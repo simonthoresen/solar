@@ -26,6 +26,7 @@ export class CelestialBody {
 
         this.initMesh();
         this.initForceVisual();
+        this.initAxisVisual();
     }
 
     initMesh() {
@@ -57,9 +58,24 @@ export class CelestialBody {
         this.scene.add(this.ring);
     }
 
+    initAxisVisual() {
+        const points = [];
+        points.push(new THREE.Vector3(0, -this.radius * 2, 0));
+        points.push(new THREE.Vector3(0, this.radius * 2, 0));
+
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
+
+        this.axisLine = new THREE.Line(geometry, material);
+
+        // Attach to mesh so it rotates with the body
+        this.mesh.add(this.axisLine);
+    }
+
     update(dt) {
         // Orbital Logic
         if (this.parent) {
+            // Clockwise orbit: increase angle (visual clockwise in default top-down view)
             this.orbitAngle += this.orbitSpeed * dt;
             // Calculate target pos
             const px = this.parent.position.x + Math.cos(this.orbitAngle) * this.orbitDist;
@@ -70,7 +86,8 @@ export class CelestialBody {
         this.updatePosition();
 
         // Rotate body visually on local Y axis
-        this.mesh.rotation.y += this.rotationSpeed * dt;
+        // Clockwise self-rotation: decrease angle
+        this.mesh.rotation.y -= this.rotationSpeed * dt;
     }
 
     updatePosition() {
@@ -89,8 +106,9 @@ export class CelestialBody {
             // Tangential force
             // Vector from center to point
             const radial = worldPosition.clone().sub(this.position);
-            // Tangent: Cross product with up vector (0,1,0)
-            const tangent = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), radial).normalize();
+            // Tangent: Cross product of Radial x Up (0,1,0) for Clockwise
+            // (Previous was Up x Radial = CCW)
+            const tangent = new THREE.Vector3().crossVectors(radial, new THREE.Vector3(0, 1, 0)).normalize();
 
             return tangent.multiplyScalar(this.forceMagnitude);
         }
@@ -100,6 +118,9 @@ export class CelestialBody {
     setDebugVisibility(visible) {
         if (this.ring) {
             this.ring.visible = visible;
+        }
+        if (this.axisLine) {
+            this.axisLine.visible = visible;
         }
     }
 }

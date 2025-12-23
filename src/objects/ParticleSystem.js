@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 
 export class ParticleSystem {
-    constructor(scene, size = 20) {
+    constructor(scene, size = 20, count = 256) {
         this.scene = scene;
         this.size = size;
+        this.count = count;
         this.particles = [];
 
         this.initParticles();
@@ -12,27 +13,32 @@ export class ParticleSystem {
     initParticles() {
         const geometry = new THREE.ConeGeometry(0.1, 0.3, 3);
         geometry.rotateX(Math.PI / 2);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-        const radius = this.size; // Size is now treated as radius
-        const radiusSq = radius * radius;
+        const radius = this.size;
 
-        for (let x = -Math.ceil(radius); x <= Math.ceil(radius); x++) {
-            for (let z = -Math.ceil(radius); z <= Math.ceil(radius); z++) {
+        for (let i = 0; i < this.count; i++) {
+            // Random position in circle
+            // r = R * sqrt(random) ensures uniform distribution
+            const r = radius * Math.sqrt(Math.random());
+            const theta = Math.random() * 2 * Math.PI;
 
-                // Circular check
-                if (x * x + z * z <= radiusSq) {
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.position.set(x, 0, z); // Integer coordinate
-                    this.scene.add(mesh);
+            const x = r * Math.cos(theta);
+            const z = r * Math.sin(theta);
 
-                    this.particles.push({
-                        mesh: mesh,
-                        velocity: new THREE.Vector3(0, 0, 0),
-                        basePos: new THREE.Vector3(x, 0, z)
-                    });
-                }
-            }
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, 0, z);
+
+            // Random varying size (10% to 100%)
+            const scale = 0.1 + Math.random() * 0.9;
+            mesh.scale.setScalar(scale);
+
+            this.scene.add(mesh);
+
+            this.particles.push({
+                mesh: mesh,
+                velocity: new THREE.Vector3(0, 0, 0)
+            });
         }
     }
 
@@ -40,7 +46,8 @@ export class ParticleSystem {
         let itemsForViz = [];
         // Constant drift force
         const driftForce = new THREE.Vector3(2, 0, 0);
-        const radiusSq = this.size * this.size;
+        const radius = this.size;
+        const radiusSq = radius * radius;
 
         this.particles.forEach(p => {
             // New Force Calculation
@@ -58,11 +65,14 @@ export class ParticleSystem {
             // Boundary Wrap
             // Check squared distance
             if (p.mesh.position.lengthSq() > radiusSq) {
-                // Respawn at opposite side
-                // Multiply position by -0.99 for "opposite side but slightly inside"
-                p.mesh.position.multiplyScalar(-0.99);
+                // Respawn at random position inside the field
+                const r = radius * Math.sqrt(Math.random());
+                const theta = Math.random() * 2 * Math.PI;
 
-                // Reset velocity to avoid carrying momentum back
+                p.mesh.position.x = r * Math.cos(theta);
+                p.mesh.position.z = r * Math.sin(theta);
+
+                // Reset velocity
                 p.velocity.set(0, 0, 0);
             }
 

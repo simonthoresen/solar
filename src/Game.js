@@ -18,13 +18,13 @@ export class Game {
 
         // Components
         this.forceGrid = new ForceGrid(this.scene);
-        this.particleSystem = new ParticleSystem(this.scene, 72);
+        this.particleSystem = new ParticleSystem(this.scene, 72, 1024);
         this.player = new Player(this.scene);
 
         this.celestialBodies = [];
 
         // Sun
-        const sun = new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 4, 0xffff00, 20);
+        const sun = new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 4, 0xffff00, 72);
         this.celestialBodies.push(sun);
 
         // Mercury
@@ -71,7 +71,7 @@ export class Game {
 
         this.clock = new THREE.Clock();
 
-        this.debugMode = true; // Default On
+        this.debugMode = false; // Default Off
 
         window.addEventListener('resize', this.onResize.bind(this));
 
