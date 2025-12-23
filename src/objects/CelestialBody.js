@@ -30,7 +30,15 @@ export class CelestialBody {
     }
 
     initMesh() {
-        const geometry = new THREE.IcosahedronGeometry(this.radius, 1);
+        let detail = 0;
+        if (this.radius >= 2.0) {
+            detail = 2; // High detail for Sun and large planets
+        } else if (this.radius >= 0.5) {
+            detail = 1; // Medium detail for Earth-sized planets
+        }
+        // Small moons get detail 0 (default initialized)
+
+        const geometry = new THREE.IcosahedronGeometry(this.radius, detail);
         const material = new THREE.MeshLambertMaterial({ color: this.color, wireframe: true });
         this.mesh = new THREE.Mesh(geometry, material);
         this.updatePosition();
