@@ -61,7 +61,8 @@ export class ParticleSystem {
             velocity: velocity.clone(),
             life: life,
             maxLife: maxLife, // Only used for smoke fade
-            initialScale: scale
+            initialScale: scale,
+            smoothedInfluence: new THREE.Vector3(0, 0, 0) // For smoothing
         };
 
         this.particles.push(particle);
@@ -123,10 +124,16 @@ export class ParticleSystem {
             // Calculate Velocity Influence (Write to _tempInfluence)
             velocityField.calculateTotalVelocity(p.mesh.position, celestialBodies, player, this._tempInfluence);
 
-            // Physics Update: Position += (InternalVelocity + ExternalInfluence) * dt
+            // Smooth Influence
+            // Ensure property exists (for existing particles if hot-reloaded, though reload creates new)
+            if (!p.smoothedInfluence) p.smoothedInfluence = new THREE.Vector3();
 
-            // Use _tempEffectiveVel to sum
-            this._tempEffectiveVel.copy(p.velocity).add(this._tempInfluence);
+            const smoothFactor = Math.min(1.0, 3.0 * dt);
+            p.smoothedInfluence.lerp(this._tempInfluence, smoothFactor);
+
+            // Apply Influence
+            // Total = p.velocity + smoothedInfluence
+            this._tempEffectiveVel.copy(p.velocity).add(p.smoothedInfluence);
 
             // Update position (avoid allocation)
             // p.mesh.position.add(_tempEffectiveVel.multiplyScalar(dt)); // multiplyScalar modifies in place!
@@ -147,8 +154,8 @@ export class ParticleSystem {
             // If we use influence, we don't need to accumulate acceleration into p.velocity.
 
             // Orient
-            if (this._tempInfluence.lengthSq() > 0.01) {
-                itemsForViz.push({ position: p.mesh.position.clone(), force: this._tempInfluence.clone() });
+            if (p.smoothedInfluence.lengthSq() > 0.01) {
+                itemsForViz.push({ position: p.mesh.position.clone(), force: p.smoothedInfluence.clone() });
             }
 
 

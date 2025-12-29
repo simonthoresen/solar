@@ -268,11 +268,29 @@ export class CelestialBody {
             // Store result in target
             target.copy(_tempTangent).multiplyScalar(this.forceMagnitude);
 
-            // Add planet's linear velocity (scaled by 0.5 per user request)
+            // Add planet's linear velocity
+            // Scaled distance based: 
+            // Surface (dist = radius) -> 100%
+            // Boundary (dist = rotationRadius) -> 0%
             if (this.velocity) {
-                // Avoid creating new vector for scaled velocity
-                // affect target directly
-                target.addScaledVector(this.velocity, 0.5);
+                // Calculate factor t [0, 1]
+                // dist is between radius and rotationRadius (mostly, if < radius treat as 1?)
+                // t = 1 - (dist - radius) / (rotationRadius - radius)
+
+                let t = 0;
+                const range = this.rotationRadius - this.radius;
+
+                if (range > 0) {
+                    t = 1 - (dist - this.radius) / range;
+                } else {
+                    t = 1; // Fallback if radius == rotationRadius
+                }
+
+                // Clamp t [0, 1]
+                t = Math.max(0, Math.min(1, t));
+
+                // Add scaled velocity
+                target.addScaledVector(this.velocity, t);
             }
 
             return target;

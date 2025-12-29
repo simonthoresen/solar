@@ -11,6 +11,7 @@ export class Player {
         this.scene = scene;
         this.position = new THREE.Vector3(0, 0, 15); // Start closer
         this.velocity = new THREE.Vector3(0, 0, 0);
+        this.smoothedVelocityInfluence = new THREE.Vector3(0, 0, 0); // For smoothing
         this.rotation = new THREE.Euler(0, 0, 0);
 
         this.initMesh();
@@ -143,7 +144,11 @@ export class Player {
         }
 
         // Effective Move
-        const totalVelocity = this.velocity.clone().add(velocityInfluence); // Add influence here
+        // Smooth the velocity influence
+        const smoothFactor = Math.min(1.0, 3.0 * dt);
+        this.smoothedVelocityInfluence.lerp(velocityInfluence, smoothFactor);
+
+        const totalVelocity = this.velocity.clone().add(this.smoothedVelocityInfluence);
 
         this.position.add(totalVelocity.clone().multiplyScalar(dt));
         this.mesh.position.copy(this.position);
