@@ -198,10 +198,6 @@ export class ParticleSystem {
                     const minLife = this.config.minLife || 10;
                     const maxLife = this.config.maxLife || 60;
                     p.life = minLife + Math.random() * (maxLife - minLife);
-
-                    // Reset scale if needed (dust scale was constant, but good to reset if we want variety on respawn? 
-                    // Implementation plan didn't specify, but existing code didn't reset scale on respawn. Let's keep scale or randomise?
-                    // Existing code didn't reset scale. Let's keep it simple.
                 }
             }
         }

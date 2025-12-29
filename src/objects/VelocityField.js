@@ -21,11 +21,6 @@ export class VelocityField {
 
         // 1. Celestial Bodies
         for (const body of celestialBodies) {
-            // getVelocityAt now takes a target. We can reuse a temp one or add directly?
-            // "totalVel.add(body.getVelocityAt(position))"
-            // body.getVelocityAt writes to its target argument.
-            // Let's pass _tempBodyVel to body, then add to total (target).
-
             body.getVelocityAt(position, _tempBodyVel);
             target.add(_tempBodyVel);
         }
@@ -33,7 +28,6 @@ export class VelocityField {
         // 2. Player Wake (if applicable)
         if (player && player.getVelocityAt) {
             // Assuming player.getVelocityAt might still return new Vector, or we update it too?
-            // For now, Player wake is not heavily used/optimized yet, but let's handle it safely.
             const pVel = player.getVelocityAt(position);
             target.add(pVel);
         }
@@ -72,8 +66,7 @@ export class VelocityField {
                     this.arrows[i].visible = true;
                     this.arrows[i].position.copy(item.position);
                     this.arrows[i].setDirection(item.force.clone().normalize());
-                    // Scale arrow length by force magnitude, clamped?
-                    // Let's keep it visible but maybe scaled slightly
+
                     const length = Math.min(forceLen * 0.5, 3); // Cap length
                     this.arrows[i].setLength(length, length * 0.2, length * 0.1);
                 } else {

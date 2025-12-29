@@ -39,15 +39,12 @@ export class Nebula {
             const z = positions.getZ(i);
 
             // 3D Noise density
-            // Flatten Y slightly in noise lookups to stretch clouds horizontally effectively
-            // Or just sample noise.
             let n = this.noise.noise3D(x * scale, y * scale * 1.5, z * scale);
 
             // Normalize noise from [-1, 1] to [0, 1]
             let t = (n + 1) * 0.5;
 
             // Apply contrast curve to open up empty space
-            // Power curve pushes mid-tones to darks
             t = Math.pow(t, 2.0);
 
             // Sample Gradient

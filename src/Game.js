@@ -5,7 +5,7 @@ import { VelocityField } from './objects/VelocityField.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Player } from './objects/Player.js';
 import { CelestialBody } from './objects/CelestialBody.js';
-import { Nebula } from './objects/Nebula.js'; // Added
+import { Nebula } from './objects/Nebula.js';
 import { solarSystemConfig, dustConfig } from './config.js';
 
 export class Game {
@@ -111,12 +111,6 @@ export class Game {
         container.style.color = 'white';
         container.style.fontFamily = 'monospace';
         container.style.zIndex = '1000';
-        container.style.display = 'none'; // Initially hidden appropriately or managed by master toggle? 
-        // User requested: "only show debug line types that are enabled" - wait, "make a checkbox next to each line type... only show debug line types that are enabled"
-        // Interpretation: always show the list so user CAN enable them. The list itself is the UI control.
-        // Let's keep the UI visible always or maybe toggle UI visibility? 
-        // Standard debug UI: usually always visible or toggled. 
-        // Requirement: "place a list of all debug line types that exist"
         container.style.display = 'block';
 
         const title = document.createElement('div');
@@ -185,14 +179,7 @@ export class Game {
     }
 
     updateDebugVisibility() {
-        // Player Axes (Uses boolean currently? Player.js needs check, assuming it takes boolean still or needs update)
-        // Player.js usually has setDebugVisibility(bool). Let's pass 'axis' state for player axes? or 'player' state?
-        // Let's check Player.js content later or handle safely. 
-        // For now, let's assume Player uses 'player' or 'axis'. Let's use 'axis' for player axes.
         if (this.player.setDebugVisibility) {
-            // If Player.js expects boolean, we might need a specific flag. 
-            // Let's check Player.js logic. (I will check Player.js in next step if it errors, but safer to assume boolean).
-            // Let's pass 'player' state for player-related debugs if simpler.
             this.player.setDebugVisibility(this.debugState.player || this.debugState.axis);
         }
 
@@ -208,10 +195,6 @@ export class Game {
     setupLights() {
         const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
         this.scene.add(ambientLight);
-
-        // const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        // directionalLight.position.set(5, 10, 7);
-        // this.scene.add(directionalLight);
     }
 
     setupCamera() {
@@ -264,10 +247,7 @@ export class Game {
         // 4. Visualize Velocities
         let allVizItems = [...particleVizItems];
         if (playerInfluence.lengthSq() > 0.01) {
-            allVizItems.push({ position: this.player.getPosition().clone(), force: playerInfluence }); // Keep 'force' prop name in viz items for now or update? VelocityField expects {position, force} (based on old code). 
-            // Let's check VelocityField updateVisuals. It uses 'force' property. I should probably rename it to 'velocity' there, but leaving as 'force' inside the viz item object is fine as long as logic works. 
-            // Actually, let's keep 'force' for the visualizer item property to avoid breaking VelocityField.js 'updateVisuals' unless I view it again.
-            // I reviewed Result 4 earlier: "const forceLen = item.force.length();". So yes, it expects 'force'.
+            allVizItems.push({ position: this.player.getPosition().clone(), force: playerInfluence });
         }
 
         this.velocityField.updateVisuals(allVizItems);

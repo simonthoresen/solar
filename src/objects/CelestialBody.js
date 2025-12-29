@@ -150,17 +150,10 @@ export class CelestialBody {
             this.position.set(px, 0, pz);
 
             // Calculate Velocity
-            // x = r * cos(theta) -> dx/dt = -r * sin(theta) * dtheta/dt
-            // z = r * sin(theta) -> dz/dt = r * cos(theta) * dtheta/dt
-            // orbitSpeed is dtheta/dt (radians per second)
             const vx = -this.orbitDist * Math.sin(this.orbitAngle) * this.orbitSpeed;
             const vz = this.orbitDist * Math.cos(this.orbitAngle) * this.orbitSpeed;
 
             // Add parent velocity if parent is moving (recursive velocity)
-            // But for now, let's assume parent (Sun) is static or we just want local orbital velocity.
-            // If we want absolute world velocity, we should add orbit velocity to parent's velocity?
-            // "velocity of the celestial body". Usually implies world velocity.
-            // Let's check if parent has velocity?
             let pv = new THREE.Vector3(0, 0, 0);
             if (this.parent.velocity) {
                 pv = this.parent.velocity;
@@ -249,12 +242,7 @@ export class CelestialBody {
 
                 if (overlap > 0) {
                     // Move player along normal by overlap amount
-                    // We modify the player's position directly. 
-                    // Note: Player.update() runs AFTER this loop usually? 
-                    // In Game.js: bodies.update() runs BEFORE player.update().
-                    // So we can modify player.position safely, but player.update() will then apply velocity.
-                    // If we don't fix position, player.update might move them further in or just keep them there.
-
+                    // Positional Correction ensures no tunneling
                     const correction = normal.clone().multiplyScalar(overlap);
                     player.position.add(correction);
                     player.mesh.position.copy(player.position);
