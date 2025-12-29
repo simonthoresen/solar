@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+const _tempBodyVel = new THREE.Vector3();
+
 export class VelocityField {
     constructor(scene) {
         this.scene = scene;
@@ -11,21 +13,32 @@ export class VelocityField {
         this.arrows = [];
     }
 
+
     // Calculate total velocity influence at a position
-    calculateTotalVelocity(position, celestialBodies, player) {
-        let totalVel = new THREE.Vector3(0, 0, 0);
+    // Optimized: target is optional, defaults to new vector if not provided (for non-hot paths)
+    calculateTotalVelocity(position, celestialBodies, player, target = new THREE.Vector3()) {
+        target.set(0, 0, 0);
 
         // 1. Celestial Bodies
         for (const body of celestialBodies) {
-            totalVel.add(body.getVelocityAt(position));
+            // getVelocityAt now takes a target. We can reuse a temp one or add directly?
+            // "totalVel.add(body.getVelocityAt(position))"
+            // body.getVelocityAt writes to its target argument.
+            // Let's pass _tempBodyVel to body, then add to total (target).
+
+            body.getVelocityAt(position, _tempBodyVel);
+            target.add(_tempBodyVel);
         }
 
         // 2. Player Wake (if applicable)
         if (player && player.getVelocityAt) {
-            totalVel.add(player.getVelocityAt(position));
+            // Assuming player.getVelocityAt might still return new Vector, or we update it too?
+            // For now, Player wake is not heavily used/optimized yet, but let's handle it safely.
+            const pVel = player.getVelocityAt(position);
+            target.add(pVel);
         }
 
-        return totalVel;
+        return target;
     }
 
     // Update visuals: Draw arrows for list of items

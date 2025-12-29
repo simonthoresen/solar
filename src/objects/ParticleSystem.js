@@ -23,6 +23,10 @@ export class ParticleSystem {
         this.smokeGeometry.rotateX(Math.PI / 2);
         this.smokeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
 
+        // Scratch vectors for update loop
+        this._tempInfluence = new THREE.Vector3();
+        this._tempEffectiveVel = new THREE.Vector3();
+
         this.initDust();
     }
 
@@ -110,22 +114,28 @@ export class ParticleSystem {
         let itemsForViz = [];
         const radius = this.size;
         const radiusSq = radius * radius;
+        // Optimization: Pre-allocate items list only if needed, or clear it. 
+        // JavaScript arrays are dynamic.
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
 
-            // Calculate Velocity Influence
-            const influence = velocityField.calculateTotalVelocity(p.mesh.position, celestialBodies, player);
+            // Calculate Velocity Influence (Write to _tempInfluence)
+            velocityField.calculateTotalVelocity(p.mesh.position, celestialBodies, player, this._tempInfluence);
 
             // Physics Update: Position += (InternalVelocity + ExternalInfluence) * dt
-            // Note: Dust internal velocity is 0 usually. Smoke has random vel? 
-            // Actually smoke was initialized with 0 velocity too in previous code, just jittered pos?
-            // "velocity: new THREE.Vector3(0, 0, 0)"
 
-            // So:
-            const effectiveVelocity = p.velocity.clone().add(influence);
+            // Use _tempEffectiveVel to sum
+            this._tempEffectiveVel.copy(p.velocity).add(this._tempInfluence);
 
-            p.mesh.position.add(effectiveVelocity.multiplyScalar(dt));
+            // Update position (avoid allocation)
+            // p.mesh.position.add(_tempEffectiveVel.multiplyScalar(dt)); // multiplyScalar modifies in place!
+            // We must not modify _tempEffectiveVel in place if we need it for lookAt or debug later without recloning?
+            // Actually lookAt uses it. 
+            // So: scale a copy? No, we want no allocation.
+            // vector.addScaledVector(v, s) is best.
+
+            p.mesh.position.addScaledVector(this._tempEffectiveVel, dt);
 
             p.life -= dt;
 
@@ -137,12 +147,8 @@ export class ParticleSystem {
             // If we use influence, we don't need to accumulate acceleration into p.velocity.
 
             // Orient
-            if (effectiveVelocity.lengthSq() > 0.001) {
-                p.mesh.lookAt(p.mesh.position.clone().add(effectiveVelocity));
-            }
-            // Add to viz list (using 'force' key for compat with VelocityField helper)
-            if (influence.lengthSq() > 0.01) {
-                itemsForViz.push({ position: p.mesh.position.clone(), force: influence });
+            if (this._tempInfluence.lengthSq() > 0.01) {
+                itemsForViz.push({ position: p.mesh.position.clone(), force: this._tempInfluence.clone() });
             }
 
 

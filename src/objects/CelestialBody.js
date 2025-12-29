@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 
+const _tempRadial = new THREE.Vector3();
+const _tempTangent = new THREE.Vector3();
+const _tempUp = new THREE.Vector3(0, 1, 0);
+
 export class CelestialBody {
     constructor(scene, position, radius, color, rotationRadius, parent = null, orbitDist = 0, orbitSpeed = 0) {
         this.scene = scene;
@@ -247,30 +251,35 @@ export class CelestialBody {
         }
     }
 
+
     // Get velocity influence at specific position
-    getVelocityAt(worldPosition) {
+    // Optimized to reduce allocations. Returns target vector.
+    getVelocityAt(worldPosition, target = new THREE.Vector3()) {
         const dist = worldPosition.distanceTo(this.position);
 
         if (dist <= this.rotationRadius && dist > 0.1) {
             // Tangential velocity (rotation)
             // Vector from center to point
-            const radial = worldPosition.clone().sub(this.position);
-            // Tangent: Cross product of Radial x Up (0,1,0) for Clockwise
-            const tangent = new THREE.Vector3().crossVectors(radial, new THREE.Vector3(0, 1, 0)).normalize();
+            _tempRadial.subVectors(worldPosition, this.position);
 
-            const velocityInfluence = tangent.multiplyScalar(this.forceMagnitude); // Keeping forceMagnitude variable name or should I rename? 
-            // "forceMagnitude" was 5. Renaming variable 'forceMagnitude' to 'rotationSpeed' might be cleaner but requires strict find/replace. 
-            // I'll stick to 'forceMagnitude' for internal variable for now to avoid breaking if defined elsewhere, 
-            // but the method is getVelocityAt.
+            // Tangent: Cross product of Radial x Up (0,1,0) for Clockwise
+            _tempTangent.crossVectors(_tempRadial, _tempUp).normalize();
+
+            // Store result in target
+            target.copy(_tempTangent).multiplyScalar(this.forceMagnitude);
 
             // Add planet's linear velocity (scaled by 0.5 per user request)
             if (this.velocity) {
-                velocityInfluence.add(this.velocity.clone().multiplyScalar(0.5));
+                // Avoid creating new vector for scaled velocity
+                // affect target directly
+                target.addScaledVector(this.velocity, 0.5);
             }
 
-            return velocityInfluence;
+            return target;
         }
-        return new THREE.Vector3(0, 0, 0);
+
+        target.set(0, 0, 0);
+        return target;
     }
 
     setDebugVisibility(state) {
