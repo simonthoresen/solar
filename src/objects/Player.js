@@ -91,6 +91,7 @@ export class Player {
                     const colors = [0xffff00, 0xff4400, 0xffffff, 0xffaa00, 0xff0000];
                     const col = colors[Math.floor(Math.random() * colors.length)];
                     this.wakeMesh.material.color.setHex(col);
+                    if (this.wakeLight) this.wakeLight.color.setHex(col);
                 }
             }
         } else {
@@ -182,9 +183,16 @@ export class Player {
         // Let's rely on translate.
         geometry.translate(0, 0, height / 2 + 0.5); // Move behind nicely
 
-        const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.2 }); // Lower opacity for larger wake
+        const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 }); // Increased opacity
         this.wakeMesh = new THREE.Mesh(geometry, material);
         this.wakeMesh.visible = false;
+
+        // Add PointLight for glow
+        this.wakeLight = new THREE.PointLight(0xffff00, 2, 10);
+        // Cone geometry was translated by (0, 0, height/2 + 0.5)
+        // So center of visual cone is at that Z.
+        this.wakeLight.position.set(0, 0, height / 2 + 0.5);
+        this.wakeMesh.add(this.wakeLight);
 
         this.mesh.add(this.wakeMesh);
 
