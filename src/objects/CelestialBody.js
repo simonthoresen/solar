@@ -5,9 +5,9 @@ const _tempTangent = new THREE.Vector3();
 const _tempUp = new THREE.Vector3(0, 1, 0);
 
 export class CelestialBody {
-    constructor(scene, position, radius, color, rotationRadius, parent = null, orbitDist = 0, orbitSpeed = 0) {
+    constructor(scene, position, sizeRadius, color, rotationRadius, parent = null, orbitDist = 0, orbitSpeed = 0) {
         this.scene = scene;
-        this.radius = radius;
+        this.sizeRadius = sizeRadius;
         this.color = color;
         this.rotationRadius = rotationRadius;
 
@@ -40,14 +40,14 @@ export class CelestialBody {
 
     initMesh() {
         let detail = 0;
-        if (this.radius >= 2.0) {
+        if (this.sizeRadius >= 2.0) {
             detail = 2; // High detail for Sun and large planets
-        } else if (this.radius >= 0.5) {
+        } else if (this.sizeRadius >= 0.5) {
             detail = 1; // Medium detail for Earth-sized planets
         }
         // Small moons get detail 0 (default initialized)
 
-        const geometry = new THREE.IcosahedronGeometry(this.radius, detail);
+        const geometry = new THREE.IcosahedronGeometry(this.sizeRadius, detail);
         const material = new THREE.MeshLambertMaterial({ color: this.color, wireframe: true });
         this.mesh = new THREE.Mesh(geometry, material);
         this.updatePosition();
@@ -78,8 +78,8 @@ export class CelestialBody {
 
     initAxisVisual() {
         const points = [];
-        points.push(new THREE.Vector3(0, -this.radius * 2, 0));
-        points.push(new THREE.Vector3(0, this.radius * 2, 0));
+        points.push(new THREE.Vector3(0, -this.sizeRadius * 2, 0));
+        points.push(new THREE.Vector3(0, this.sizeRadius * 2, 0));
 
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
@@ -204,7 +204,7 @@ export class CelestialBody {
             // Distance Check for Color
             const distSq = this.position.distanceToSquared(playerPosition);
             // Player is 1x1x1, half-width is 0.5. Radius + 0.5
-            const collisionDist = this.radius + 0.5;
+            const collisionDist = this.sizeRadius + 0.5;
 
             if (distSq < collisionDist * collisionDist) {
                 this.playerLine.material.color.setHex(0xff0000); // Red
@@ -325,10 +325,10 @@ export class CelestialBody {
                 const dist = Math.sqrt(distSq);
 
                 let t = 0;
-                const range = this.rotationRadius - this.radius;
+                const range = this.rotationRadius - this.sizeRadius;
 
                 if (range > 0) {
-                    t = 1 - (dist - this.radius) / range;
+                    t = 1 - (dist - this.sizeRadius) / range;
                 } else {
                     t = 1; // Fallback if radius == rotationRadius
                 }

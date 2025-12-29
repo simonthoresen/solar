@@ -45,7 +45,7 @@ export class Game {
             const body = new CelestialBody(
                 this.scene,
                 new THREE.Vector3(0, 0, 0),
-                data.radius,
+                data.sizeRadius,
                 data.color,
                 data.rotationRadius,
                 parent,

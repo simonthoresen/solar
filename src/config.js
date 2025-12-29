@@ -1,7 +1,7 @@
 export const solarSystemConfig = [
     {
         id: 'sun',
-        radius: 4,
+        sizeRadius: 4,
         color: 0xffff00,
         rotationRadius: 72,
         parentId: null,
@@ -10,7 +10,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'mercury',
-        radius: 0.4,
+        sizeRadius: 0.4,
         color: 0xaaaaaa,
         rotationRadius: 2,
         parentId: 'sun',
@@ -19,7 +19,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'venus',
-        radius: 0.9,
+        sizeRadius: 0.9,
         color: 0xffaa00,
         rotationRadius: 4,
         parentId: 'sun',
@@ -28,7 +28,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'earth',
-        radius: 0.9,
+        sizeRadius: 0.9,
         color: 0x0000ff,
         rotationRadius: 4,
         parentId: 'sun',
@@ -37,7 +37,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'moon',
-        radius: 0.2,
+        sizeRadius: 0.2,
         color: 0x888888,
         rotationRadius: 1,
         parentId: 'earth',
@@ -46,7 +46,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'mars',
-        radius: 0.5,
+        sizeRadius: 0.5,
         color: 0xff0000,
         rotationRadius: 3,
         parentId: 'sun',
@@ -55,7 +55,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'phobos',
-        radius: 0.1,
+        sizeRadius: 0.1,
         color: 0x666666,
         rotationRadius: 0.5,
         parentId: 'mars',
@@ -64,7 +64,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'deimos',
-        radius: 0.1,
+        sizeRadius: 0.1,
         color: 0x555555,
         rotationRadius: 0.5,
         parentId: 'mars',
@@ -73,7 +73,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'jupiter',
-        radius: 2.2,
+        sizeRadius: 2.2,
         color: 0xffaa88,
         rotationRadius: 8,
         parentId: 'sun',
@@ -82,7 +82,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'io',
-        radius: 0.4,
+        sizeRadius: 0.4,
         color: 0xffffaa,
         rotationRadius: 1.5,
         parentId: 'jupiter',
@@ -91,7 +91,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'europa',
-        radius: 0.3,
+        sizeRadius: 0.3,
         color: 0xaaffff,
         rotationRadius: 1.5,
         parentId: 'jupiter',
@@ -100,7 +100,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'saturn',
-        radius: 2.0,
+        sizeRadius: 2.0,
         color: 0xeeddcc,
         rotationRadius: 7,
         parentId: 'sun',
@@ -109,7 +109,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'uranus',
-        radius: 1.5,
+        sizeRadius: 1.5,
         color: 0xaabbff,
         rotationRadius: 6,
         parentId: 'sun',
@@ -118,7 +118,7 @@ export const solarSystemConfig = [
     },
     {
         id: 'neptune',
-        radius: 1.4,
+        sizeRadius: 1.4,
         color: 0x4466ff,
         rotationRadius: 6,
         parentId: 'sun',
