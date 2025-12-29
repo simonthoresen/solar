@@ -4,6 +4,7 @@ import { ForceGrid } from './objects/ForceGrid.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Player } from './objects/Player.js';
 import { CelestialBody } from './objects/CelestialBody.js';
+import { solarSystemConfig, starfieldConfig } from './config.js';
 
 export class Game {
     constructor() {
@@ -18,51 +19,38 @@ export class Game {
 
         // Components
         this.forceGrid = new ForceGrid(this.scene);
-        this.particleSystem = new ParticleSystem(this.scene, 72, 1024);
+        this.particleSystem = new ParticleSystem(this.scene, starfieldConfig);
         this.player = new Player(this.scene);
 
         this.celestialBodies = [];
 
-        // Sun
-        const sun = new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 4, 0xffff00, 72);
-        this.celestialBodies.push(sun);
+        // Initialize Celestial Bodies from Config
+        const bodiesMap = new Map();
 
-        // Mercury
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.4, 0xaaaaaa, 2, sun, 6, 1.5));
+        solarSystemConfig.forEach(data => {
+            const parent = data.parentId ? bodiesMap.get(data.parentId) : null;
 
-        // Venus
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.9, 0xffaa00, 4, sun, 9, 1.2));
+            // If parent is specified but not found yet, we might need a multi-pass or topological sort.
+            // For now, config is ordered parents-first.
+            // A simple check: if parentId exists but parent is null, it's an issue with order.
+            if (data.parentId && !parent) {
+                console.warn(`Parent '${data.parentId}' not found for '${data.id}'. Check config order.`);
+            }
 
-        // Earth
-        const earth = new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.9, 0x0000ff, 4, sun, 12, 1.0);
-        this.celestialBodies.push(earth);
-        // Moon
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.2, 0x888888, 1, earth, 1.5, 3.0));
+            const body = new CelestialBody(
+                this.scene,
+                new THREE.Vector3(0, 0, 0),
+                data.radius,
+                data.color,
+                data.forceRadius,
+                parent,
+                data.orbitDistance,
+                data.orbitSpeed
+            );
 
-        // Mars
-        const mars = new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.5, 0xff0000, 3, sun, 15, 0.8);
-        this.celestialBodies.push(mars);
-        // Phobos
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.1, 0x666666, 0.5, mars, 0.8, 4.0));
-        // Deimos
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.1, 0x555555, 0.5, mars, 1.2, 3.5));
-
-        // Jupiter
-        const jupiter = new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 2.2, 0xffaa88, 8, sun, 24, 0.4);
-        this.celestialBodies.push(jupiter);
-        // Io
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.4, 0xffffaa, 1.5, jupiter, 3.0, 5.0));
-        // Europa
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 0.3, 0xaaffff, 1.5, jupiter, 4.0, 4.0));
-
-        // Saturn
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 2.0, 0xeeddcc, 7, sun, 32, 0.3));
-
-        // Uranus
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 1.5, 0xaabbff, 6, sun, 40, 0.2));
-
-        // Neptune
-        this.celestialBodies.push(new CelestialBody(this.scene, new THREE.Vector3(0, 0, 0), 1.4, 0x4466ff, 6, sun, 48, 0.15));
+            bodiesMap.set(data.id, body);
+            this.celestialBodies.push(body);
+        });
 
         this.setupCamera();
         this.setupControls();
@@ -177,6 +165,18 @@ export class Game {
         }
 
         this.forceGrid.updateVisuals(allVizItems);
+
+        // 5. Smoke Trails
+        // Spawn smoke if moving forward
+        if (this.player.keys.w) {
+            // Spawn rate: maybe not every frame? 
+            // Every frame @ 60fps might be too dense, but we can try.
+            // Or random chance?
+            if (Math.random() < 0.5) { // 50% chance per frame => ~30/sec
+                // Use random position in wake
+                this.particleSystem.spawnSmoke(this.player.getRandomWakePosition());
+            }
+        }
 
         // Camera follow player logic
         const currentPlayerPos = this.player.getPosition();

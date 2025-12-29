@@ -4,6 +4,7 @@ export class ForceGrid {
     constructor(scene) {
         this.scene = scene;
         this.arrowHelperGroup = new THREE.Group();
+        this.arrowHelperGroup.visible = false;
         this.scene.add(this.arrowHelperGroup);
 
         // Cache arrows to avoid recreating meshes every frame

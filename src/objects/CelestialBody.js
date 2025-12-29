@@ -61,6 +61,7 @@ export class CelestialBody {
         // Create the final object to add to the scene
         this.ring = new THREE.LineLoop(geometry, material);
         this.ring.rotation.x = -Math.PI / 2; // Lie flat on XZ plane
+        this.ring.visible = false;
         this.updatePosition();
 
         this.scene.add(this.ring);
@@ -75,6 +76,7 @@ export class CelestialBody {
         const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
 
         this.axisLine = new THREE.Line(geometry, material);
+        this.axisLine.visible = false;
 
         // Attach to mesh so it rotates with the body
         this.mesh.add(this.axisLine);

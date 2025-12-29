@@ -25,6 +25,7 @@ export class Player {
         // Axis visualization
         // "render the axis of the cube as 2 unit long lines and label them as x, y, and z"
         this.axes = new THREE.Group();
+        this.axes.visible = false;
         this.mesh.add(this.axes); // Attach to mesh to rotate with it
 
         const axisLen = 2;
@@ -200,5 +201,30 @@ export class Player {
         if (this.axes) {
             this.axes.visible = visible;
         }
+    }
+
+    getRandomWakePosition() {
+        // Wake is a triangle in local space:
+        // Tip at (0, 0, 4), Base center at (0, 0, 1), Base width 1 (-0.5 to 0.5)
+
+        // Random Z between 1 and 4
+        const z = 1.0 + Math.random() * 3.0; // 1 to 4
+
+        // Width at this Z (linear interpolation)
+        // At z=1, width=1. At z=4, width=0.
+        // Ratio t = (z - 1) / 3   (0 at base, 1 at tip)
+        // width = 1 * (1 - t)
+        const t = (z - 1.0) / 3.0;
+        const width = 1.0 * (1.0 - t);
+
+        // Random X within [-width/2, width/2]
+        const x = (Math.random() - 0.5) * width;
+
+        // Local point
+        const localPos = new THREE.Vector3(x, 0, z); // Y is 0 (flat)
+
+        // Transform to world
+        // We can use mesh.localToWorld, but it modifies the vector in place
+        return this.mesh.localToWorld(localPos);
     }
 }
