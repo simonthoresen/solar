@@ -1,135 +1,135 @@
 export const solarSystemConfig = [
     {
         id: 'sun',
-        sizeRadius: 4,
+        sizeRadius: 10,
         color: 0xffff00,
-        rotationRadius: 72,
+        rotationRadius: 450,
         parentId: null,
         orbitDistance: 0,
         orbitSpeed: 0
     },
     {
         id: 'mercury',
-        sizeRadius: 0.4,
-        color: 0xaaaaaa,
-        rotationRadius: 2,
+        sizeRadius: 10.0,
+        color: 0x00ff00, //0xaaaaaa,
+        rotationRadius: 20,
         parentId: 'sun',
-        orbitDistance: 6,
-        orbitSpeed: 1.5
+        orbitDistance: 50,
+        orbitSpeed: 0.25
     },
     {
         id: 'venus',
-        sizeRadius: 0.9,
+        sizeRadius: 10.0,
         color: 0xffaa00,
-        rotationRadius: 4,
+        rotationRadius: 20,
         parentId: 'sun',
-        orbitDistance: 9,
-        orbitSpeed: 1.2
+        orbitDistance: 100,
+        orbitSpeed: 0.15
     },
     {
         id: 'earth',
-        sizeRadius: 0.9,
+        sizeRadius: 10.0,
         color: 0x0000ff,
-        rotationRadius: 4,
+        rotationRadius: 20,
         parentId: 'sun',
-        orbitDistance: 12,
-        orbitSpeed: 1.0
+        orbitDistance: 150,
+        orbitSpeed: 0.3
     },
     {
         id: 'moon',
-        sizeRadius: 0.2,
+        sizeRadius: 5.0,
         color: 0x888888,
         rotationRadius: 1,
         parentId: 'earth',
-        orbitDistance: 1.5,
-        orbitSpeed: 3.0
+        orbitDistance: 20.0,
+        orbitSpeed: 1.0
     },
     {
         id: 'mars',
-        sizeRadius: 0.5,
+        sizeRadius: 10.0,
         color: 0xff0000,
-        rotationRadius: 3,
+        rotationRadius: 20,
         parentId: 'sun',
-        orbitDistance: 15,
-        orbitSpeed: 0.8
+        orbitDistance: 200,
+        orbitSpeed: 0.2
     },
     {
         id: 'phobos',
-        sizeRadius: 0.1,
+        sizeRadius: 5.0,
         color: 0x666666,
         rotationRadius: 0.5,
         parentId: 'mars',
-        orbitDistance: 0.8,
-        orbitSpeed: 4.0
+        orbitDistance: 20.0,
+        orbitSpeed: 0.4
     },
     {
         id: 'deimos',
-        sizeRadius: 0.1,
+        sizeRadius: 5.0,
         color: 0x555555,
         rotationRadius: 0.5,
         parentId: 'mars',
-        orbitDistance: 1.2,
-        orbitSpeed: 3.5
+        orbitDistance: 35.0,
+        orbitSpeed: 0.7
     },
     {
         id: 'jupiter',
-        sizeRadius: 2.2,
+        sizeRadius: 10.0,
         color: 0xffaa88,
-        rotationRadius: 8,
+        rotationRadius: 20,
         parentId: 'sun',
-        orbitDistance: 24,
+        orbitDistance: 250,
         orbitSpeed: 0.4
     },
     {
         id: 'io',
-        sizeRadius: 0.4,
+        sizeRadius: 5.0,
         color: 0xffffaa,
         rotationRadius: 1.5,
         parentId: 'jupiter',
-        orbitDistance: 3.0,
+        orbitDistance: 20.0,
         orbitSpeed: 5.0
     },
     {
         id: 'europa',
-        sizeRadius: 0.3,
+        sizeRadius: 5.0,
         color: 0xaaffff,
         rotationRadius: 1.5,
         parentId: 'jupiter',
-        orbitDistance: 4.0,
+        orbitDistance: 35.0,
         orbitSpeed: 4.0
     },
     {
         id: 'saturn',
-        sizeRadius: 2.0,
+        sizeRadius: 10.0,
         color: 0xeeddcc,
-        rotationRadius: 7,
+        rotationRadius: 20,
         parentId: 'sun',
-        orbitDistance: 32,
+        orbitDistance: 300,
         orbitSpeed: 0.3
     },
     {
         id: 'uranus',
-        sizeRadius: 1.5,
+        sizeRadius: 10.0,
         color: 0xaabbff,
-        rotationRadius: 6,
+        rotationRadius: 20,
         parentId: 'sun',
-        orbitDistance: 40,
+        orbitDistance: 350,
         orbitSpeed: 0.2
     },
     {
         id: 'neptune',
-        sizeRadius: 1.4,
+        sizeRadius: 10.0,
         color: 0x4466ff,
-        rotationRadius: 6,
+        rotationRadius: 20,
         parentId: 'sun',
-        orbitDistance: 48,
+        orbitDistance: 400,
         orbitSpeed: 0.15
     }
 ];
 
 export const dustConfig = {
-    count: 1024,
-    fieldRadius: 72,
+    count: 4096,
+    fieldRadius: 450,
     dustColor: 0xffffff,
     minLife: 2,
     maxLife: 5,
