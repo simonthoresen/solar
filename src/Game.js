@@ -245,7 +245,7 @@ export class Game {
 
         // 1. Orbital updates
         this.celestialBodies.forEach(body => {
-            body.update(delta, this.player.getPosition());
+            body.update(delta, this.player);
         });
 
         // 2. Player Velocity Influence & Update

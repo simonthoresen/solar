@@ -34,8 +34,8 @@ export class Player {
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = new THREE.MeshLambertMaterial({ color: 0x0000ff });
         this.mesh = new THREE.Mesh(geometry, material);
-        // Shrink
-        this.mesh.scale.set(0.5, 0.5, 0.5);
+        // Shrink (REMOVED per user request)
+        // this.mesh.scale.set(0.5, 0.5, 0.5);
 
         this.mesh.position.copy(this.position);
         this.scene.add(this.mesh);
@@ -44,6 +44,28 @@ export class Player {
         this.axisHelper = new THREE.AxesHelper(2);
         this.axisHelper.visible = false;
         this.mesh.add(this.axisHelper);
+
+        // Debug Collision Boundary (Radius 0.5)
+        // Parent mesh scale is 1.0 (default).
+        // Collision logic uses 0.5 (half-width or radius).
+        const curve = new THREE.EllipseCurve(
+            0, 0,            // ax, aY
+            0.5, 0.5,        // xRadius, yRadius
+            0, 2 * Math.PI,  // aStartAngle, aEndAngle
+            false,           // aClockwise
+            0                // aRotation
+        );
+        const points = curve.getPoints(32);
+        const boundaryGeom = new THREE.BufferGeometry().setFromPoints(points);
+        const boundaryMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        this.boundaryLine = new THREE.Line(boundaryGeom, boundaryMat);
+
+        // Rotate to XZ plane (Mesh is Y-up? Player logic uses Y-rotation. Box is axis aligned.)
+        // Ellipse is in XY. We want XZ. Rotate X 90.
+        this.boundaryLine.rotation.x = -Math.PI / 2;
+
+        this.boundaryLine.visible = false;
+        this.mesh.add(this.boundaryLine);
     }
 
     initInput() {
@@ -166,6 +188,7 @@ export class Player {
 
     setDebugVisibility(visible) {
         if (this.axisHelper) this.axisHelper.visible = visible;
+        if (this.boundaryLine) this.boundaryLine.visible = visible;
     }
 
     // ... (rest of class) ...
