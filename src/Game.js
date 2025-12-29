@@ -238,7 +238,9 @@ export class Game {
 
 
     animate() {
-        const delta = this.clock.getDelta();
+        let delta = this.clock.getDelta();
+        // Cap delta to prevent huge jumps on tab resume
+        if (delta > 0.1) delta = 0.1;
         const time = this.clock.getElapsedTime();
 
         // 1. Orbital updates
