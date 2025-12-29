@@ -26,6 +26,7 @@ export class ParticleSystem {
         // Scratch vectors for update loop
         this._tempInfluence = new THREE.Vector3();
         this._tempEffectiveVel = new THREE.Vector3();
+        this._tempTarget = new THREE.Vector3();
 
         this.initDust();
     }
@@ -144,6 +145,13 @@ export class ParticleSystem {
 
             p.mesh.position.addScaledVector(this._tempEffectiveVel, dt);
 
+            // Orient Particle to Face Velocity
+            // Target = Position + EffectiveVelocity
+            if (this._tempEffectiveVel.lengthSq() > 0.0001) {
+                this._tempTarget.copy(p.mesh.position).add(this._tempEffectiveVel);
+                p.mesh.lookAt(this._tempTarget);
+            }
+
             p.life -= dt;
 
             // Optional: Modify internal velocity?
@@ -181,6 +189,11 @@ export class ParticleSystem {
 
                     p.mesh.position.set(r * Math.cos(theta), 0, r * Math.sin(theta));
                     p.velocity.set(0, 0, 0);
+
+                    // Snap to target velocity immediately (avoid fade-in)
+                    velocityField.calculateTotalVelocity(p.mesh.position, celestialBodies, player, this._tempInfluence);
+                    if (!p.smoothedInfluence) p.smoothedInfluence = new THREE.Vector3();
+                    p.smoothedInfluence.copy(this._tempInfluence);
 
                     const minLife = this.config.minLife || 10;
                     const maxLife = this.config.maxLife || 60;
