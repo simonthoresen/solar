@@ -134,3 +134,10 @@ export const starfieldConfig = {
     minLife: 10,
     maxLife: 60
 };
+
+export const playerConfig = {
+    acceleration: 25,
+    maxSpeed: 250,
+    turnSpeed: 3,
+    deceleration: 3.0
+};

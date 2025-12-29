@@ -1,18 +1,22 @@
+
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ForceGrid } from './objects/ForceGrid.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Player } from './objects/Player.js';
 import { CelestialBody } from './objects/CelestialBody.js';
+import { Nebula } from './objects/Nebula.js'; // Added
 import { solarSystemConfig, starfieldConfig } from './config.js';
 
 export class Game {
     constructor() {
         this.scene = new THREE.Scene();
+        this.backgroundScene = new THREE.Scene(); // For Nebula
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
 
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.autoClear = false; // Important for multi-pass rendering
         document.body.appendChild(this.renderer.domElement);
 
         this.setupLights();
@@ -21,6 +25,7 @@ export class Game {
         this.forceGrid = new ForceGrid(this.scene);
         this.particleSystem = new ParticleSystem(this.scene, starfieldConfig);
         this.player = new Player(this.scene);
+        this.nebula = new Nebula(this.backgroundScene); // Initialize Nebula
 
         this.celestialBodies = [];
 
@@ -34,7 +39,7 @@ export class Game {
             // For now, config is ordered parents-first.
             // A simple check: if parentId exists but parent is null, it's an issue with order.
             if (data.parentId && !parent) {
-                console.warn(`Parent '${data.parentId}' not found for '${data.id}'. Check config order.`);
+                console.warn(`Parent '${data.parentId}' not found for '${data.id}'.Check config order.`);
             }
 
             const body = new CelestialBody(
@@ -117,45 +122,27 @@ export class Game {
         this.renderer.setAnimationLoop(this.animate.bind(this));
     }
 
+
     animate() {
         const delta = this.clock.getDelta();
         const time = this.clock.getElapsedTime();
 
         // 1. Orbital updates
         this.celestialBodies.forEach(body => {
-            body.update(delta);
+            body.update(delta, this.player.getPosition());
         });
 
         // 2. Player Forces & Update
-        // Calculate Force on Player (from Bodies, but NOT wake - wake is FROM player)
-        // Actually, player is affected by bodies. Wake affects others.
-        // We can use ForceGrid.calculateTotalForce for player, but pass 'null' as player arg to avoid self-wake force?
-        // Or simply: Player is affected by CelestialBodies.
         const playerForce = this.forceGrid.calculateTotalForce(
             this.player.getPosition(),
             this.celestialBodies,
-            null // Player ignores its own wake for movement? Usually yes.
+            null
         );
 
-        // Manual update for Player (since signature changed in Player.update to expect grid?)
-        // Let's modify Player.update to accept FORCE vector instead of Grid, or Mock the grid?
-        // Actually, let's fix Player.js update locally here or update Player.js signature?
-        // Optimally, I should update Player.js to accept `externalForce`.
-        // For now, I'll pass a mock object or just Update Player.js in Step 2.
-        // Wait, I didn't update Player.js `update` method signature in previous steps!
-        // Player.update(dt, forceGrid). existing code: const externalForce = forceGrid.getForceAtPosition(...)
-        // Since ForceGrid no longer has getForceAtPosition (I removed it!), this will crash.
-        // I need to update Player.js `update` method too! 
-        // I will do it in a follow up or assume I can hotfix it now.
-        // Actually, I can allow Game.js to pass a "Force Provider" or pass the vector directly.
-        // Let's assume I will update Player.js to accept the vector.
-
-        // I will use a temporary monkey-patch or better, update Player.js properly in next step.
-        // But for now, let's write Game.js assuming Player.update takes (dt, forceVector).
         this.player.update(delta, playerForce);
 
+
         // 3. Particle System Update
-        // Returns list of { position, force } for visualization
         const particleVizItems = this.particleSystem.update(delta, this.forceGrid, this.celestialBodies, this.player);
 
         // 4. Visualize Forces
@@ -167,13 +154,8 @@ export class Game {
         this.forceGrid.updateVisuals(allVizItems);
 
         // 5. Smoke Trails
-        // Spawn smoke if moving forward
         if (this.player.keys.w) {
-            // Spawn rate: maybe not every frame? 
-            // Every frame @ 60fps might be too dense, but we can try.
-            // Or random chance?
-            if (Math.random() < 0.5) { // 50% chance per frame => ~30/sec
-                // Use random position in wake
+            if (Math.random() < 0.5) {
                 this.particleSystem.spawnSmoke(this.player.getRandomWakePosition());
             }
         }
@@ -189,6 +171,11 @@ export class Game {
 
         this.lastPlayerPos.copy(currentPlayerPos);
 
+        // --- RENDER PASSES ---
+        this.renderer.clear();
+        this.nebula.update(this.camera.position);
+        this.renderer.render(this.backgroundScene, this.camera);
+        this.renderer.clearDepth();
         this.renderer.render(this.scene, this.camera);
     }
 

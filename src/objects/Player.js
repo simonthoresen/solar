@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { playerConfig } from '../config.js';
 
 export class Player {
     constructor(scene) {
@@ -6,8 +7,11 @@ export class Player {
         this.position = new THREE.Vector3(-5, 0, 0);
         this.velocity = new THREE.Vector3(0, 0, 0);
         this.rotation = 0; // Y-rotation angle
-        this.speed = 10;
-        this.turnSpeed = 3;
+
+        this.acceleration = playerConfig.acceleration;
+        this.maxSpeed = playerConfig.maxSpeed;
+        this.turnSpeed = playerConfig.turnSpeed;
+        this.deceleration = playerConfig.deceleration;
 
         this.keys = { w: false, a: false, d: false };
 
@@ -125,7 +129,7 @@ export class Player {
 
         // Thrust
         if (this.keys.w) {
-            this.velocity.add(forwardDir.multiplyScalar(this.speed * dt));
+            this.velocity.add(forwardDir.multiplyScalar(this.acceleration * dt));
             this.wake.visible = true;
         } else {
             this.wake.visible = false;
@@ -136,8 +140,14 @@ export class Player {
             this.velocity.add(externalForce.clone().multiplyScalar(dt));
         }
 
-        // Apply friction
-        this.velocity.multiplyScalar(0.95);
+        // Apply friction / deceleration
+        const decency = 1 - this.deceleration * dt;
+        this.velocity.multiplyScalar(decency > 0 ? decency : 0);
+
+        // Limit speed
+        if (this.velocity.length() > this.maxSpeed) {
+            this.velocity.setLength(this.maxSpeed);
+        }
 
         // Position update
         this.position.add(this.velocity.clone().multiplyScalar(dt));

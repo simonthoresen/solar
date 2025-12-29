@@ -116,7 +116,6 @@ export class ParticleSystem {
             // Reduce life
             p.life -= dt;
 
-            // Check lifecycle or boundary
             if (p.life <= 0 || p.mesh.position.lengthSq() > radiusSq) {
                 // Respawn at random position inside the field
                 const r = radius * Math.sqrt(Math.random());
@@ -163,16 +162,11 @@ export class ParticleSystem {
             p.life -= dt;
 
             // Fade out effect
-            // p.mesh.material is shared so we can't fade individual opacities easily without cloning materials.
-            // Since we use one material, we might skip fade or clone material per particle.
-            // Cloning material 200 times is okay-ish but maybe expensive for cheap particles.
-            // Let's stick to "pop" on death or just scale down? Scale down is cheap.
             const lifeRatio = p.life / p.maxLife; // 1 -> 0
-
-            // Use initialScale to shrink
             const currentScale = p.initialScale * lifeRatio;
             p.mesh.scale.setScalar(currentScale);
 
+            // Check collision
             // Check death
             if (p.life <= 0) {
                 this.scene.remove(p.mesh);
@@ -184,13 +178,9 @@ export class ParticleSystem {
             if (p.velocity.lengthSq() > 0.001) {
                 p.mesh.lookAt(p.mesh.position.clone().add(p.velocity));
             }
-
-            // Viz (optional: do we want to see force lines for smoke? maybe too cluttered)
-            // if (totalForce.lengthSq() > 0.01) {
-            //     itemsForViz.push({ position: p.mesh.position.clone(), force: totalForce });
-            // }
         }
 
         return itemsForViz;
     }
+
 }
