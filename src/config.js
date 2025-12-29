@@ -132,7 +132,8 @@ export const dustConfig = {
     fieldRadius: 72,
     dustColor: 0xffffff,
     minLife: 10,
-    maxLife: 60
+    maxLife: 60,
+    poolSize: 1500
 };
 
 export const playerConfig = {
