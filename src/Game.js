@@ -1,7 +1,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { ForceGrid } from './objects/ForceGrid.js';
+import { VelocityField } from './objects/VelocityField.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Player } from './objects/Player.js';
 import { CelestialBody } from './objects/CelestialBody.js';
@@ -22,7 +22,7 @@ export class Game {
         this.setupLights();
 
         // Components
-        this.forceGrid = new ForceGrid(this.scene);
+        this.velocityField = new VelocityField(this.scene);
         this.particleSystem = new ParticleSystem(this.scene, dustConfig);
         this.player = new Player(this.scene);
         this.nebula = new Nebula(this.backgroundScene); // Initialize Nebula
@@ -47,7 +47,7 @@ export class Game {
                 new THREE.Vector3(0, 0, 0),
                 data.radius,
                 data.color,
-                data.forceRadius,
+                data.rotationRadius,
                 parent,
                 data.orbitDistance,
                 data.orbitSpeed
@@ -182,8 +182,8 @@ export class Game {
             this.player.setDebugVisibility(this.debugState.player || this.debugState.axis);
         }
 
-        // Force Grid Arrows
-        this.forceGrid.setVisible(this.debugState.dustVelocity);
+        // Force Grid Arrows (Now Velocity Field Arrows)
+        this.velocityField.setVisible(this.debugState.dustVelocity);
 
         // Celestial Rings
         this.celestialBodies.forEach(body => {
@@ -232,26 +232,29 @@ export class Game {
             body.update(delta, this.player.getPosition());
         });
 
-        // 2. Player Forces & Update
-        const playerForce = this.forceGrid.calculateTotalForce(
+        // 2. Player Velocity Influence & Update
+        const playerInfluence = this.velocityField.calculateTotalVelocity(
             this.player.getPosition(),
             this.celestialBodies,
             null
         );
 
-        this.player.update(delta, playerForce);
+        this.player.update(delta, playerInfluence);
 
 
         // 3. Particle System Update
-        const particleVizItems = this.particleSystem.update(delta, this.forceGrid, this.celestialBodies, this.player);
+        const particleVizItems = this.particleSystem.update(delta, this.velocityField, this.celestialBodies, this.player);
 
-        // 4. Visualize Forces
+        // 4. Visualize Velocities
         let allVizItems = [...particleVizItems];
-        if (playerForce.lengthSq() > 0.01) {
-            allVizItems.push({ position: this.player.getPosition().clone(), force: playerForce });
+        if (playerInfluence.lengthSq() > 0.01) {
+            allVizItems.push({ position: this.player.getPosition().clone(), force: playerInfluence }); // Keep 'force' prop name in viz items for now or update? VelocityField expects {position, force} (based on old code). 
+            // Let's check VelocityField updateVisuals. It uses 'force' property. I should probably rename it to 'velocity' there, but leaving as 'force' inside the viz item object is fine as long as logic works. 
+            // Actually, let's keep 'force' for the visualizer item property to avoid breaking VelocityField.js 'updateVisuals' unless I view it again.
+            // I reviewed Result 4 earlier: "const forceLen = item.force.length();". So yes, it expects 'force'.
         }
 
-        this.forceGrid.updateVisuals(allVizItems);
+        this.velocityField.updateVisuals(allVizItems);
 
         // 5. Smoke Trails
         if (this.player.keys.w) {

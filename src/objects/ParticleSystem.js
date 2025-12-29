@@ -106,31 +106,43 @@ export class ParticleSystem {
         this.createParticle('smoke', jitterPos, velocity, life, scale, life);
     }
 
-    update(dt, forceGrid, celestialBodies, player) {
+    update(dt, velocityField, celestialBodies, player) {
         let itemsForViz = [];
         const radius = this.size;
         const radiusSq = radius * radius;
 
-        // Iterate backwards to allow removal for ALL particles if they die (smoke) or drift (logic check)
-        // Wait, 'dust' respawns, 'smoke' dies.
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
 
-            // Common Physics
-            const totalForce = forceGrid.calculateTotalForce(p.mesh.position, celestialBodies, player);
-            p.velocity.add(totalForce.clone().multiplyScalar(dt));
-            p.velocity.multiplyScalar(0.95); // Friction
-            p.mesh.position.add(p.velocity.clone().multiplyScalar(dt));
+            // Calculate Velocity Influence
+            const influence = velocityField.calculateTotalVelocity(p.mesh.position, celestialBodies, player);
+
+            // Physics Update: Position += (InternalVelocity + ExternalInfluence) * dt
+            // Note: Dust internal velocity is 0 usually. Smoke has random vel? 
+            // Actually smoke was initialized with 0 velocity too in previous code, just jittered pos?
+            // "velocity: new THREE.Vector3(0, 0, 0)"
+
+            // So:
+            const effectiveVelocity = p.velocity.clone().add(influence);
+
+            p.mesh.position.add(effectiveVelocity.multiplyScalar(dt));
 
             p.life -= dt;
 
-            // Orientation
-            if (p.velocity.lengthSq() > 0.001) {
-                p.mesh.lookAt(p.mesh.position.clone().add(p.velocity));
+            // Optional: Modify internal velocity?
+            // "add actual velocity vectors together"
+            // If we don't modify p.velocity, they simply move with the field.
+            // If they leave the field, they stop.
+            // Existing friction logic: p.velocity.multiplyScalar(0.95). 
+            // If we use influence, we don't need to accumulate acceleration into p.velocity.
+
+            // Orient
+            if (effectiveVelocity.lengthSq() > 0.001) {
+                p.mesh.lookAt(p.mesh.position.clone().add(effectiveVelocity));
             }
-            // Add to viz list
-            if (totalForce.lengthSq() > 0.01) {
-                itemsForViz.push({ position: p.mesh.position.clone(), force: totalForce });
+            // Add to viz list (using 'force' key for compat with VelocityField helper)
+            if (influence.lengthSq() > 0.01) {
+                itemsForViz.push({ position: p.mesh.position.clone(), force: influence });
             }
 
 

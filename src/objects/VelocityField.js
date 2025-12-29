@@ -1,31 +1,31 @@
 import * as THREE from 'three';
 
-export class ForceGrid {
+export class VelocityField {
     constructor(scene) {
         this.scene = scene;
         this.arrowHelperGroup = new THREE.Group();
         this.arrowHelperGroup.visible = false;
         this.scene.add(this.arrowHelperGroup);
 
-        // Cache arrows to avoid recreating meshes every frame
+        // Cache arrows
         this.arrows = [];
     }
 
-    // Calculate total force at a position from all bodies + player
-    calculateTotalForce(position, celestialBodies, player) {
-        let totalForce = new THREE.Vector3(0, 0, 0);
+    // Calculate total velocity influence at a position
+    calculateTotalVelocity(position, celestialBodies, player) {
+        let totalVel = new THREE.Vector3(0, 0, 0);
 
         // 1. Celestial Bodies
         for (const body of celestialBodies) {
-            totalForce.add(body.getForceAt(position));
+            totalVel.add(body.getVelocityAt(position));
         }
 
-        // 2. Player Wake
-        if (player) {
-            totalForce.add(player.getForceAt(position));
+        // 2. Player Wake (if applicable)
+        if (player && player.getVelocityAt) {
+            totalVel.add(player.getVelocityAt(position));
         }
 
-        return totalForce;
+        return totalVel;
     }
 
     // Update visuals: Draw arrows for list of items

@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
 export class CelestialBody {
-    constructor(scene, position, radius, color, forceRadius, parent = null, orbitDist = 0, orbitSpeed = 0) {
+    constructor(scene, position, radius, color, rotationRadius, parent = null, orbitDist = 0, orbitSpeed = 0) {
         this.scene = scene;
         this.radius = radius;
         this.color = color;
-        this.forceRadius = forceRadius;
+        this.rotationRadius = rotationRadius;
 
         this.parent = parent;
         this.orbitDist = orbitDist;
@@ -27,7 +27,7 @@ export class CelestialBody {
         this.velocity = new THREE.Vector3(0, 0, 0);
 
         this.initMesh();
-        this.initForceVisual();
+        this.initRotationVisual();
         this.initAxisVisual();
         this.initDirectionVisual();
         this.initPlayerLineVisual();
@@ -50,10 +50,10 @@ export class CelestialBody {
         this.scene.add(this.mesh);
     }
 
-    initForceVisual() {
+    initRotationVisual() {
         const curve = new THREE.EllipseCurve(
             0, 0,            // ax, aY
-            this.forceRadius, this.forceRadius,           // xRadius, yRadius
+            this.rotationRadius, this.rotationRadius,           // xRadius, yRadius
             0, 2 * Math.PI,  // aStartAngle, aEndAngle
             false,            // aClockwise
             0                 // aRotation
@@ -247,19 +247,28 @@ export class CelestialBody {
         }
     }
 
-    // Get force vector at specific position
-    getForceAt(worldPosition) {
+    // Get velocity influence at specific position
+    getVelocityAt(worldPosition) {
         const dist = worldPosition.distanceTo(this.position);
 
-        if (dist <= this.forceRadius && dist > 0.1) {
-            // Tangential force
+        if (dist <= this.rotationRadius && dist > 0.1) {
+            // Tangential velocity (rotation)
             // Vector from center to point
             const radial = worldPosition.clone().sub(this.position);
             // Tangent: Cross product of Radial x Up (0,1,0) for Clockwise
-            // (Previous was Up x Radial = CCW)
             const tangent = new THREE.Vector3().crossVectors(radial, new THREE.Vector3(0, 1, 0)).normalize();
 
-            return tangent.multiplyScalar(this.forceMagnitude);
+            const velocityInfluence = tangent.multiplyScalar(this.forceMagnitude); // Keeping forceMagnitude variable name or should I rename? 
+            // "forceMagnitude" was 5. Renaming variable 'forceMagnitude' to 'rotationSpeed' might be cleaner but requires strict find/replace. 
+            // I'll stick to 'forceMagnitude' for internal variable for now to avoid breaking if defined elsewhere, 
+            // but the method is getVelocityAt.
+
+            // Add planet's linear velocity (scaled by 0.5 per user request)
+            if (this.velocity) {
+                velocityInfluence.add(this.velocity.clone().multiplyScalar(0.5));
+            }
+
+            return velocityInfluence;
         }
         return new THREE.Vector3(0, 0, 0);
     }

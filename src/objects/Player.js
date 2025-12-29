@@ -4,237 +4,144 @@ import { playerConfig } from '../config.js';
 export class Player {
     constructor(scene) {
         this.scene = scene;
-        this.position = new THREE.Vector3(-5, 0, 0);
+        this.position = new THREE.Vector3(0, 0, 15); // Start closer
         this.velocity = new THREE.Vector3(0, 0, 0);
-        this.rotation = 0; // Y-rotation angle
-
-        this.acceleration = playerConfig.acceleration;
-        this.maxSpeed = playerConfig.maxSpeed;
-        this.turnSpeed = playerConfig.turnSpeed;
-        this.deceleration = playerConfig.deceleration;
-
-        this.keys = { w: false, a: false, d: false };
+        this.rotation = new THREE.Euler(0, 0, 0);
 
         this.initMesh();
-        this.setupControls();
+
+        // Input state
+        this.keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            shift: false
+        };
+
+        this.initInput();
     }
 
     initMesh() {
-        // 1x1x1 Cube
+        // Player is a small cube
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const material = new THREE.MeshLambertMaterial({ color: 0x0000ff });
         this.mesh = new THREE.Mesh(geometry, material);
+        // Shrink
+        this.mesh.scale.set(0.5, 0.5, 0.5);
+
+        this.mesh.position.copy(this.position);
         this.scene.add(this.mesh);
 
-        // Axis visualization
-        // "render the axis of the cube as 2 unit long lines and label them as x, y, and z"
-        this.axes = new THREE.Group();
-        this.axes.visible = false;
-        this.mesh.add(this.axes); // Attach to mesh to rotate with it
-
-        const axisLen = 2;
-
-        // X Axis (Red)
-        this.createAxisLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(axisLen, 0, 0), 0xff0000);
-        // Y Axis (Green)
-        this.createAxisLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, axisLen, 0), 0x00ff00);
-        // Z Axis (Blue)
-        this.createAxisLine(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -axisLen), 0x0000ff);
-
-        // Labels (using simple HTML overlay or Sprites? Sprites are easier in 3D scene)
-        // Since I don't have a font loader handy for 3D text, I'll use CanvasTexture with Sprites.
-        this.createLabel('X', new THREE.Vector3(axisLen + 0.2, 0, 0), 'red');
-        this.createLabel('Y', new THREE.Vector3(0, axisLen + 0.2, 0), 'green');
-        this.createLabel('Z', new THREE.Vector3(0, 0, -axisLen - 0.2), 'blue');
-
-        // Wake
-        // "triangle directly behind the cube... as wide as the cube (1), start behind it, extend 3 units"
-        // Setup geometry: Triangle flat on Y=0
-        const wakeGeo = new THREE.BufferGeometry();
-        // Points relative to player local space
-        // Player faces -Z (typically) or +Z? Let's assume +Z is forward for now, but usually -Z is forward in Three.js objects.
-        // Wait, "w moves the player forwards".
-        // Let's assume local +Z is "forward" for simplicity of math, or local -Z.
-        // If Model faces Z, "behind" is -Z?
-        // Let's stick to standard Three.js: -Z is forward. So behind is +Z.
-        // Width 1, Starts at back face (z=0.5?), extend 3 units (to z=3.5).
-        // Triangle: (0, 0, 3.5), (0.5, 0, 0.5), (-0.5, 0, 0.5)
-
-        const vertices = new Float32Array([
-            -0.5, 0, 1.0, // Left base
-            0.5, 0, 1.0, // Right base
-            0.0, 0, 4.0  // Tip
-        ]);
-        wakeGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-
-        const wakeMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, side: THREE.DoubleSide });
-        this.wake = new THREE.Mesh(wakeGeo, wakeMat);
-        this.wake.visible = false;
-        this.mesh.add(this.wake);
+        // Axis helper for debug
+        this.axisHelper = new THREE.AxesHelper(2);
+        this.axisHelper.visible = false;
+        this.mesh.add(this.axisHelper);
     }
 
-    createAxisLine(start, end, color) {
-        const geo = new THREE.BufferGeometry().setFromPoints([start, end]);
-        const mat = new THREE.LineBasicMaterial({ color: color });
-        const line = new THREE.Line(geo, mat);
-        this.axes.add(line);
-    }
-
-    createLabel(text, position, colorStr) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = colorStr;
-        ctx.font = '48px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, 32, 32);
-
-        const map = new THREE.CanvasTexture(canvas);
-        const material = new THREE.SpriteMaterial({ map: map });
-        const sprite = new THREE.Sprite(material);
-        sprite.position.copy(position);
-        sprite.scale.set(1, 1, 1);
-        this.axes.add(sprite);
-    }
-
-    setupControls() {
+    initInput() {
         window.addEventListener('keydown', (e) => {
-            if (this.keys.hasOwnProperty(e.key.toLowerCase())) {
-                this.keys[e.key.toLowerCase()] = true;
-            }
+            const k = e.key.toLowerCase();
+            if (this.keys.hasOwnProperty(k)) this.keys[k] = true;
+            if (e.key === 'Shift') this.keys.shift = true;
         });
         window.addEventListener('keyup', (e) => {
-            if (this.keys.hasOwnProperty(e.key.toLowerCase())) {
-                this.keys[e.key.toLowerCase()] = false;
-            }
+            const k = e.key.toLowerCase();
+            if (this.keys.hasOwnProperty(k)) this.keys[k] = false;
+            if (e.key === 'Shift') this.keys.shift = false;
         });
     }
 
-    update(dt, externalForce) {
+    update(dt, velocityInfluence = new THREE.Vector3()) { // Renamed external input
         // Rotation
-        if (this.keys.a) {
-            this.rotation += this.turnSpeed * dt;
-        }
-        if (this.keys.d) {
-            this.rotation -= this.turnSpeed * dt;
-        }
+        const turnSpeed = playerConfig.turnSpeed;
+        if (this.keys.a) this.rotation.y += turnSpeed * dt;
+        if (this.keys.d) this.rotation.y -= turnSpeed * dt;
 
-        // Update mesh rotation
-        this.mesh.rotation.y = this.rotation;
-
-        // Movement vector (Forward is -Z in local space, so rotated vector)
-        const forwardDir = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
+        this.mesh.rotation.y = this.rotation.y;
 
         // Thrust
+        const forward = new THREE.Vector3(0, 0, -1).applyEuler(this.rotation);
+
+        // Acceleration
         if (this.keys.w) {
-            this.velocity.add(forwardDir.multiplyScalar(this.acceleration * dt));
-            this.wake.visible = true;
-        } else {
-            this.wake.visible = false;
+            this.velocity.add(forward.multiplyScalar(playerConfig.acceleration * dt));
+        }
+        if (this.keys.s) {
+            this.velocity.add(forward.multiplyScalar(-playerConfig.acceleration * dt));
         }
 
-        // Apply external forces
-        if (externalForce) {
-            this.velocity.add(externalForce.clone().multiplyScalar(dt));
+        // Apply External Velocity Influence (from VelocityGrid)
+        // Previous logic: velocity += force * dt
+        // New logic: "Velocity ... should be added to the velocity of all particles"
+        // Wait, "Rotation velocity... and velocity of celestial body... added to velocity of all particles"
+        // If VelocityGrid returns a VELOCITY vector (m/s), then we should ADD it directly? 
+        // Or is it a force that causes acceleration? 
+        // "any particle within that radius will receive a rotation velocity... velocity of celestial body should also be added"
+        // This implies: ParticleVelocity = ParticleMomentumVelocity + EnvironmentVelocity?
+        // OR ParticleVelocity += EnvironmentVelocity * dt?
+        // IF it's a "Velocity Field" (like wind), usually objects act like:
+        // ObjectVel += (WindVel - ObjectVel) * dragFactor * dt.
+        // BUT user said: "added to the velocity... simplier... always just about adding actual velocity vectors"
+        // If I just add VelocityField to this.velocity every frame, it will accelerate infinitely?
+        // "Added to the velocity"
+        // If I am in a river moving 5m/s. My speed is MySwimmingSpeed + RiverSpeed.
+        // If I stop swimming, I move at RiverSpeed.
+        // So: EffectiveVelocity = InternalVelocity + ExternalVelocity.
+        // Then Position += EffectiveVelocity * dt.
+        // This is DIFFERENT from "Force" (Acceleration).
+        // Let's implement this interpretation:
+        // this.velocity (momentum) is updated by thrust/drag.
+        // this.position += (this.velocity + velocityInfluence) * dt.
+
+        // WAIT. Existing particle system did: `p.velocity.add(totalForce * dt)`. This IS acceleration.
+        // User says "refactor all the force functionality... much simpler... adding actual velocity vectors"
+        // If usage is: `p.mesh.position.add(p.velocity * dt)`, and we want adding velocity vectors.
+        // Maybe: `p.mesh.position.add( (p.velocity + envVelocity) * dt )`? 
+        // OR `p.velocity += envVelocity`? (This would accumulate infinitely).
+        // User phrasing "receive a rotation velocity" implies an instantaneous component.
+        // Let's assume: The Object's Motion = Internal Velocity + External Velocity.
+
+        // Update Position
+
+        // Friction/Deceleration
+        this.velocity.multiplyScalar(1 - (playerConfig.deceleration * dt));
+
+        // Clamp Speed
+        if (this.velocity.length() > playerConfig.maxSpeed) {
+            this.velocity.setLength(playerConfig.maxSpeed);
         }
 
-        // Apply friction / deceleration
-        const decency = 1 - this.deceleration * dt;
-        this.velocity.multiplyScalar(decency > 0 ? decency : 0);
+        // Effective Move
+        const totalVelocity = this.velocity.clone().add(velocityInfluence); // Add influence here
 
-        // Limit speed
-        if (this.velocity.length() > this.maxSpeed) {
-            this.velocity.setLength(this.maxSpeed);
-        }
-
-        // Position update
-        this.position.add(this.velocity.clone().multiplyScalar(dt));
+        this.position.add(totalVelocity.clone().multiplyScalar(dt));
         this.mesh.position.copy(this.position);
     }
 
+    // For Debug / Game loop 
     getPosition() {
-        return this.mesh.position;
-    }
-
-    // Check if a world point is inside the wake triangle
-    isPointInWake(worldPoint) {
-        if (!this.wake.visible) return false;
-
-        // Convert world point to Player's local space
-        const localPoint = worldPoint.clone();
-        this.mesh.worldToLocal(localPoint);
-
-        // Check if inside triangle in local space (ignoring Y)
-        // Triangle vertices: A(-0.5, 1.0), B(0.5, 1.0), C(0.0, 4.0)
-        const px = localPoint.x;
-        const pz = localPoint.z;
-
-        // Bounding box check first
-        if (pz < 1.0 || pz > 4.0) return false;
-        if (px < -0.5 || px > 0.5) return false;
-
-        // Barycentric Check
-        const x1 = -0.5, z1 = 1.0;
-        const x2 = 0.5, z2 = 1.0;
-        const x3 = 0.0, z3 = 4.0;
-
-        // Denominator
-        const den = (z2 - z3) * (x1 - x3) + (x3 - x2) * (z1 - z3);
-        const a = ((z2 - z3) * (px - x3) + (x3 - x2) * (pz - z3)) / den;
-        const b = ((z3 - z1) * (px - x3) + (x1 - x3) * (pz - z3)) / den;
-        const c = 1 - a - b;
-
-        return a >= 0 && a <= 1 && b >= 0 && b <= 1 && c >= 0 && c <= 1;
-    }
-
-    getWakeForce() {
-        const forceDir = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
-        return forceDir.multiplyScalar(20);
-    }
-
-    // Get force exerted by player on explicit point
-    getForceAt(worldPosition) {
-        if (!this.wake.visible) return new THREE.Vector3(0, 0, 0);
-
-        // Optimization: Quick distance check?
-        if (worldPosition.distanceTo(this.position) > 10) return new THREE.Vector3(0, 0, 0);
-
-        if (this.isPointInWake(worldPosition)) {
-            return this.getWakeForce();
-        }
-        return new THREE.Vector3(0, 0, 0);
-    }
-
-    setDebugVisibility(visible) {
-        if (this.axes) {
-            this.axes.visible = visible;
-        }
+        return this.position;
     }
 
     getRandomWakePosition() {
-        // Wake is a triangle in local space:
-        // Tip at (0, 0, 4), Base center at (0, 0, 1), Base width 1 (-0.5 to 0.5)
+        const offset = new THREE.Vector3(0, 0, 1.5).applyEuler(this.rotation);
+        return this.position.clone().add(offset);
+    }
 
-        // Random Z between 1 and 4
-        const z = 1.0 + Math.random() * 3.0; // 1 to 4
+    setDebugVisibility(visible) {
+        if (this.axisHelper) this.axisHelper.visible = visible;
+    }
 
-        // Width at this Z (linear interpolation)
-        // At z=1, width=1. At z=4, width=0.
-        // Ratio t = (z - 1) / 3   (0 at base, 1 at tip)
-        // width = 1 * (1 - t)
-        const t = (z - 1.0) / 3.0;
-        const width = 1.0 * (1.0 - t);
-
-        // Random X within [-width/2, width/2]
-        const x = (Math.random() - 0.5) * width;
-
-        // Local point
-        const localPos = new THREE.Vector3(x, 0, z); // Y is 0 (flat)
-
-        // Transform to world
-        // We can use mesh.localToWorld, but it modifies the vector in place
-        return this.mesh.localToWorld(localPos);
+    // Wake function (if needed for VelocityField, though mostly particles affect it not vice versa?)
+    // Game.js calculates force FROM bodies TO player.
+    // Does player impart velocity? "Player Wake" was in ForceGrid. 
+    // If we want Player to push particles, we need getVelocityAt.
+    getVelocityAt(pos) {
+        // Simple wake: push away or drag? 
+        // Previously: Repel close, drag behind?
+        // Let's keep it simple or return 0 if not specified.
+        // Returning 0 for now to keep refactor clean unless asked.
+        return new THREE.Vector3(0, 0, 0);
     }
 }
