@@ -55,6 +55,20 @@ export class Game {
 
             bodiesMap.set(data.id, body);
             this.celestialBodies.push(body);
+
+            // Special handling for Sun
+            if (data.id === 'sun') {
+                const sunLight = new THREE.PointLight(0xffffff, 2500, 0); // High intensity (2500), Infinite range (0)
+                body.mesh.add(sunLight);
+
+                // Make Sun mesh emissive so it looks bright even if not lit by itself (which works for Basic/Lambert, but ensuring visuals)
+                // CelestialBody uses MeshLambertMaterial (based on previous edits/assumptions, or let's verify).
+                // If it uses Lambert, it reacts to light. Emissive helps it look like a source.
+                if (body.mesh.material) {
+                    body.mesh.material.emissive = new THREE.Color(0xffff00);
+                    body.mesh.material.emissiveIntensity = 1.0;
+                }
+            }
         });
 
         this.setupCamera();
@@ -195,9 +209,9 @@ export class Game {
         const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
         this.scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(5, 10, 7);
-        this.scene.add(directionalLight);
+        // const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        // directionalLight.position.set(5, 10, 7);
+        // this.scene.add(directionalLight);
     }
 
     setupCamera() {
