@@ -288,16 +288,26 @@ export class CelestialBody {
 
     // Get velocity influence at specific position
     // Optimized to reduce allocations. Returns target vector.
+    // Get velocity influence at specific position
+    // Optimized to reduce allocations. Returns target vector.
     getVelocityAt(worldPosition, target = new THREE.Vector3()) {
-        const dist = worldPosition.distanceTo(this.position);
+        const distSq = worldPosition.distanceToSquared(this.position);
+        const radiusSq = this.rotationRadius * this.rotationRadius;
 
-        if (dist <= this.rotationRadius && dist > 0.1) {
+        if (distSq <= radiusSq && distSq > 0.01) {
             // Tangential velocity (rotation)
             // Vector from center to point
             _tempRadial.subVectors(worldPosition, this.position);
+            _tempRadial.y = 0; // Enforce Flat
 
             // Tangent: Cross product of Radial x Up (0,1,0) for Clockwise
-            _tempTangent.crossVectors(_tempRadial, _tempUp).normalize();
+            // Since we are strictly 2D XZ, Tangent of (x, 0, z) is (z, 0, -x) or similar?
+            // Cross (x, 0, z) x (0, 1, 0)
+            // x = (0*0 - z*1) = -z
+            // y = (z*0 - x*0) = 0
+            // z = (x*1 - 0*0) = x
+            // So Tangent is (-z, 0, x)
+            _tempTangent.set(- _tempRadial.z, 0, _tempRadial.x).normalize();
 
             // Store result in target
             target.copy(_tempTangent).multiplyScalar(this.forceMagnitude);
@@ -307,9 +317,12 @@ export class CelestialBody {
             // Surface (dist = radius) -> 100%
             // Boundary (dist = rotationRadius) -> 0%
             if (this.velocity) {
-                // Calculate factor t [0, 1]
-                // dist is between radius and rotationRadius (mostly, if < radius treat as 1?)
-                // t = 1 - (dist - radius) / (rotationRadius - radius)
+                // We need actual distance for linear interpolation, sadly sqrt is needed here
+                // UNLESS we use squared interpolation, which changes the falloff curve.
+                // Linear falloff is expected. `Math.sqrt` is acceptable for objects IN range.
+                // The optimization is mostly skipping objects OUT of range.
+
+                const dist = Math.sqrt(distSq);
 
                 let t = 0;
                 const range = this.rotationRadius - this.radius;
@@ -326,6 +339,9 @@ export class CelestialBody {
                 // Add scaled velocity
                 target.addScaledVector(this.velocity, t);
             }
+
+            // Final Y enforcement
+            target.y = 0;
 
             return target;
         }

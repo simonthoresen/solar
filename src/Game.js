@@ -242,7 +242,13 @@ export class Game {
 
 
         // 3. Particle System Update
-        const particleVizItems = this.particleSystem.update(delta, this.velocityField, this.celestialBodies, this.player);
+        const particleVizItems = this.particleSystem.update(
+            delta,
+            this.velocityField,
+            this.celestialBodies,
+            this.player,
+            this.debugState.dustVelocity // Pass debug flag
+        );
 
         // 4. Visualize Velocities
         let allVizItems = [...particleVizItems];
