@@ -62,7 +62,7 @@ export class ParticleSystem {
         geometry.rotateX(Math.PI / 2);
 
         // Use config color w/ fallback
-        const color = this.config.starColor !== undefined ? this.config.starColor : 0xffffff;
+        const color = this.config.dustColor !== undefined ? this.config.dustColor : 0xffffff;
         const material = new THREE.MeshBasicMaterial({ color: color });
 
         const radius = this.size;

@@ -264,21 +264,21 @@ export class CelestialBody {
         return new THREE.Vector3(0, 0, 0);
     }
 
-    setDebugVisibility(visible) {
+    setDebugVisibility(state) {
         if (this.ring) {
-            this.ring.visible = visible;
+            this.ring.visible = state.rings;
         }
         if (this.axisLine) {
-            this.axisLine.visible = visible;
+            this.axisLine.visible = state.axis;
         }
         if (this.directionLine) {
-            this.directionLine.visible = visible;
+            this.directionLine.visible = state.planetToParent;
         }
         if (this.playerLine) {
-            this.playerLine.visible = visible;
+            this.playerLine.visible = state.planetToPlayer;
         }
         if (this.velocityLine) {
-            this.velocityLine.visible = visible;
+            this.velocityLine.visible = state.planetVelocity;
         }
     }
 }

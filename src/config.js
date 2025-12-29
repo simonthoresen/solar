@@ -127,10 +127,10 @@ export const solarSystemConfig = [
     }
 ];
 
-export const starfieldConfig = {
+export const dustConfig = {
     count: 1024,
     fieldRadius: 72,
-    starColor: 0xffffff,
+    dustColor: 0xffffff,
     minLife: 10,
     maxLife: 60
 };

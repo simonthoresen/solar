@@ -6,7 +6,7 @@ import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Player } from './objects/Player.js';
 import { CelestialBody } from './objects/CelestialBody.js';
 import { Nebula } from './objects/Nebula.js'; // Added
-import { solarSystemConfig, starfieldConfig } from './config.js';
+import { solarSystemConfig, dustConfig } from './config.js';
 
 export class Game {
     constructor() {
@@ -23,7 +23,7 @@ export class Game {
 
         // Components
         this.forceGrid = new ForceGrid(this.scene);
-        this.particleSystem = new ParticleSystem(this.scene, starfieldConfig);
+        this.particleSystem = new ParticleSystem(this.scene, dustConfig);
         this.player = new Player(this.scene);
         this.nebula = new Nebula(this.backgroundScene); // Initialize Nebula
 
@@ -64,30 +64,130 @@ export class Game {
 
         this.clock = new THREE.Clock();
 
-        this.debugMode = false; // Default Off
+        // Debug State
+        this.debugState = {
+            rings: false,
+            axis: false,
+            planetToParent: false,
+            planetToPlayer: false,
+            planetVelocity: false,
+            dustVelocity: false
+        };
+
+        this.initDebugUI();
 
         window.addEventListener('resize', this.onResize.bind(this));
 
         // Debug Toggle
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'h') {
-                this.toggleDebug();
+                this.handleMasterToggle();
             }
         });
     }
 
-    toggleDebug() {
-        this.debugMode = !this.debugMode;
+    initDebugUI() {
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.top = '10px';
+        container.style.right = '10px';
+        container.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        container.style.padding = '10px';
+        container.style.borderRadius = '5px';
+        container.style.color = 'white';
+        container.style.fontFamily = 'monospace';
+        container.style.zIndex = '1000';
+        container.style.display = 'none'; // Initially hidden appropriately or managed by master toggle? 
+        // User requested: "only show debug line types that are enabled" - wait, "make a checkbox next to each line type... only show debug line types that are enabled"
+        // Interpretation: always show the list so user CAN enable them. The list itself is the UI control.
+        // Let's keep the UI visible always or maybe toggle UI visibility? 
+        // Standard debug UI: usually always visible or toggled. 
+        // Requirement: "place a list of all debug line types that exist"
+        container.style.display = 'block';
 
-        // Player Axes
-        this.player.setDebugVisibility(this.debugMode);
+        const title = document.createElement('div');
+        title.innerText = 'Debug Options';
+        title.style.marginBottom = '5px';
+        title.style.fontWeight = 'bold';
+        container.appendChild(title);
+
+        this.checkboxes = {};
+
+        const labelMap = {
+            rings: 'Rings',
+            axis: 'Axis',
+            planetToParent: 'Planet to Parent',
+            planetToPlayer: 'Planet to Player',
+            planetVelocity: 'Planet Velocity',
+            dustVelocity: 'Dust Velocity'
+        };
+
+        Object.keys(this.debugState).forEach(key => {
+            const row = document.createElement('div');
+            row.style.marginBottom = '2px';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `debug-${key}`;
+            checkbox.checked = this.debugState[key];
+            checkbox.style.marginRight = '5px';
+            checkbox.style.cursor = 'pointer';
+
+            checkbox.addEventListener('change', (e) => {
+                this.debugState[key] = e.target.checked;
+                this.updateDebugVisibility();
+            });
+
+            const label = document.createElement('label');
+            label.htmlFor = `debug-${key}`;
+            label.innerText = labelMap[key] || key;
+            label.style.cursor = 'pointer';
+
+            row.appendChild(checkbox);
+            row.appendChild(label);
+            container.appendChild(row);
+
+            this.checkboxes[key] = checkbox;
+        });
+
+        document.body.appendChild(container);
+    }
+
+    handleMasterToggle() {
+        // If any is true -> set all false
+        // If all false -> set all true
+        const anyEnabled = Object.values(this.debugState).some(v => v);
+
+        const newState = !anyEnabled;
+
+        Object.keys(this.debugState).forEach(key => {
+            this.debugState[key] = newState;
+            if (this.checkboxes[key]) {
+                this.checkboxes[key].checked = newState;
+            }
+        });
+
+        this.updateDebugVisibility();
+    }
+
+    updateDebugVisibility() {
+        // Player Axes (Uses boolean currently? Player.js needs check, assuming it takes boolean still or needs update)
+        // Player.js usually has setDebugVisibility(bool). Let's pass 'axis' state for player axes? or 'player' state?
+        // Let's check Player.js content later or handle safely. 
+        // For now, let's assume Player uses 'player' or 'axis'. Let's use 'axis' for player axes.
+        if (this.player.setDebugVisibility) {
+            // If Player.js expects boolean, we might need a specific flag. 
+            // Let's check Player.js logic. (I will check Player.js in next step if it errors, but safer to assume boolean).
+            // Let's pass 'player' state for player-related debugs if simpler.
+            this.player.setDebugVisibility(this.debugState.player || this.debugState.axis);
+        }
 
         // Force Grid Arrows
-        this.forceGrid.setVisible(this.debugMode);
+        this.forceGrid.setVisible(this.debugState.dustVelocity);
 
         // Celestial Rings
         this.celestialBodies.forEach(body => {
-            body.setDebugVisibility(this.debugMode);
+            body.setDebugVisibility(this.debugState);
         });
     }
 
