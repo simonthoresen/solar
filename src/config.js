@@ -142,6 +142,10 @@ export const playerConfig = {
     turnSpeed: 3,
     deceleration: 3.0,
     smokeEmissionInterval: 0.01,
+    vortexRadius: 4.0,
     vortexRadius: 3.0,
-    vortexOffsetZ: 2.5
+    vortexOffsetZ: 3.5,
+    hullColor: 0x4488ff,
+    modelScale: 1.0,
+    wakeOffsetZ: 1.5
 };

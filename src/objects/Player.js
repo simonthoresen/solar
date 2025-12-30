@@ -30,10 +30,81 @@ export class Player {
     }
 
     initMesh() {
-        // Player is a small cube
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshLambertMaterial({ color: 0x0000ff });
-        this.mesh = new THREE.Mesh(geometry, material);
+        // Player is a Group containing two tetrahedrons
+        this.mesh = new THREE.Group();
+
+        // 1. Hull (Bottom, larger, configurable color)
+        // Shape: Tetrahedron with flat top on XZ plane, pointing down/forward?
+        // Let's make it look like a boat.
+        // Base triangle on XZ plane. Tip at -Y.
+        // Forward is -Z.
+        // Base: (0, 0, -Front), (-Side, 0, +Back), (+Side, 0, +Back) ?
+
+        const scale = playerConfig.modelScale || 1.0;
+        const hullColor = playerConfig.hullColor !== undefined ? playerConfig.hullColor : 0x4488ff;
+
+        // Custom BufferGeometry helper
+        function createTetrahedron(radius, height, isTop, color) {
+            const geom = new THREE.BufferGeometry();
+
+            // Vertices
+            // We want a "speed boat" look.
+            // Let's define specific points relative to size.
+            // Length L, Width W, Height H.
+            // Forward is -Z.
+
+            const len = radius * 1.5;
+            const wid = radius * 0.8;
+            const h = height;
+
+            // Base Triangle on Y=0
+            // V1: Front Tip (0, 0, -len)
+            // V2: Back Left (-wid, 0, len)
+            // V3: Back Right (wid, 0, len)
+            const vFront = [0, 0, -len];
+            const vBackL = [-wid, 0, len * 0.5]; // Slightly forward of full back for "arrow" shape
+            const vBackR = [wid, 0, len * 0.5];
+
+            // V4: Apex
+            // If Top: (0, h, 0) or maybe slightly back?
+            // If Bottom: (0, -h, 0)
+            const y = isTop ? h : -h;
+            // Shift apex back for speed look?
+            const zApex = 0;
+            const vApex = [0, y, zApex];
+
+            const vertices = new Float32Array([
+                // Bottom/Deck Face (V1, V2, V3) - Actually handled by side faces usually, but let's include all faces
+                // Face 1: Front-Left-Apex
+                ...vFront, ...vBackL, ...vApex,
+                // Face 2: Front-Right-Apex
+                ...vFront, ...vApex, ...vBackR, // Reordered for normal?
+                // Face 3: Back-Apex
+                ...vBackL, ...vBackR, ...vApex,
+                // Face 4: Deck (V1, V2, V3) - Often hidden inside if we align two shapes
+                ...vFront, ...vBackR, ...vBackL
+            ]);
+
+            // Quick normals recalc needed?
+            geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            geom.computeVertexNormals();
+
+            const mat = new THREE.MeshLambertMaterial({ color: color });
+            return new THREE.Mesh(geom, mat);
+        }
+
+        const hullHeight = 0.5 * scale;
+        const hullSize = 1.0 * scale;
+        this.hullMesh = createTetrahedron(hullSize, hullHeight, false, hullColor);
+        this.mesh.add(this.hullMesh);
+
+        // 2. Cabin (Top, smaller, always white)
+        const cabinHeight = 0.4 * scale;
+        const cabinSize = 0.6 * scale; // Smaller radius
+        this.cabinMesh = createTetrahedron(cabinSize, cabinHeight, true, 0xffffff);
+        // Shift cabin slightly back?
+        this.cabinMesh.position.z = 0.2 * scale;
+        this.mesh.add(this.cabinMesh);
 
         this.mesh.position.copy(this.position);
         this.scene.add(this.mesh);
@@ -234,7 +305,9 @@ export class Player {
         // Center should be shifted so tip is near 0.
         // Shift +height/2 in Z?
         // Let's rely on translate.
-        geometry.translate(0, 0, height / 2 + 0.5); // Move behind nicely
+
+        const wakeOffset = playerConfig.wakeOffsetZ !== undefined ? playerConfig.wakeOffsetZ : 0.5;
+        geometry.translate(0, 0, height / 2 + wakeOffset); // Move behind nicely
 
         const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 }); // Increased opacity
         this.wakeMesh = new THREE.Mesh(geometry, material);
@@ -242,9 +315,9 @@ export class Player {
 
         // Add PointLight for glow
         this.wakeLight = new THREE.PointLight(0xffff00, 2, 10);
-        // Cone geometry was translated by (0, 0, height/2 + 0.5)
+        // Cone geometry was translated by (0, 0, height/2 + wakeOffset)
         // So center of visual cone is at that Z.
-        this.wakeLight.position.set(0, 0, height / 2 + 0.5);
+        this.wakeLight.position.set(0, 0, height / 2 + wakeOffset);
         this.wakeMesh.add(this.wakeLight);
 
         this.mesh.add(this.wakeMesh);
