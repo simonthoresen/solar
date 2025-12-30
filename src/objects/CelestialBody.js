@@ -5,7 +5,7 @@ const _tempTangent = new THREE.Vector3();
 const _tempUp = new THREE.Vector3(0, 1, 0);
 
 export class CelestialBody {
-    constructor(scene, position, sizeRadius, color, rotationRadius, parent = null, orbitDist = 0, orbitSpeed = 0) {
+    constructor(scene, position, sizeRadius, color, rotationRadius, parent = null, orbitDist = 0, orbitSpeed = 0, rotationSpeed = 0.5) {
         this.scene = scene;
         this.sizeRadius = sizeRadius;
         this.color = color;
@@ -25,8 +25,8 @@ export class CelestialBody {
         }
 
         // Vortex parameters
-        this.forceMagnitude = 5; // Configurable strength
-        this.rotationSpeed = 0.5; // Visual rotation
+        this.rotationSpeed = rotationSpeed; // Visual rotation
+        this.forceMagnitude = this.rotationSpeed * 10.0; // Scaled by rotation speed
 
         this.velocity = new THREE.Vector3(0, 0, 0);
 

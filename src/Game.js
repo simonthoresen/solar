@@ -50,7 +50,8 @@ export class Game {
                 data.rotationRadius,
                 parent,
                 data.orbitDistance,
-                data.orbitSpeed
+                data.orbitSpeed,
+                data.rotationSpeed
             );
 
             bodiesMap.set(data.id, body);

@@ -6,124 +6,138 @@ export const solarSystemConfig = [
         rotationRadius: 450,
         parentId: null,
         orbitDistance: 0,
-        orbitSpeed: 0
+        orbitSpeed: 0,
+        rotationSpeed: 0.5
     },
     {
         id: 'mercury',
         sizeRadius: 10.0,
-        color: 0x00ff00, //0xaaaaaa,
-        rotationRadius: 20,
+        color: 0xaaaaaa,
+        rotationRadius: 35,
         parentId: 'sun',
         orbitDistance: 50,
-        orbitSpeed: 0.25
+        orbitSpeed: 0.25,
+        rotationSpeed: 1
     },
     {
         id: 'venus',
         sizeRadius: 10.0,
         color: 0xffaa00,
-        rotationRadius: 20,
+        rotationRadius: 35,
         parentId: 'sun',
         orbitDistance: 100,
-        orbitSpeed: 0.15
+        orbitSpeed: 0.15,
+        rotationSpeed: 0.5
     },
     {
         id: 'earth',
         sizeRadius: 10.0,
         color: 0x0000ff,
-        rotationRadius: 20,
+        rotationRadius: 35,
         parentId: 'sun',
         orbitDistance: 150,
-        orbitSpeed: 0.3
+        orbitSpeed: 0.3,
+        rotationSpeed: 2.5
     },
     {
         id: 'moon',
         sizeRadius: 5.0,
         color: 0x888888,
-        rotationRadius: 1,
+        rotationRadius: 15,
         parentId: 'earth',
         orbitDistance: 20.0,
-        orbitSpeed: 1.0
+        orbitSpeed: 1.0,
+        rotationSpeed: 0.5
     },
     {
         id: 'mars',
         sizeRadius: 10.0,
         color: 0xff0000,
-        rotationRadius: 20,
+        rotationRadius: 35,
         parentId: 'sun',
         orbitDistance: 200,
-        orbitSpeed: 0.2
+        orbitSpeed: 0.2,
+        rotationSpeed: 1.5
     },
     {
         id: 'phobos',
         sizeRadius: 5.0,
         color: 0x666666,
-        rotationRadius: 0.5,
+        rotationRadius: 15,
         parentId: 'mars',
         orbitDistance: 20.0,
-        orbitSpeed: 0.4
+        orbitSpeed: 1.4,
+        rotationSpeed: 1.2
     },
     {
         id: 'deimos',
         sizeRadius: 5.0,
         color: 0x555555,
-        rotationRadius: 0.5,
+        rotationRadius: 15,
         parentId: 'mars',
         orbitDistance: 35.0,
-        orbitSpeed: 0.7
+        orbitSpeed: 0.7,
+        rotationSpeed: 1.4
     },
     {
         id: 'jupiter',
         sizeRadius: 10.0,
         color: 0xffaa88,
-        rotationRadius: 20,
+        rotationRadius: 35,
         parentId: 'sun',
         orbitDistance: 250,
-        orbitSpeed: 0.4
+        orbitSpeed: 0.4,
+        rotationSpeed: 2.0
     },
     {
         id: 'io',
         sizeRadius: 5.0,
         color: 0xffffaa,
-        rotationRadius: 1.5,
+        rotationRadius: 15,
         parentId: 'jupiter',
         orbitDistance: 20.0,
-        orbitSpeed: 5.0
+        orbitSpeed: 5.0,
+        rotationSpeed: 0.8
     },
     {
         id: 'europa',
         sizeRadius: 5.0,
         color: 0xaaffff,
-        rotationRadius: 1.5,
+        rotationRadius: 15,
         parentId: 'jupiter',
         orbitDistance: 35.0,
-        orbitSpeed: 4.0
+        orbitSpeed: 4.0,
+        rotationSpeed: 0.6
     },
     {
         id: 'saturn',
         sizeRadius: 10.0,
         color: 0xeeddcc,
-        rotationRadius: 20,
+        rotationRadius: 30,
         parentId: 'sun',
         orbitDistance: 300,
-        orbitSpeed: 0.3
+        orbitSpeed: 0.3,
+        rotationSpeed: 0.9
     },
     {
         id: 'uranus',
         sizeRadius: 10.0,
         color: 0xaabbff,
-        rotationRadius: 20,
+        rotationRadius: 30,
         parentId: 'sun',
         orbitDistance: 350,
-        orbitSpeed: 0.2
+        orbitSpeed: 0.2,
+        rotationSpeed: 0.7
     },
     {
         id: 'neptune',
         sizeRadius: 10.0,
         color: 0x4466ff,
-        rotationRadius: 20,
+        rotationRadius: 30,
         parentId: 'sun',
         orbitDistance: 400,
-        orbitSpeed: 0.15
+        orbitSpeed: 0.15,
+        rotationSpeed: 0.8
     }
 ];
 
