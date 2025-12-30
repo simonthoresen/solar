@@ -81,8 +81,9 @@ export class Player {
         const material = new THREE.LineBasicMaterial({ color: 0xff00ff }); // Magenta for vortex
         this.vortexLine = new THREE.Line(geometry, material);
 
-        // Vortex is at local (0, 0, 1.5).
-        this.vortexLine.position.set(0, 0, 1.5);
+        // Vortex is at local (0, 0, offset).
+        const offsetZ = playerConfig.vortexOffsetZ || 1.5;
+        this.vortexLine.position.set(0, 0, offsetZ);
         this.vortexLine.rotation.x = -Math.PI / 2;
         this.vortexLine.visible = false;
         this.mesh.add(this.vortexLine);
@@ -172,15 +173,15 @@ export class Player {
         // Engine is at local (0, 0, 1.5) rotated by ship rotation.
         // Assuming box is centered at 0,0,0. 
         // 1.5 is behind the ship (since forward is -Z).
-        // Wait, forward is -Z. So back is +Z.
-        // Box is size 1. So back face is at +0.5.
         // 1.5 is a bit further back. 
-        const offset = new THREE.Vector3(0, 0, 1.5).applyEuler(this.rotation);
+        const offsetZ = playerConfig.vortexOffsetZ || 1.5;
+        const offset = new THREE.Vector3(0, 0, offsetZ).applyEuler(this.rotation);
         return this.position.clone().add(offset);
     }
 
     getRandomWakePosition() {
-        const offset = new THREE.Vector3(0, 0, 1.5).applyEuler(this.rotation);
+        const offsetZ = playerConfig.vortexOffsetZ || 1.5;
+        const offset = new THREE.Vector3(0, 0, offsetZ).applyEuler(this.rotation);
         return this.position.clone().add(offset);
     }
 
