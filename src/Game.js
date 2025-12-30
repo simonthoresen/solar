@@ -287,8 +287,7 @@ export class Game {
                 this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, this.camera);
             }
         } else {
-            this.smokeAccumulator = playerConfig.smokeEmissionInterval; // Valid to spawn immediately on next press? Or reset to 0? 
-            // Let's reset to interval so it spawns immediately when pressing W
+            // Reset to interval so it spawns immediately when pressing W
             this.smokeAccumulator = playerConfig.smokeEmissionInterval;
         }
 

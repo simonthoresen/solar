@@ -15,7 +15,6 @@ export class ParticleSystem {
         this.dustCount = config.count || 1024;
         this.dustGeometry = new THREE.CircleGeometry(1, 12);
         this.dustGeometry = new THREE.CircleGeometry(1, 12);
-        // this.dustGeometry.rotateX(Math.PI / 2); // Removed for billboard
         const dustColor = this.config.dustColor !== undefined ? this.config.dustColor : 0xffffff;
         this.dustMaterial = new THREE.MeshBasicMaterial({ color: dustColor });
 
@@ -31,7 +30,6 @@ export class ParticleSystem {
         // --- Smoke System (Instanced) ---
         this.smokeMaxCount = config.poolSize || 1500;
         this.smokeGeometry = new THREE.CircleGeometry(1, 12);
-        // this.smokeGeometry.rotateX(Math.PI / 2); // Removed for billboard
         this.smokeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
 
         this.smokeMesh = new THREE.InstancedMesh(this.smokeGeometry, this.smokeMaterial, this.smokeMaxCount);

@@ -288,8 +288,6 @@ export class CelestialBody {
 
     // Get velocity influence at specific position
     // Optimized to reduce allocations. Returns target vector.
-    // Get velocity influence at specific position
-    // Optimized to reduce allocations. Returns target vector.
     getVelocityAt(worldPosition, target = new THREE.Vector3()) {
         const distSq = worldPosition.distanceToSquared(this.position);
         const radiusSq = this.rotationRadius * this.rotationRadius;

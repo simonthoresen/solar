@@ -4,7 +4,6 @@ import { playerConfig, dustConfig } from '../config.js';
 // Scratch vectors for wake calculation
 const _tempWakeDiff = new THREE.Vector3();
 const _tempWakeLocal = new THREE.Vector3();
-const _tempWakeForward = new THREE.Vector3(0, 0, -1); // Player forward is -Z
 
 export class Player {
     constructor(scene) {
@@ -22,7 +21,6 @@ export class Player {
             w: false,
             a: false,
             s: false,
-            d: false,
             d: false,
             shift: false,
             space: false
@@ -63,19 +61,11 @@ export class Player {
             const h = height;
 
             // Base Triangle on Y=0
-            // V1: Front Tip (0, 0, -len)
-            // V2: Back Left (-wid, 0, len)
-            // V3: Back Right (wid, 0, len)
             const vFront = [0, 0, -len];
             const vBackL = [-wid, 0, len * 0.5]; // Slightly forward of full back for "arrow" shape
             const vBackR = [wid, 0, len * 0.5];
-
-            // V4: Apex
-            // If Top: (0, h, 0) or maybe slightly back?
-            // If Bottom: (0, -h, 0)
-            const y = isTop ? h : -h;
-            // Shift apex back for speed look?
-            const zApex = 0;
+            const y = isTop ? h : -h; // Apex Y
+            const zApex = 0; // Shift apex back for speed look?
             const vApex = [0, y, zApex];
 
             let verticesArray = [
@@ -90,26 +80,10 @@ export class Player {
                 ...vFront, ...vBackR, ...vBackL
             ];
 
-            // If it's the bottom hull, the "Pyramid" points down.
-            // Theoretical normals were calculated for Pointing Up.
-            // Pointing down makes them face IN (Topological inversion).
-            // We need to reverse the winding to make them face OUT.
             if (!isTop) {
-                // Reversing the array by triplets effectively flips winding for each face
-                // [a,b,c] -> [c,b,a] is reverse winding.
-                // We have multiple faces. Just reversing the whole array of floats
-                // works if we reverse by 3s? No.
-                // [a,b,c, d,e,f] -> [f,e,d, c,b,a]
-                // Face 2 becomes [c,b,a] (was Face 1). Winding: c->b->a.
-                // Face 1 becomes [f,e,d] (was Face 2). Winding: f->e->d.
-                // Yes, reversing the entire array works for winding + face order swap (which doesn't matter).
-                // Actually, let's just swap vertices in the definition to be safe/explicit.
-                // Or:
+                // Reverse winding for bottom hull (pointing down)
                 const reversed = [];
                 for (let i = 0; i < verticesArray.length; i += 9) {
-                    // Face is 9 floats (3 vertices * 3 coords)
-                    // v1(0..2), v2(3..5), v3(6..8)
-                    // Swap v2 and v3
                     const v1 = verticesArray.slice(i, i + 3);
                     const v2 = verticesArray.slice(i + 3, i + 6);
                     const v3 = verticesArray.slice(i + 6, i + 9);
@@ -270,9 +244,9 @@ export class Player {
 
         this.position.add(totalVelocity.clone().multiplyScalar(dt));
 
-        // Boundary Check
+        // Boundary Check (Planar - ignore Y)
         const maxRadius = dustConfig.fieldRadius;
-        const distSq = this.position.lengthSq();
+        const distSq = this.position.x * this.position.x + this.position.z * this.position.z;
         if (distSq > maxRadius * maxRadius) {
             const dist = Math.sqrt(distSq);
             // Clamp position
@@ -457,7 +431,11 @@ export class Player {
             // Iterate celestialBodies
             if (celestialBodies) {
                 for (const body of celestialBodies) {
-                    // Simple sphere check
+                    // Simple sphere check against cylinder visual (ZX plane mostly relevant)
+                    // distanceToSquared uses 3D, but laser and planet are near Y=0 usually.
+                    // Let's stick to 2D check for gameplay feel? No, collision should be 3D if they have volume.
+                    // But effectively 2.5D.
+                    // Using standard distance for now, assuming laser height matches planet equator.
                     const distSq = nextPos.distanceToSquared(body.position);
                     const hitRad = body.sizeRadius + 0.5; // Little buffer
                     if (distSq < hitRad * hitRad) {
