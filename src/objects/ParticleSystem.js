@@ -87,7 +87,7 @@ export class ParticleSystem {
         this.dustMesh.instanceMatrix.needsUpdate = true;
     }
 
-    spawnSmoke(position, initialVelocity = null) {
+    spawnSmoke(position, initialInfluence = null) {
         // Get next slot in ring buffer
         const idx = this.smokeCursor;
         this.smokeCursor = (this.smokeCursor + 1) % this.smokeMaxCount;
@@ -101,15 +101,16 @@ export class ParticleSystem {
         p.position.y = 0; // Enforce Y=0
         p.position.z += (Math.random() - 0.5) * 0.5;
 
-        if (initialVelocity) {
-            p.velocity.copy(initialVelocity);
-        } else {
-            p.velocity.set(0, 0, 0);
-        }
+        p.velocity.set(0, 0, 0);
         p.life = 6 + Math.random() * 9;
         p.maxLife = p.life;
         p.initialScale = 0.1 + Math.random() * 0.9;
-        p.smoothedInfluence.set(0, 0, 0);
+
+        if (initialInfluence) {
+            p.smoothedInfluence.copy(initialInfluence);
+        } else {
+            p.smoothedInfluence.set(0, 0, 0);
+        }
 
         this.updateInstance(this.smokeMesh, idx, p.position, p.initialScale, null, null);
         this.smokeMesh.instanceMatrix.needsUpdate = true;
@@ -223,8 +224,8 @@ export class ParticleSystem {
             } else {
                 const lifeRatio = p.life / p.maxLife;
                 let scaleMod = 1.0;
-                if (lifeRatio > 0.9) scaleMod = (1.0 - lifeRatio) / 0.1;
-                else if (lifeRatio < 0.5) scaleMod = lifeRatio / 0.5;
+                // Smoke spawns at full size, only fades out
+                if (lifeRatio < 0.5) scaleMod = lifeRatio / 0.5;
 
                 const currentScale = p.initialScale * scaleMod;
 

@@ -140,5 +140,6 @@ export const playerConfig = {
     acceleration: 50,
     maxSpeed: 50,
     turnSpeed: 3,
-    deceleration: 3.0
+    deceleration: 3.0,
+    smokeEmissionInterval: 0.1
 };

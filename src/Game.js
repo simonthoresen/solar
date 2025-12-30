@@ -6,7 +6,7 @@ import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Player } from './objects/Player.js';
 import { CelestialBody } from './objects/CelestialBody.js';
 import { Nebula } from './objects/Nebula.js';
-import { solarSystemConfig, dustConfig } from './config.js';
+import { solarSystemConfig, dustConfig, playerConfig } from './config.js';
 
 export class Game {
     constructor() {
@@ -92,7 +92,10 @@ export class Game {
 
         window.addEventListener('resize', this.onResize.bind(this));
 
-        // Debug Toggle
+        // Scratch objects
+        this._tempSmokeInfluence = new THREE.Vector3();
+        this.smokeAccumulator = 0;
+
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'h') {
                 this.handleMasterToggle();
@@ -261,9 +264,30 @@ export class Game {
 
         // 5. Smoke Trails
         if (this.player.keys.w) {
-            if (Math.random() < 0.25) {
-                this.particleSystem.spawnSmoke(this.player.getRandomWakePosition(), this.player.velocity.clone().negate());
+            this.smokeAccumulator += delta;
+            if (this.smokeAccumulator >= playerConfig.smokeEmissionInterval) {
+                this.smokeAccumulator = 0; // Reset accumulator
+
+                const wakePos = this.player.getRandomWakePosition();
+
+                // Calculate field influence at this position
+                this.velocityField.calculateTotalVelocity(
+                    wakePos,
+                    this.celestialBodies,
+                    this.player, // Should player influence smoke? Maybe not self? But usually yes for consistency. 
+                    this._tempSmokeInfluence
+                );
+                // Actually, if we want them to snap to "computed velocity of the point", that implies the field.
+                // Does player influence the field? Yes, but usually at the wake position (behind player) player influence might be strong/weird?
+                // Dust particles update uses 'player' in calculateTotalVelocity.
+                // So we should probably include it for consistency.
+
+                this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence);
             }
+        } else {
+            this.smokeAccumulator = playerConfig.smokeEmissionInterval; // Valid to spawn immediately on next press? Or reset to 0? 
+            // Let's reset to interval so it spawns immediately when pressing W
+            this.smokeAccumulator = playerConfig.smokeEmissionInterval;
         }
 
         // Camera follow player logic
