@@ -180,7 +180,7 @@ export class Player {
         });
     }
 
-    update(dt, velocityInfluence = new THREE.Vector3()) { // Renamed external input
+    update(dt, velocityInfluence = new THREE.Vector3(), celestialBodies = [], particleSystem = null) { // Renamed external input
         // Rotation
         const turnSpeed = playerConfig.turnSpeed;
         if (this.keys.a) this.rotation.y += turnSpeed * dt;
@@ -267,7 +267,7 @@ export class Player {
             this.shootCooldown = 0.25; // 4 shots per second
         }
 
-        this.updateLasers(dt);
+        this.updateLasers(dt, celestialBodies, particleSystem);
 
         this.mesh.position.copy(this.position);
     }
@@ -413,14 +413,47 @@ export class Player {
         });
     }
 
-    updateLasers(dt) {
+    updateLasers(dt, celestialBodies, particleSystem) {
         const maxRadius = dustConfig.fieldRadius;
+        // Collision Scratch
+        const laserRadius = 0.2; // From visual
 
         for (let i = this.lasers.length - 1; i >= 0; i--) {
             const laser = this.lasers[i];
+            const nextPos = laser.mesh.position.clone().add(laser.velocity.clone().multiplyScalar(dt));
+
+            // 1. Planet Collisions
+            let hitPlanet = false;
+            // Iterate celestialBodies
+            if (celestialBodies) {
+                for (const body of celestialBodies) {
+                    // Simple sphere check
+                    const distSq = nextPos.distanceToSquared(body.position);
+                    const hitRad = body.sizeRadius + 0.5; // Little buffer
+                    if (distSq < hitRad * hitRad) {
+                        hitPlanet = true;
+                        break;
+                    }
+                }
+            }
+
+            if (hitPlanet) {
+                this.scene.remove(laser.mesh);
+                laser.mesh.geometry.dispose();
+                laser.mesh.material.dispose();
+                this.lasers.splice(i, 1);
+                continue; // Done with this laser
+            }
+
+            // 2. Particle Collisions
+            if (particleSystem) {
+                // Check current position (or interpolated?)
+                // Just check current/next pos
+                particleSystem.checkLaserCollisions(nextPos, laserRadius);
+            }
 
             // Move
-            laser.mesh.position.add(laser.velocity.clone().multiplyScalar(dt));
+            laser.mesh.position.copy(nextPos);
             laser.life -= dt;
 
             // Check distance

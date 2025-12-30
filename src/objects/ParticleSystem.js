@@ -245,4 +245,36 @@ export class ParticleSystem {
 
         return itemsForViz;
     }
+
+    checkLaserCollisions(laserPos, laserRadius) {
+        const laserRadSq = laserRadius * laserRadius; // Simplify, assume particle radius is handled or small
+        // Actually, particle radius is roughly 1.0 * scale.
+        // Let's use a generous hit radius for satisfaction. 2.0?
+
+        // Optimize: Check simple distance.
+        // DUST
+        for (let i = 0; i < this.dustCount; i++) {
+            const p = this.dustData[i];
+            const distSq = p.position.distanceToSquared(laserPos);
+            // Particle approx radius ~1.0. 
+            // Combined radius ~ (1.0 + 0.2)^2 = 1.44. Let's say 2.0 squared = 4 for ease.
+            if (distSq < 4.0) {
+                // Hit! Respawn.
+                p.life = 0; // Force respawn next frame
+                // Create a small "pop" viz? maybe later.
+            }
+        }
+
+        // SMOKE
+        for (let i = 0; i < this.smokeMaxCount; i++) {
+            const p = this.smokeData[i];
+            if (!p.active) continue;
+
+            const distSq = p.position.distanceToSquared(laserPos);
+            if (distSq < 4.0) {
+                // Hit! Deactivate.
+                p.life = 0; // Will be deactivated next frame
+            }
+        }
+    }
 }

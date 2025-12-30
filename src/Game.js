@@ -243,7 +243,7 @@ export class Game {
             null
         );
 
-        this.player.update(delta, playerInfluence);
+        this.player.update(delta, playerInfluence, this.celestialBodies, this.particleSystem);
 
 
         // 3. Particle System Update
