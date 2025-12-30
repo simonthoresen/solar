@@ -46,9 +46,11 @@ export class VelocityField {
                 // target.add(player.velocity.clone().negate());
 
                 // Better:
-                target.x -= player.velocity.x;
-                target.y -= player.velocity.y;
-                target.z -= player.velocity.z;
+                // Boost the force to overcome smoothing
+                const multiplier = 5.0;
+                target.x -= player.velocity.x * multiplier;
+                target.y -= player.velocity.y * multiplier;
+                target.z -= player.velocity.z * multiplier;
             }
         }
 

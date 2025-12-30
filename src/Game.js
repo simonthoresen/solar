@@ -276,7 +276,7 @@ export class Game {
                 this.velocityField.calculateTotalVelocity(
                     wakePos,
                     this.celestialBodies,
-                    this.player, // Should player influence smoke? Maybe not self? But usually yes for consistency. 
+                    null, // Do not include player/vortex in initial influence. Let it lerp in.
                     this._tempSmokeInfluence
                 );
                 // Actually, if we want them to snap to "computed velocity of the point", that implies the field.
