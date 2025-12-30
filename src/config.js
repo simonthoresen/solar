@@ -137,8 +137,8 @@ export const dustConfig = {
 };
 
 export const playerConfig = {
-    acceleration: 25,
-    maxSpeed: 500,
+    acceleration: 50,
+    maxSpeed: 50,
     turnSpeed: 3,
     deceleration: 3.0
 };

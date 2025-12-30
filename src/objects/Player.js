@@ -121,7 +121,9 @@ export class Player {
         }
 
         // Friction/Deceleration
-        this.velocity.multiplyScalar(1 - (playerConfig.deceleration * dt));
+        if (!this.keys.w && !this.keys.s) {
+            this.velocity.multiplyScalar(1 - (playerConfig.deceleration * dt));
+        }
 
         // Clamp Speed
         if (this.velocity.length() > playerConfig.maxSpeed) {

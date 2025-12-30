@@ -247,6 +247,7 @@ export class Game {
             this.velocityField,
             this.celestialBodies,
             this.player,
+            this.camera, // Pass camera for billboards
             this.debugState.dustVelocity // Pass debug flag
         );
 
@@ -261,7 +262,7 @@ export class Game {
         // 5. Smoke Trails
         if (this.player.keys.w) {
             if (Math.random() < 0.25) {
-                this.particleSystem.spawnSmoke(this.player.getRandomWakePosition());
+                this.particleSystem.spawnSmoke(this.player.getRandomWakePosition(), this.player.velocity.clone().negate());
             }
         }
 

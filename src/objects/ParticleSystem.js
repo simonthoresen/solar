@@ -13,8 +13,9 @@ export class ParticleSystem {
 
         // --- Dust System (Instanced) ---
         this.dustCount = config.count || 1024;
-        this.dustGeometry = new THREE.ConeGeometry(1, 3, 3);
-        this.dustGeometry.rotateX(Math.PI / 2);
+        this.dustGeometry = new THREE.CircleGeometry(1, 12);
+        this.dustGeometry = new THREE.CircleGeometry(1, 12);
+        // this.dustGeometry.rotateX(Math.PI / 2); // Removed for billboard
         const dustColor = this.config.dustColor !== undefined ? this.config.dustColor : 0xffffff;
         this.dustMaterial = new THREE.MeshBasicMaterial({ color: dustColor });
 
@@ -29,8 +30,8 @@ export class ParticleSystem {
 
         // --- Smoke System (Instanced) ---
         this.smokeMaxCount = config.poolSize || 1500;
-        this.smokeGeometry = new THREE.ConeGeometry(1, 3, 3);
-        this.smokeGeometry.rotateX(Math.PI / 2);
+        this.smokeGeometry = new THREE.CircleGeometry(1, 12);
+        // this.smokeGeometry.rotateX(Math.PI / 2); // Removed for billboard
         this.smokeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
 
         this.smokeMesh = new THREE.InstancedMesh(this.smokeGeometry, this.smokeMaterial, this.smokeMaxCount);
@@ -81,12 +82,12 @@ export class ParticleSystem {
                 smoothedInfluence: new THREE.Vector3()
             };
 
-            this.updateInstance(this.dustMesh, i, this.dustData[i].position, 0);
+            this.updateInstance(this.dustMesh, i, this.dustData[i].position, 0, null, null);
         }
         this.dustMesh.instanceMatrix.needsUpdate = true;
     }
 
-    spawnSmoke(position) {
+    spawnSmoke(position, initialVelocity = null) {
         // Get next slot in ring buffer
         const idx = this.smokeCursor;
         this.smokeCursor = (this.smokeCursor + 1) % this.smokeMaxCount;
@@ -100,28 +101,29 @@ export class ParticleSystem {
         p.position.y = 0; // Enforce Y=0
         p.position.z += (Math.random() - 0.5) * 0.5;
 
-        p.velocity.set(0, 0, 0);
+        if (initialVelocity) {
+            p.velocity.copy(initialVelocity);
+        } else {
+            p.velocity.set(0, 0, 0);
+        }
         p.life = 6 + Math.random() * 9;
         p.maxLife = p.life;
         p.initialScale = 0.1 + Math.random() * 0.9;
         p.smoothedInfluence.set(0, 0, 0);
 
-        this.updateInstance(this.smokeMesh, idx, p.position, p.initialScale);
+        this.updateInstance(this.smokeMesh, idx, p.position, p.initialScale, null, null);
         this.smokeMesh.instanceMatrix.needsUpdate = true;
     }
 
-    updateInstance(mesh, index, position, scale, lookAtTarget = null) {
+    updateInstance(mesh, index, position, scale, target = null, quaternion = null) {
         this.dummy.position.copy(position);
         this.dummy.scale.setScalar(scale);
 
-        if (lookAtTarget) {
-            this.dummy.lookAt(lookAtTarget);
+        if (quaternion) {
+            this.dummy.quaternion.copy(quaternion);
+        } else if (target) {
+            this.dummy.lookAt(target);
         } else {
-            // Default orientation if needed, or maintain previous?
-            // Cone points +Z naturally after init logic?
-            // init logic: geometry.rotateX(PI/2). Cone points +Z (local).
-            // InstancedMesh default quaternion is Identity.
-            // If we don't lookAt, it points +Z world.
             this.dummy.rotation.set(0, 0, 0);
         }
 
@@ -129,10 +131,11 @@ export class ParticleSystem {
         mesh.setMatrixAt(index, this.dummy.matrix);
     }
 
-    update(dt, velocityField, celestialBodies, player) {
+    update(dt, velocityField, celestialBodies, player, camera, debugDustVelocity = false) {
         let itemsForViz = []; // Kept for debug visualizer compatibility
         const radius = this.size;
         const radiusSq = radius * radius;
+        const cameraQuaternion = camera ? camera.quaternion : null;
 
         // --- Update Dust ---
         for (let i = 0; i < this.dustCount; i++) {
@@ -182,7 +185,7 @@ export class ParticleSystem {
             if (lifeRatio > 0.9) scaleMod = (1.0 - lifeRatio) / 0.1;
             else if (lifeRatio < 0.5) scaleMod = lifeRatio / 0.5;
 
-            this.updateInstance(this.dustMesh, i, p.position, p.initialScale * scaleMod, target);
+            this.updateInstance(this.dustMesh, i, p.position, p.initialScale * scaleMod, target, cameraQuaternion);
 
             // Viz Output (Sampled for performance distribution)
             // Show every 20th particle to get a spread across the field
@@ -216,7 +219,7 @@ export class ParticleSystem {
             if (p.life <= 0) {
                 p.active = false;
                 // Scale to 0 to hide
-                this.updateInstance(this.smokeMesh, i, p.position, 0);
+                this.updateInstance(this.smokeMesh, i, p.position, 0, null, null);
             } else {
                 const lifeRatio = p.life / p.maxLife;
                 let scaleMod = 1.0;
@@ -229,7 +232,7 @@ export class ParticleSystem {
                 if (this._tempEffectiveVel.lengthSq() > 0.0001) {
                     target = p.position.clone().add(this._tempEffectiveVel);
                 }
-                this.updateInstance(this.smokeMesh, i, p.position, currentScale, target);
+                this.updateInstance(this.smokeMesh, i, p.position, currentScale, target, cameraQuaternion);
 
                 // Show every 5th active smoke particle
                 if (i % 5 === 0 && p.smoothedInfluence.lengthSq() > 0.01) {
