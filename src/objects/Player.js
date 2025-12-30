@@ -78,7 +78,7 @@ export class Player {
             const zApex = 0;
             const vApex = [0, y, zApex];
 
-            const vertices = new Float32Array([
+            let verticesArray = [
                 // Bottom/Deck Face (V1, V2, V3) - Actually handled by side faces usually, but let's include all faces
                 // Face 1: Front-Left-Apex
                 ...vFront, ...vBackL, ...vApex,
@@ -88,7 +88,37 @@ export class Player {
                 ...vBackL, ...vBackR, ...vApex,
                 // Face 4: Deck (V1, V2, V3) - Often hidden inside if we align two shapes
                 ...vFront, ...vBackR, ...vBackL
-            ]);
+            ];
+
+            // If it's the bottom hull, the "Pyramid" points down.
+            // Theoretical normals were calculated for Pointing Up.
+            // Pointing down makes them face IN (Topological inversion).
+            // We need to reverse the winding to make them face OUT.
+            if (!isTop) {
+                // Reversing the array by triplets effectively flips winding for each face
+                // [a,b,c] -> [c,b,a] is reverse winding.
+                // We have multiple faces. Just reversing the whole array of floats
+                // works if we reverse by 3s? No.
+                // [a,b,c, d,e,f] -> [f,e,d, c,b,a]
+                // Face 2 becomes [c,b,a] (was Face 1). Winding: c->b->a.
+                // Face 1 becomes [f,e,d] (was Face 2). Winding: f->e->d.
+                // Yes, reversing the entire array works for winding + face order swap (which doesn't matter).
+                // Actually, let's just swap vertices in the definition to be safe/explicit.
+                // Or:
+                const reversed = [];
+                for (let i = 0; i < verticesArray.length; i += 9) {
+                    // Face is 9 floats (3 vertices * 3 coords)
+                    // v1(0..2), v2(3..5), v3(6..8)
+                    // Swap v2 and v3
+                    const v1 = verticesArray.slice(i, i + 3);
+                    const v2 = verticesArray.slice(i + 3, i + 6);
+                    const v3 = verticesArray.slice(i + 6, i + 9);
+                    reversed.push(...v1, ...v3, ...v2);
+                }
+                verticesArray = reversed;
+            }
+
+            const vertices = new Float32Array(verticesArray);
 
             // Quick normals recalc needed?
             geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
