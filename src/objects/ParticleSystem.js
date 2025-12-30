@@ -87,7 +87,7 @@ export class ParticleSystem {
         this.dustMesh.instanceMatrix.needsUpdate = true;
     }
 
-    spawnSmoke(position, initialInfluence = null) {
+    spawnSmoke(position, initialInfluence = null, camera = null) {
         // Get next slot in ring buffer
         const idx = this.smokeCursor;
         this.smokeCursor = (this.smokeCursor + 1) % this.smokeMaxCount;
@@ -112,7 +112,8 @@ export class ParticleSystem {
             p.smoothedInfluence.set(0, 0, 0);
         }
 
-        this.updateInstance(this.smokeMesh, idx, p.position, p.initialScale, null, null);
+        const cameraQuaternion = camera ? camera.quaternion : null;
+        this.updateInstance(this.smokeMesh, idx, p.position, p.initialScale, null, cameraQuaternion);
         this.smokeMesh.instanceMatrix.needsUpdate = true;
     }
 
