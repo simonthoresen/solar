@@ -60,10 +60,32 @@ export class Player {
 
         // Rotate to XZ plane (Mesh is Y-up? Player logic uses Y-rotation. Box is axis aligned.)
         // Ellipse is in XY. We want XZ. Rotate X 90.
+        // Rotate to XZ plane
         this.boundaryLine.rotation.x = -Math.PI / 2;
-
         this.boundaryLine.visible = false;
         this.mesh.add(this.boundaryLine);
+        this.initVortexDebug();
+    }
+
+    initVortexDebug() {
+        const radius = playerConfig.vortexRadius || 1.0;
+        const curve = new THREE.EllipseCurve(
+            0, 0,            // ax, aY
+            radius, radius,  // xRadius, yRadius
+            0, 2 * Math.PI,  // aStartAngle, aEndAngle
+            false,           // aClockwise
+            0                // aRotation
+        );
+        const points = curve.getPoints(32);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color: 0xff00ff }); // Magenta for vortex
+        this.vortexLine = new THREE.Line(geometry, material);
+
+        // Vortex is at local (0, 0, 1.5).
+        this.vortexLine.position.set(0, 0, 1.5);
+        this.vortexLine.rotation.x = -Math.PI / 2;
+        this.vortexLine.visible = false;
+        this.mesh.add(this.vortexLine);
     }
 
     initInput() {
@@ -146,14 +168,32 @@ export class Player {
         return this.position;
     }
 
+    getEnginePosition() {
+        // Engine is at local (0, 0, 1.5) rotated by ship rotation.
+        // Assuming box is centered at 0,0,0. 
+        // 1.5 is behind the ship (since forward is -Z).
+        // Wait, forward is -Z. So back is +Z.
+        // Box is size 1. So back face is at +0.5.
+        // 1.5 is a bit further back. 
+        const offset = new THREE.Vector3(0, 0, 1.5).applyEuler(this.rotation);
+        return this.position.clone().add(offset);
+    }
+
     getRandomWakePosition() {
         const offset = new THREE.Vector3(0, 0, 1.5).applyEuler(this.rotation);
         return this.position.clone().add(offset);
     }
 
     setDebugVisibility(visible) {
-        if (this.axisHelper) this.axisHelper.visible = visible;
-        if (this.boundaryLine) this.boundaryLine.visible = visible;
+        if (typeof visible === 'object') {
+            if (this.axisHelper) this.axisHelper.visible = visible.axis;
+            if (this.boundaryLine) this.boundaryLine.visible = visible.axis; // Link boundary to axis
+            if (this.vortexLine) this.vortexLine.visible = visible.vortex;
+        } else {
+            if (this.axisHelper) this.axisHelper.visible = visible;
+            if (this.boundaryLine) this.boundaryLine.visible = visible;
+            if (this.vortexLine) this.vortexLine.visible = false;
+        }
     }
 
     // ... (rest of class) ...

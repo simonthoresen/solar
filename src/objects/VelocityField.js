@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { playerConfig } from '../config.js';
 
 const _tempBodyVel = new THREE.Vector3();
 
@@ -30,6 +31,25 @@ export class VelocityField {
             // Assuming player.getVelocityAt might still return new Vector, or we update it too?
             const pVel = player.getVelocityAt(position);
             target.add(pVel);
+        }
+
+        // 3. Player Engine Vortex
+        if (player && player.getEnginePosition) {
+            const enginePos = player.getEnginePosition();
+            const distSq = position.distanceToSquared(enginePos);
+            const vortexRadius = playerConfig.vortexRadius || 1.0;
+
+            if (distSq < vortexRadius * vortexRadius) {
+                // Apply inverted player velocity
+                // Use temp vector to avoid allocation if possible, but player.velocity is safe to clone/negate?
+                // Actually, let's just use a scratch vector or direct add if we want performance.
+                // target.add(player.velocity.clone().negate());
+
+                // Better:
+                target.x -= player.velocity.x;
+                target.y -= player.velocity.y;
+                target.z -= player.velocity.z;
+            }
         }
 
         return target;

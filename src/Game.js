@@ -85,7 +85,8 @@ export class Game {
             planetToParent: false,
             planetToPlayer: false,
             planetVelocity: false,
-            dustVelocity: false
+            dustVelocity: false,
+            vortex: false
         };
 
         this.initDebugUI();
@@ -130,7 +131,8 @@ export class Game {
             planetToParent: 'Planet to Parent',
             planetToPlayer: 'Planet to Player',
             planetVelocity: 'Planet Velocity',
-            dustVelocity: 'Dust Velocity'
+            dustVelocity: 'Dust Velocity',
+            vortex: 'Vortex'
         };
 
         Object.keys(this.debugState).forEach(key => {
@@ -183,7 +185,7 @@ export class Game {
 
     updateDebugVisibility() {
         if (this.player.setDebugVisibility) {
-            this.player.setDebugVisibility(this.debugState.player || this.debugState.axis);
+            this.player.setDebugVisibility(this.debugState);
         }
 
         // Force Grid Arrows (Now Velocity Field Arrows)
@@ -282,7 +284,7 @@ export class Game {
                 // Dust particles update uses 'player' in calculateTotalVelocity.
                 // So we should probably include it for consistency.
 
-                this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence);
+                this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, this.camera);
             }
         } else {
             this.smokeAccumulator = playerConfig.smokeEmissionInterval; // Valid to spawn immediately on next press? Or reset to 0? 

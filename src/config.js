@@ -141,5 +141,6 @@ export const playerConfig = {
     maxSpeed: 50,
     turnSpeed: 3,
     deceleration: 3.0,
-    smokeEmissionInterval: 0.1
+    smokeEmissionInterval: 0.01,
+    vortexRadius: 2.0
 };
