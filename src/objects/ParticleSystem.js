@@ -13,7 +13,7 @@ export class ParticleSystem {
 
         // --- Dust System (Instanced) ---
         this.dustCount = config.count || 1024;
-        this.dustGeometry = new THREE.ConeGeometry(0.1, 0.3, 3);
+        this.dustGeometry = new THREE.ConeGeometry(1, 3, 3);
         this.dustGeometry.rotateX(Math.PI / 2);
         const dustColor = this.config.dustColor !== undefined ? this.config.dustColor : 0xffffff;
         this.dustMaterial = new THREE.MeshBasicMaterial({ color: dustColor });
@@ -29,7 +29,7 @@ export class ParticleSystem {
 
         // --- Smoke System (Instanced) ---
         this.smokeMaxCount = config.poolSize || 1500;
-        this.smokeGeometry = new THREE.ConeGeometry(0.1, 0.3, 3);
+        this.smokeGeometry = new THREE.ConeGeometry(1, 3, 3);
         this.smokeGeometry.rotateX(Math.PI / 2);
         this.smokeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
 
@@ -71,16 +71,17 @@ export class ParticleSystem {
             const x = r * Math.cos(theta);
             const z = r * Math.sin(theta);
 
+            const duration = minLife + Math.random() * (maxLife - minLife);
             this.dustData[i] = {
                 position: new THREE.Vector3(x, 0, z),
                 velocity: new THREE.Vector3(0, 0, 0),
-                life: minLife + Math.random() * (maxLife - minLife),
-                maxLife: maxLife, // Not really used for fading dust, but kept consistent
+                life: duration,
+                maxLife: duration,
                 initialScale: 0.1 + Math.random() * 0.9,
                 smoothedInfluence: new THREE.Vector3()
             };
 
-            this.updateInstance(this.dustMesh, i, this.dustData[i].position, this.dustData[i].initialScale);
+            this.updateInstance(this.dustMesh, i, this.dustData[i].position, 0);
         }
         this.dustMesh.instanceMatrix.needsUpdate = true;
     }
@@ -167,6 +168,7 @@ export class ParticleSystem {
                 const minLife = this.config.minLife || 10;
                 const maxLife = this.config.maxLife || 60;
                 p.life = minLife + Math.random() * (maxLife - minLife);
+                p.maxLife = p.life;
             }
 
             // 3. Update Visuals
@@ -174,7 +176,13 @@ export class ParticleSystem {
             if (this._tempEffectiveVel.lengthSq() > 0.0001) {
                 target = p.position.clone().add(this._tempEffectiveVel);
             }
-            this.updateInstance(this.dustMesh, i, p.position, p.initialScale, target);
+
+            const lifeRatio = p.life / p.maxLife;
+            let scaleMod = 1.0;
+            if (lifeRatio > 0.9) scaleMod = (1.0 - lifeRatio) / 0.1;
+            else if (lifeRatio < 0.5) scaleMod = lifeRatio / 0.5;
+
+            this.updateInstance(this.dustMesh, i, p.position, p.initialScale * scaleMod, target);
 
             // Viz Output (Sampled for performance distribution)
             // Show every 20th particle to get a spread across the field
@@ -211,7 +219,11 @@ export class ParticleSystem {
                 this.updateInstance(this.smokeMesh, i, p.position, 0);
             } else {
                 const lifeRatio = p.life / p.maxLife;
-                const currentScale = p.initialScale * lifeRatio;
+                let scaleMod = 1.0;
+                if (lifeRatio > 0.9) scaleMod = (1.0 - lifeRatio) / 0.1;
+                else if (lifeRatio < 0.5) scaleMod = lifeRatio / 0.5;
+
+                const currentScale = p.initialScale * scaleMod;
 
                 let target = null;
                 if (this._tempEffectiveVel.lengthSq() > 0.0001) {

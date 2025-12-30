@@ -260,7 +260,7 @@ export class Game {
 
         // 5. Smoke Trails
         if (this.player.keys.w) {
-            if (Math.random() < 0.5) {
+            if (Math.random() < 0.25) {
                 this.particleSystem.spawnSmoke(this.player.getRandomWakePosition());
             }
         }
