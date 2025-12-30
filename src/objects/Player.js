@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { playerConfig } from '../config.js';
+import { playerConfig, dustConfig } from '../config.js';
 
 // Scratch vectors for wake calculation
 const _tempWakeDiff = new THREE.Vector3();
@@ -161,6 +161,25 @@ export class Player {
         const totalVelocity = this.velocity.clone().add(this.smoothedVelocityInfluence);
 
         this.position.add(totalVelocity.clone().multiplyScalar(dt));
+
+        // Boundary Check
+        const maxRadius = dustConfig.fieldRadius;
+        const distSq = this.position.lengthSq();
+        if (distSq > maxRadius * maxRadius) {
+            const dist = Math.sqrt(distSq);
+            // Clamp position
+            this.position.multiplyScalar(maxRadius / dist);
+
+            // Kill velocity component moving away from center
+            // Normal at boundary is just normalized position
+            const normal = this.position.clone().normalize();
+            const velDot = this.velocity.dot(normal);
+            if (velDot > 0) {
+                // Moving outwards, remove that component
+                this.velocity.sub(normal.multiplyScalar(velDot));
+            }
+        }
+
         this.mesh.position.copy(this.position);
     }
 
