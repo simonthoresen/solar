@@ -23,8 +23,13 @@ export class Player {
             a: false,
             s: false,
             d: false,
-            shift: false
+            d: false,
+            shift: false,
+            space: false
         };
+
+        this.lasers = [];
+        this.shootCooldown = 0;
 
         this.initInput();
     }
@@ -165,11 +170,13 @@ export class Player {
             const k = e.key.toLowerCase();
             if (this.keys.hasOwnProperty(k)) this.keys[k] = true;
             if (e.key === 'Shift') this.keys.shift = true;
+            if (e.key === ' ') this.keys.space = true;
         });
         window.addEventListener('keyup', (e) => {
             const k = e.key.toLowerCase();
             if (this.keys.hasOwnProperty(k)) this.keys[k] = false;
             if (e.key === 'Shift') this.keys.shift = false;
+            if (e.key === ' ') this.keys.space = false;
         });
     }
 
@@ -250,6 +257,17 @@ export class Player {
                 this.velocity.sub(normal.multiplyScalar(velDot));
             }
         }
+
+        if (this.shootCooldown > 0) {
+            this.shootCooldown -= dt;
+        }
+
+        if (this.keys.space && this.shootCooldown <= 0) {
+            this.fireLaser();
+            this.shootCooldown = 0.25; // 4 shots per second
+        }
+
+        this.updateLasers(dt);
 
         this.mesh.position.copy(this.position);
     }
@@ -359,5 +377,77 @@ export class Player {
         }
 
         return target;
+    }
+
+    fireLaser() {
+        const laserColor = playerConfig.laserColor !== undefined ? playerConfig.laserColor : 0x00ff00;
+        const laserLength = 5.0;
+        const laserRadius = 0.2;
+
+        const geometry = new THREE.CylinderGeometry(laserRadius, laserRadius, laserLength, 8);
+        geometry.rotateX(Math.PI / 2); // Rotate to point along Z
+        const material = new THREE.MeshBasicMaterial({ color: laserColor });
+
+        // Calculate spawn positions (Left and Right of hull)
+        // Hull width is roughly 0.8 * scale (from initMesh logic)
+        const scale = playerConfig.modelScale || 1.0;
+        const sideOffset = 1.0 * scale; // Slightly wider than hull
+        const verticalOffset = -0.2 * scale; // Align with hull bottom/mid
+        const forwardOffset = -1.0 * scale; // Start near front of ship
+
+        const offsets = [-sideOffset, sideOffset];
+
+        offsets.forEach(offset => {
+            const laser = new THREE.Mesh(geometry, material);
+            const initialPos = new THREE.Vector3(offset, verticalOffset, forwardOffset).applyEuler(this.rotation).add(this.position);
+
+            laser.position.copy(initialPos);
+            laser.quaternion.copy(this.mesh.quaternion); // Same rotation as ship at moment of fire
+
+            this.scene.add(laser);
+            this.lasers.push({
+                mesh: laser,
+                velocity: new THREE.Vector3(0, 0, -1).applyEuler(this.rotation).multiplyScalar(150), // Fast speed
+                life: 5.0 // Max life safety
+            });
+        });
+    }
+
+    updateLasers(dt) {
+        const maxRadius = dustConfig.fieldRadius;
+
+        for (let i = this.lasers.length - 1; i >= 0; i--) {
+            const laser = this.lasers[i];
+
+            // Move
+            laser.mesh.position.add(laser.velocity.clone().multiplyScalar(dt));
+            laser.life -= dt;
+
+            // Check distance
+            const distSq = laser.mesh.position.lengthSq();
+            const dist = Math.sqrt(distSq);
+
+            // Fade if outside boundary
+            if (dist > maxRadius) {
+                laser.mesh.material.transparent = true;
+                const overshoot = dist - maxRadius;
+                const fadeDist = 50; // Fade over 50 units
+                const opacity = 1.0 - Math.min(1.0, overshoot / fadeDist);
+                laser.mesh.material.opacity = opacity;
+
+                if (opacity <= 0.01 || laser.life <= 0) {
+                    // Remove
+                    this.scene.remove(laser.mesh);
+                    laser.mesh.geometry.dispose();
+                    laser.mesh.material.dispose();
+                    this.lasers.splice(i, 1);
+                }
+            } else if (laser.life <= 0) {
+                this.scene.remove(laser.mesh);
+                laser.mesh.geometry.dispose(); // Best practice
+                laser.mesh.material.dispose();
+                this.lasers.splice(i, 1);
+            }
+        }
     }
 }

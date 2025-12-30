@@ -147,5 +147,6 @@ export const playerConfig = {
     vortexOffsetZ: 3.5,
     hullColor: 0x4488ff,
     modelScale: 1.0,
-    wakeOffsetZ: 1.5
+    wakeOffsetZ: 1.5,
+    laserColor: 0x00ff00 // Green laser default
 };
