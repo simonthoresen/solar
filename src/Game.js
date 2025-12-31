@@ -6,13 +6,14 @@ import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Player } from './objects/Player.js';
 import { CelestialBody } from './objects/CelestialBody.js';
 import { Nebula } from './objects/Nebula.js';
+import { StudioUI } from './StudioUI.js';
 import { solarSystemConfig, dustConfig, playerConfig } from './config.js';
 
 export class Game {
     constructor() {
         this.scene = new THREE.Scene();
         this.backgroundScene = new THREE.Scene(); // For Nebula
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50000); // Increased Far clip for studio view
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
 
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -51,7 +52,8 @@ export class Game {
                 parent,
                 data.orbitDistance,
                 data.orbitSpeed,
-                data.rotationSpeed
+                data.rotationSpeed,
+                data.id // Pass ID
             );
 
             bodiesMap.set(data.id, body);
@@ -76,6 +78,14 @@ export class Game {
         this.setupControls();
 
         this.lastPlayerPos = this.player.getPosition().clone();
+
+        this.gameMode = 'game';
+        this.isOrbitPaused = false;
+        this.studioUI = new StudioUI(this);
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+
+        this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
 
         this.clock = new THREE.Clock();
 
@@ -204,20 +214,38 @@ export class Game {
     }
 
     setupCamera() {
-        // Initial camera position relative to player
-        const pPos = this.player.getPosition();
-        this.camera.position.set(pPos.x, pPos.y + 10, pPos.z + 10);
-        this.camera.lookAt(pPos);
+        this.camera.up.set(0, 1, 0); // Enforce Y-up to prevent roll
+        if (this.gameMode === 'game') {
+            // Initial camera position relative to player
+            const pPos = this.player.getPosition();
+            this.camera.position.set(pPos.x, pPos.y + 10, pPos.z + 20); // Behind and above
+            this.camera.lookAt(pPos);
+        } else {
+            // Studio Mode: Top down, far away
+            // Offset Z slightly to avoid LookAt(0,0,0) singularity with Up(0,1,0)
+            this.camera.position.set(0, 1000, 1);
+            this.camera.lookAt(0, 0, 0);
+        }
     }
 
     setupControls() {
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
+        this.controls.enableZoom = true; // Allow scroll zoom
+        this.controls.enablePan = false; // Disable panning to keep target centered
         this.controls.screenSpacePanning = false;
 
-        // Target the player
-        this.controls.target.copy(this.player.getPosition());
+        if (this.gameMode === 'game') {
+            // Target the player
+            this.controls.target.copy(this.player.getPosition());
+            this.controls.maxDistance = 500;
+        } else {
+            // Target center initially
+            this.controls.target.set(0, 0, 0);
+            this.controls.maxDistance = 50000;
+        }
+
         this.controls.update();
     }
 
@@ -232,11 +260,42 @@ export class Game {
         if (delta > 0.1) delta = 0.1;
         const time = this.clock.getElapsedTime();
 
-        // 1. Orbital updates
+        // 1. Orbital updates (Run in both modes to see effects)
+        // Use 0 delta if paused in studio
+        let orbitDelta = delta;
+        if (this.gameMode === 'studio' && this.isOrbitPaused) {
+            orbitDelta = 0;
+        }
+
         this.celestialBodies.forEach(body => {
-            body.update(delta, this.player);
+            body.update(orbitDelta, this.player);
         });
 
+        if (this.gameMode === 'game') {
+            this.updateGameLogic(delta);
+            this.controls.target.copy(this.player.getPosition());
+        } else {
+            // Studio Mode Logic
+            // Follow selected body if any
+            if (this.studioUI && this.studioUI.selectedBody) {
+                this.controls.target.copy(this.studioUI.selectedBody.position);
+            }
+            this.controls.update();
+        }
+
+        // --- RENDER PASSES ---
+        this.renderer.clear();
+
+        if (this.gameMode === 'game') {
+            this.nebula.update(this.camera.position);
+            this.renderer.render(this.backgroundScene, this.camera);
+            this.renderer.clearDepth();
+        }
+
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    updateGameLogic(delta) {
         // 2. Player Velocity Influence & Update
         const playerInfluence = this.velocityField.calculateTotalVelocity(
             this.player.getPosition(),
@@ -280,10 +339,6 @@ export class Game {
                     null, // Do not include player/vortex in initial influence. Let it lerp in.
                     this._tempSmokeInfluence
                 );
-                // Actually, if we want them to snap to "computed velocity of the point", that implies the field.
-                // Does player influence the field? Yes, but usually at the wake position (behind player) player influence might be strong/weird?
-                // Dust particles update uses 'player' in calculateTotalVelocity.
-                // So we should probably include it for consistency.
 
                 this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, this.camera);
             }
@@ -292,28 +347,122 @@ export class Game {
             this.smokeAccumulator = playerConfig.smokeEmissionInterval;
         }
 
-        // Camera follow player logic
+        // Camera follow update
+        // We do NOT manually move the camera position here for 'follow', 
+        // OrbitControls handles position relative to target if we update target.
+        // BUT standard OrbitControls doesn't automatically move camera WITH target (it just pivots).
+        // To make camera "follow" the player (maintain relative offset), we need to shift camera too.
+
         const currentPlayerPos = this.player.getPosition();
         const deltaPos = currentPlayerPos.clone().sub(this.lastPlayerPos);
 
+        // Add delta to Camera position to maintain relative offset
         this.camera.position.add(deltaPos);
-        this.controls.target.add(deltaPos);
+
+        // Target is updated in animate loop for robustness, but we can do it here too/instead.
+        // animate loop does: this.controls.target.copy(this.player.getPosition());
 
         this.controls.update();
 
         this.lastPlayerPos.copy(currentPlayerPos);
-
-        // --- RENDER PASSES ---
-        this.renderer.clear();
-        this.nebula.update(this.camera.position);
-        this.renderer.render(this.backgroundScene, this.camera);
-        this.renderer.clearDepth();
-        this.renderer.render(this.scene, this.camera);
     }
 
     onResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    onMouseClick(event) {
+        if (this.gameMode !== 'studio') return;
+
+        // Calculate mouse position in normalized device coordinates
+        this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+
+        // Intersect with celestial bodies
+        // accessing mesh property of CelestialBody
+        const meshes = this.celestialBodies.map(cb => cb.mesh);
+        const intersects = this.raycaster.intersectObjects(meshes, true);
+
+        if (intersects.length > 0) {
+            // Find the CelestialBody corresponding to the mesh
+            // We need to traverse up to find the root mesh if we hit a child (like a ring or detail)
+            // But CelestialBody stores the mesh. 
+            // Better: find which CelestialBody holds this mesh.
+
+            const hitObject = intersects[0].object;
+            const selectedBody = this.celestialBodies.find(cb => {
+                // Check if hitObject is the mesh or a child of the mesh
+                let current = hitObject;
+                while (current) {
+                    if (current === cb.mesh) return true;
+                    current = current.parent;
+                }
+                return false;
+            });
+
+            if (selectedBody) {
+                console.log("Selected:", selectedBody);
+
+                // Deselect previous
+                if (this.studioUI.selectedBody) {
+                    this.studioUI.selectedBody.setSelected(false);
+                }
+
+                selectedBody.setSelected(true);
+                this.studioUI.show(selectedBody);
+            }
+        } else {
+            // Clicked empty space
+            if (this.studioUI.selectedBody) {
+                this.studioUI.selectedBody.setSelected(false);
+            }
+            this.studioUI.hide();
+        }
+    }
+
+    // Helpers for StudioUI to get config
+    getConfigForBody(celestialBody) {
+        return solarSystemConfig.find(c => c.id === celestialBody.configId) ||
+            // Fallback if we didn't store ID on body. 
+            // We should probably store the ID on the body during creation.
+            // Let's check CelestialBody.js to see if it has 'id' or we can match by reference?
+            // Creating a map might be better, or just adding the ID to the body.
+            // For now, let's assume we can match by reference from our initial map or I'll add the ID to CelestialBody.
+            null;
+    }
+
+    getAllBodyConfigs() {
+        return solarSystemConfig;
+    }
+
+    setMode(mode) {
+        this.gameMode = mode;
+        this.setupCamera();
+        this.setupControls();
+
+        if (mode === 'studio') {
+            this.studioUI.container.style.display = 'block'; // Make sure UI is back if we return
+            this.player.mesh.visible = false; // Hide player in studio?
+        } else {
+            this.studioUI.hide();
+            this.player.mesh.visible = true;
+            // Reset player position if needed? Or just continue?
+            // Maybe reset camera to player logic
+        }
+    }
+
+    toggleOrbitPause() {
+        this.isOrbitPaused = !this.isOrbitPaused;
+        return this.isOrbitPaused;
+    }
+
+    resetOrbits() {
+        this.celestialBodies.forEach(body => {
+            body.resetOrbit();
+        });
     }
 }
