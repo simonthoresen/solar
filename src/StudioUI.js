@@ -17,36 +17,29 @@ export class StudioUI {
     }
 
     createUI() {
+        // Global controls at the top
+        this.topControls = document.createElement('div');
+        this.topControls.className = 'top-controls';
+        this.topControls.innerHTML = `
+            <button id="studio-toggle-orbit-btn" class="control-btn">Pause Orbits</button>
+            <button id="studio-reset-orbits-btn" class="control-btn">Reset Orbits</button>
+            <button id="studio-save-btn" class="control-btn">Save Config</button>
+        `;
+        document.body.appendChild(this.topControls);
+
+        // Editor panel
         this.container = document.createElement('div');
         this.container.className = 'studio-ui-panel';
         this.container.style.display = 'none';
-
-        // Basic structure handling
         this.container.innerHTML = `
-            <div class="studio-header">
-                <h3>Solar Studio</h3>
-                <div class="studio-controls">
-                    <button id="studio-toggle-orbit-btn" class="control-btn">Pause Orbits</button>
-                    <button id="studio-reset-orbits-btn" class="control-btn">Reset Orbits</button>
-                </div>
-                <div class="studio-actions">
-                    <button id="studio-play-btn">Play Game</button>
-                    <button id="studio-save-btn">Save Config</button>
-                </div>
-            </div>
             <div class="studio-body-editor" id="studio-editor">
                 <div class="no-selection">Select a celestial body to edit</div>
             </div>
         `;
-
         document.body.appendChild(this.container);
 
         document.getElementById('studio-save-btn').addEventListener('click', () => {
             this.saveConfig();
-        });
-
-        document.getElementById('studio-play-btn').addEventListener('click', () => {
-            this.game.setMode('game');
         });
 
         const toggleOrbitBtn = document.getElementById('studio-toggle-orbit-btn');
@@ -56,9 +49,7 @@ export class StudioUI {
         });
 
         document.getElementById('studio-reset-orbits-btn').addEventListener('click', () => {
-            if (confirm('Reset all planetary orbits to zero alignment?')) {
-                this.game.resetOrbits();
-            }
+            this.game.resetOrbits();
         });
     }
 
