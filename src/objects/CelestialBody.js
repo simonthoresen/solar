@@ -85,11 +85,11 @@ export class CelestialBody {
     }
 
     initMesh() {
-        let detail = 0;
+        let detail = 2; // Was 0
         if (this.sizeRadius >= 2.0) {
-            detail = 2; // High detail for Sun and large planets
+            detail = 4; // Was 2
         } else if (this.sizeRadius >= 0.5) {
-            detail = 1; // Medium detail for Earth-sized planets
+            detail = 3; // Was 1
         }
         // Small moons get detail 0 (default initialized)
 

@@ -74,8 +74,8 @@ export class Game {
                 sunLight.shadow.mapSize.height = 4096;
                 sunLight.shadow.camera.near = 0.5;
                 sunLight.shadow.camera.far = 1000;
-                sunLight.shadow.bias = -0.0001;
-                sunLight.shadow.normalBias = 0.05;
+                sunLight.shadow.bias = 0; // Better for high res maps
+                sunLight.shadow.normalBias = 0.1; // Offset lookup along normal to fix acne on curves
 
                 body.mesh.add(sunLight);
 
