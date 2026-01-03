@@ -262,6 +262,9 @@ export class Player {
             }
         }
 
+        // Planet Collisions (Planar XZ)
+        this.handlePlanetCollisions(celestialBodies);
+
         if (this.shootCooldown > 0) {
             this.shootCooldown -= dt;
         }
@@ -274,6 +277,48 @@ export class Player {
         this.updateLasers(dt, celestialBodies, particleSystem);
 
         this.mesh.position.copy(this.position);
+    }
+
+    handlePlanetCollisions(celestialBodies) {
+        if (!celestialBodies) return;
+
+        for (const body of celestialBodies) {
+            // Planar XZ distance check
+            const dx = this.position.x - body.position.x;
+            const dz = this.position.z - body.position.z;
+            const distSq = dx * dx + dz * dz;
+
+            // Player visual boundary is roughly 0.5 radius
+            const collisionDist = body.sizeRadius + 0.5;
+
+            if (distSq < collisionDist * collisionDist) {
+                const dist = Math.sqrt(distSq);
+                const overlap = collisionDist - dist;
+
+                // 1. Vector Planet -> Player (Normal in XZ plane)
+                const normal = new THREE.Vector3(dx, 0, dz);
+                if (dist > 0.001) {
+                    normal.divideScalar(dist);
+                } else {
+                    normal.set(0, 0, 1); // Fallback
+                }
+
+                // 2. Relative Velocity along Normal
+                // We want PlayerVel_Rad >= PlanetVel_Rad
+                const planetVelRad = body.velocity.dot(normal);
+                const playerVelRad = this.velocity.dot(normal);
+
+                if (playerVelRad < planetVelRad) {
+                    const diff = planetVelRad - playerVelRad;
+                    this.velocity.addScaledVector(normal, diff);
+                }
+
+                // 3. Positional Correction (Depenetration)
+                if (overlap > 0) {
+                    this.position.addScaledVector(normal, overlap);
+                }
+            }
+        }
     }
 
     // For Debug / Game loop 

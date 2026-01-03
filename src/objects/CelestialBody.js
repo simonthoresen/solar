@@ -286,46 +286,6 @@ export class CelestialBody {
 
             if (distSq < collisionDist * collisionDist) {
                 this.playerLine.material.color.setHex(0xff0000); // Red
-
-                // Collision Push Logic
-                // 1. Vector Planet -> Player (Normal)
-                const normal = new THREE.Vector3().subVectors(playerPosition, this.position).normalize();
-
-                // 2. Relative Velocity along Normal
-                // We want PlayerVel_Rad >= PlanetVel_Rad
-                // If PlayerVel_Rad < PlanetVel_Rad, we are penetrating (or not moving away fast enough).
-
-                const planetVelRad = this.velocity.dot(normal);
-                const playerVelRad = player.velocity.dot(normal);
-
-                if (playerVelRad < planetVelRad) {
-                    // We need to add an impulse to match the planet's speed
-                    // Impulse = (PlanetVel - PlayerVel) projected on Normal
-                    const diff = planetVelRad - playerVelRad;
-
-                    // Add slight extra "bounce" or separation speed (optional, let's stick to rigid first)
-                    // Let's ensure at least a small positive separation speed if planet is static?
-                    // User asked for "push away".
-                    // If we just match, we 'stick'.
-                    // Let's add a minimum separation constant?
-                    // Or just match. Matching stops penetration.
-
-                    player.velocity.addScaledVector(normal, diff);
-                }
-
-                // Positional Correction (Depenetration)
-                // If we are overlapping, move player out immediately to prevent tunneling/sticking
-                const dist = Math.sqrt(distSq);
-                const overlap = collisionDist - dist;
-
-                if (overlap > 0) {
-                    // Move player along normal by overlap amount
-                    // Positional Correction ensures no tunneling
-                    const correction = normal.clone().multiplyScalar(overlap);
-                    player.position.add(correction);
-                    player.mesh.position.copy(player.position);
-                }
-
             } else {
                 this.playerLine.material.color.setHex(0x00ff00); // Green
             }
