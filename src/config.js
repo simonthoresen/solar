@@ -2,7 +2,7 @@ export const solarSystemConfig = [
     {
         "id": "sun",
         "sizeRadius": 10,
-        "color": 16776960,
+        "color": 0xffff00,
         "rotationRadius": 450,
         "parentId": null,
         "orbitDistance": 0,
@@ -13,7 +13,7 @@ export const solarSystemConfig = [
     {
         "id": "mercury",
         "sizeRadius": 10,
-        "color": 11184810,
+        "color": 0xaaaaaa,
         "rotationRadius": 35,
         "parentId": "sun",
         "orbitDistance": 65,
@@ -24,7 +24,7 @@ export const solarSystemConfig = [
     {
         "id": "venus",
         "sizeRadius": 10,
-        "color": 16755200,
+        "color": 0xffaa00,
         "rotationRadius": 35,
         "parentId": "sun",
         "orbitDistance": 100,
@@ -35,7 +35,7 @@ export const solarSystemConfig = [
     {
         "id": "earth",
         "sizeRadius": 10,
-        "color": 255,
+        "color": 0x0000ff,
         "rotationRadius": 35,
         "parentId": "sun",
         "orbitDistance": 150,
@@ -46,7 +46,7 @@ export const solarSystemConfig = [
     {
         "id": "moon",
         "sizeRadius": 5,
-        "color": 8947848,
+        "color": 0x888888,
         "rotationRadius": 15,
         "parentId": "earth",
         "orbitDistance": 20,
@@ -57,7 +57,7 @@ export const solarSystemConfig = [
     {
         "id": "mars",
         "sizeRadius": 10,
-        "color": 16711680,
+        "color": 0xff0000,
         "rotationRadius": 35,
         "parentId": "sun",
         "orbitDistance": 225,
@@ -68,7 +68,7 @@ export const solarSystemConfig = [
     {
         "id": "phobos",
         "sizeRadius": 5,
-        "color": 6710886,
+        "color": 0x666666,
         "rotationRadius": 15,
         "parentId": "mars",
         "orbitDistance": 20,
@@ -79,7 +79,7 @@ export const solarSystemConfig = [
     {
         "id": "deimos",
         "sizeRadius": 5,
-        "color": 5592405,
+        "color": 0x555555,
         "rotationRadius": 15,
         "parentId": "mars",
         "orbitDistance": 35,
@@ -90,7 +90,7 @@ export const solarSystemConfig = [
     {
         "id": "jupiter",
         "sizeRadius": 10,
-        "color": 16755336,
+        "color": 0xffaa08,
         "rotationRadius": 35,
         "parentId": "sun",
         "orbitDistance": 325,
@@ -101,7 +101,7 @@ export const solarSystemConfig = [
     {
         "id": "io",
         "sizeRadius": 5,
-        "color": 16777130,
+        "color": 0xffff0a,
         "rotationRadius": 15,
         "parentId": "jupiter",
         "orbitDistance": 20,
@@ -112,7 +112,7 @@ export const solarSystemConfig = [
     {
         "id": "europa",
         "sizeRadius": 5,
-        "color": 11206655,
+        "color": 0xaaffff,
         "rotationRadius": 15,
         "parentId": "jupiter",
         "orbitDistance": 35,
@@ -123,7 +123,7 @@ export const solarSystemConfig = [
     {
         "id": "saturn",
         "sizeRadius": 10,
-        "color": 15654348,
+        "color": 0xeeeedc,
         "rotationRadius": 35,
         "parentId": "sun",
         "orbitDistance": 395,
@@ -134,7 +134,7 @@ export const solarSystemConfig = [
     {
         "id": "uranus",
         "sizeRadius": 10,
-        "color": 11189247,
+        "color": 0xaabbff,
         "rotationRadius": 35,
         "parentId": "sun",
         "orbitDistance": 430,
@@ -145,7 +145,7 @@ export const solarSystemConfig = [
     {
         "id": "neptune",
         "sizeRadius": 10,
-        "color": 4482815,
+        "color": 0x4466ff,
         "rotationRadius": 35,
         "parentId": "sun",
         "orbitDistance": 465,
@@ -158,7 +158,7 @@ export const solarSystemConfig = [
 export const dustConfig = {
     "count": 4096,
     "fieldRadius": 500,
-    "dustColor": 16777215,
+    "dustColor": 0xffffff,
     "minLife": 2,
     "maxLife": 5,
     "poolSize": 1500
@@ -172,8 +172,8 @@ export const playerConfig = {
     "smokeEmissionInterval": 0.01,
     "vortexRadius": 3,
     "vortexOffsetZ": 3.5,
-    "hullColor": 4491519,
+    "hullColor": 0x4488ff,
     "modelScale": 1,
     "wakeOffsetZ": 1.5,
-    "laserColor": 65280
+    "laserColor": 0x00ff00
 };

@@ -191,10 +191,21 @@ export class StudioUI {
     saveConfig() {
         const configData = solarSystemConfig;
 
+        // Helper to stringify with hex colors
+        const stringifyWithHex = (data) => {
+            let json = JSON.stringify(data, null, 4);
+            // Regex to find "keyColor": 12345 or "color": 12345
+            // and replace with hex format
+            return json.replace(/("(?:[a-zA-Z0-9]+)?color(?:[a-zA-Z0-9]+)?"):\s*(\d+)/gi, (match, key, value) => {
+                const hexValue = "0x" + parseInt(value).toString(16).padStart(6, '0');
+                return `${key}: ${hexValue}`;
+            });
+        };
+
         // Format as JS file content
-        const fileContent = `export const solarSystemConfig = ${JSON.stringify(configData, null, 4)};\n\n` +
-            `export const dustConfig = ${JSON.stringify(dustConfig, null, 4)};\n\n` +
-            `export const playerConfig = ${JSON.stringify(playerConfig, null, 4)};`;
+        const fileContent = `export const solarSystemConfig = ${stringifyWithHex(solarSystemConfig)};\n\n` +
+            `export const dustConfig = ${stringifyWithHex(dustConfig)};\n\n` +
+            `export const playerConfig = ${stringifyWithHex(playerConfig)};`;
 
         const blob = new Blob([fileContent], { type: 'text/javascript' });
         const url = URL.createObjectURL(blob);
