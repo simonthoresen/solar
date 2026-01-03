@@ -14,6 +14,7 @@ export class StudioUI {
     init() {
         this.createUI();
         this.hide(); // Hidden by default until an object is selected
+        this.toggleTopControls(false); // Hide top buttons by default
     }
 
     createUI() {
@@ -64,6 +65,12 @@ export class StudioUI {
         this.isVisible = false;
         if (this.container) {
             this.container.style.display = 'none';
+        }
+    }
+
+    toggleTopControls(visible) {
+        if (this.topControls) {
+            this.topControls.style.display = visible ? 'flex' : 'none';
         }
     }
 

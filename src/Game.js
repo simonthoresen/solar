@@ -482,9 +482,11 @@ export class Game {
 
         if (mode === 'studio') {
             this.studioUI.container.style.display = 'block'; // Make sure UI is back if we return
+            this.studioUI.toggleTopControls(true);
             this.player.mesh.visible = false; // Hide player in studio?
         } else {
             this.studioUI.hide();
+            this.studioUI.toggleTopControls(false);
             this.player.mesh.visible = true;
             // Reset player position if needed? Or just continue?
             // Maybe reset camera to player logic
