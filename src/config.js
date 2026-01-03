@@ -3,7 +3,7 @@ export const solarSystemConfig = [
         "id": "sun",
         "sizeRadius": 10,
         "color": 0xffff00,
-        "rotationRadius": 450,
+        "rotationRadius": 500,
         "parentId": null,
         "orbitDistance": 0,
         "orbitSpeed": 0,
@@ -157,7 +157,7 @@ export const solarSystemConfig = [
 
 export const dustConfig = {
     "count": 4096,
-    "fieldRadius": 500,
+    "fieldRadius": 525,
     "dustColor": 0xffffff,
     "minLife": 2,
     "maxLife": 5,
