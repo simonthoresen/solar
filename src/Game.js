@@ -7,6 +7,7 @@ import { Player } from './objects/Player.js';
 import { CelestialBody } from './objects/CelestialBody.js';
 import { Nebula } from './objects/Nebula.js';
 import { StudioUI } from './StudioUI.js';
+import { MainMenu } from './MainMenu.js';
 import { solarSystemConfig, dustConfig, playerConfig } from './config.js';
 
 export class Game {
@@ -82,6 +83,7 @@ export class Game {
         this.gameMode = 'game';
         this.isOrbitPaused = false;
         this.studioUI = new StudioUI(this);
+        this.mainMenu = new MainMenu(this);
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
 
@@ -111,6 +113,9 @@ export class Game {
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'h') {
                 this.handleMasterToggle();
+            }
+            if (e.key === 'Escape') {
+                this.mainMenu.toggle();
             }
         });
     }
@@ -229,12 +234,14 @@ export class Game {
     }
 
     setupControls() {
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.05;
-        this.controls.enableZoom = true; // Allow scroll zoom
-        this.controls.enablePan = false; // Disable panning to keep target centered
-        this.controls.screenSpacePanning = false;
+        if (!this.controls) {
+            this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.05;
+            this.controls.enableZoom = true; // Allow scroll zoom
+            this.controls.enablePan = false; // Disable panning to keep target centered
+            this.controls.screenSpacePanning = false;
+        }
 
         if (this.gameMode === 'game') {
             // Target the player
@@ -258,6 +265,24 @@ export class Game {
         let delta = this.clock.getDelta();
         // Cap delta to prevent huge jumps on tab resume
         if (delta > 0.1) delta = 0.1;
+
+        if (this.mainMenu && this.mainMenu.isVisible) {
+            // Update billboards even during pause if camera orbits
+            if (this.particleSystem) {
+                this.particleSystem.update(0, this.velocityField, this.celestialBodies, this.player, this.camera, false);
+            }
+
+            // Static render
+            this.renderer.clear();
+            if (this.gameMode === 'game') {
+                this.nebula.update(this.camera.position);
+                this.renderer.render(this.backgroundScene, this.camera);
+                this.renderer.clearDepth();
+            }
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
+
         const time = this.clock.getElapsedTime();
 
         // 1. Orbital updates (Run in both modes to see effects)
@@ -273,7 +298,6 @@ export class Game {
 
         if (this.gameMode === 'game') {
             this.updateGameLogic(delta);
-            this.controls.target.copy(this.player.getPosition());
         } else {
             // Studio Mode Logic
             // Follow selected body if any
@@ -282,6 +306,29 @@ export class Game {
             }
             this.controls.update();
         }
+
+        // Particle System & Velocity Visuals Update (Run in both modes)
+        // Use 0 delta if logic should be static but visuals (billboards) should update
+        const particleDelta = (this.gameMode === 'studio' && this.isOrbitPaused) ? 0 : delta;
+
+        const particleVizItems = this.particleSystem.update(
+            particleDelta,
+            this.velocityField,
+            this.celestialBodies,
+            this.player,
+            this.camera,
+            this.debugState.dustVelocity
+        );
+
+        // Update Velocity Visualization
+        let allVizItems = [...particleVizItems];
+        if (this.gameMode === 'game') {
+            const playerInfluence = this.velocityField.calculateTotalVelocity(this.player.getPosition(), this.celestialBodies, null);
+            if (playerInfluence.lengthSq() > 0.01) {
+                allVizItems.push({ position: this.player.getPosition().clone(), force: playerInfluence });
+            }
+        }
+        this.velocityField.updateVisuals(allVizItems);
 
         // --- RENDER PASSES ---
         this.renderer.clear();
@@ -305,26 +352,7 @@ export class Game {
 
         this.player.update(delta, playerInfluence, this.celestialBodies, this.particleSystem);
 
-
-        // 3. Particle System Update
-        const particleVizItems = this.particleSystem.update(
-            delta,
-            this.velocityField,
-            this.celestialBodies,
-            this.player,
-            this.camera, // Pass camera for billboards
-            this.debugState.dustVelocity // Pass debug flag
-        );
-
-        // 4. Visualize Velocities
-        let allVizItems = [...particleVizItems];
-        if (playerInfluence.lengthSq() > 0.01) {
-            allVizItems.push({ position: this.player.getPosition().clone(), force: playerInfluence });
-        }
-
-        this.velocityField.updateVisuals(allVizItems);
-
-        // 5. Smoke Trails
+        // 5. Smoke Trails (Moved down, numbered for history)
         if (this.player.keys.w) {
             this.smokeAccumulator += delta;
             if (this.smokeAccumulator >= playerConfig.smokeEmissionInterval) {
@@ -348,19 +376,12 @@ export class Game {
         }
 
         // Camera follow update
-        // We do NOT manually move the camera position here for 'follow', 
-        // OrbitControls handles position relative to target if we update target.
-        // BUT standard OrbitControls doesn't automatically move camera WITH target (it just pivots).
-        // To make camera "follow" the player (maintain relative offset), we need to shift camera too.
-
         const currentPlayerPos = this.player.getPosition();
         const deltaPos = currentPlayerPos.clone().sub(this.lastPlayerPos);
 
-        // Add delta to Camera position to maintain relative offset
+        // Update target and camera position to maintain relative offset
+        this.controls.target.copy(currentPlayerPos);
         this.camera.position.add(deltaPos);
-
-        // Target is updated in animate loop for robustness, but we can do it here too/instead.
-        // animate loop does: this.controls.target.copy(this.player.getPosition());
 
         this.controls.update();
 
@@ -452,6 +473,10 @@ export class Game {
             this.player.mesh.visible = true;
             // Reset player position if needed? Or just continue?
             // Maybe reset camera to player logic
+        }
+
+        if (this.mainMenu.isVisible) {
+            this.mainMenu.hide();
         }
     }
 

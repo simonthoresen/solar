@@ -14,9 +14,14 @@ export class ParticleSystem {
         // --- Dust System (Instanced) ---
         this.dustCount = config.count || 1024;
         this.dustGeometry = new THREE.CircleGeometry(1, 12);
-        this.dustGeometry = new THREE.CircleGeometry(1, 12);
         const dustColor = this.config.dustColor !== undefined ? this.config.dustColor : 0xffffff;
-        this.dustMaterial = new THREE.MeshBasicMaterial({ color: dustColor });
+        this.dustMaterial = new THREE.MeshBasicMaterial({
+            color: dustColor,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            transparent: true,
+            opacity: 0.9
+        });
 
         this.dustMesh = new THREE.InstancedMesh(this.dustGeometry, this.dustMaterial, this.dustCount);
         this.dustMesh.frustumCulled = false; // Prevent culling when looking away from center
@@ -30,7 +35,13 @@ export class ParticleSystem {
         // --- Smoke System (Instanced) ---
         this.smokeMaxCount = config.poolSize || 1500;
         this.smokeGeometry = new THREE.CircleGeometry(1, 12);
-        this.smokeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+        this.smokeMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
 
         this.smokeMesh = new THREE.InstancedMesh(this.smokeGeometry, this.smokeMaterial, this.smokeMaxCount);
         this.smokeMesh.frustumCulled = false; // Prevent culling
