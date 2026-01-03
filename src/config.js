@@ -7,7 +7,8 @@ export const solarSystemConfig = [
         "parentId": null,
         "orbitDistance": 0,
         "orbitSpeed": 0,
-        "rotationSpeed": 0.5
+        "rotationSpeed": 0.5,
+        "renderMode": "toon"
     },
     {
         "id": "mercury",
@@ -17,7 +18,8 @@ export const solarSystemConfig = [
         "parentId": "sun",
         "orbitDistance": 65,
         "orbitSpeed": 0.25,
-        "rotationSpeed": 1
+        "rotationSpeed": 1,
+        "renderMode": "toon"
     },
     {
         "id": "venus",
@@ -27,7 +29,8 @@ export const solarSystemConfig = [
         "parentId": "sun",
         "orbitDistance": 100,
         "orbitSpeed": 0.15,
-        "rotationSpeed": 0.5
+        "rotationSpeed": 0.5,
+        "renderMode": "toon"
     },
     {
         "id": "earth",
@@ -37,7 +40,8 @@ export const solarSystemConfig = [
         "parentId": "sun",
         "orbitDistance": 150,
         "orbitSpeed": 0.3,
-        "rotationSpeed": 2.5
+        "rotationSpeed": 2.5,
+        "renderMode": "toon"
     },
     {
         "id": "moon",
@@ -47,7 +51,8 @@ export const solarSystemConfig = [
         "parentId": "earth",
         "orbitDistance": 20,
         "orbitSpeed": 1,
-        "rotationSpeed": 0.5
+        "rotationSpeed": 0.5,
+        "renderMode": "toon"
     },
     {
         "id": "mars",
@@ -57,7 +62,8 @@ export const solarSystemConfig = [
         "parentId": "sun",
         "orbitDistance": 225,
         "orbitSpeed": 0.2,
-        "rotationSpeed": 1.5
+        "rotationSpeed": 1.5,
+        "renderMode": "toon"
     },
     {
         "id": "phobos",
@@ -67,7 +73,8 @@ export const solarSystemConfig = [
         "parentId": "mars",
         "orbitDistance": 20,
         "orbitSpeed": 1.4,
-        "rotationSpeed": 1.2
+        "rotationSpeed": 1.2,
+        "renderMode": "toon"
     },
     {
         "id": "deimos",
@@ -77,7 +84,8 @@ export const solarSystemConfig = [
         "parentId": "mars",
         "orbitDistance": 35,
         "orbitSpeed": 0.7,
-        "rotationSpeed": 1.4
+        "rotationSpeed": 1.4,
+        "renderMode": "toon"
     },
     {
         "id": "jupiter",
@@ -87,7 +95,8 @@ export const solarSystemConfig = [
         "parentId": "sun",
         "orbitDistance": 325,
         "orbitSpeed": 0.4,
-        "rotationSpeed": 2
+        "rotationSpeed": 2,
+        "renderMode": "toon"
     },
     {
         "id": "io",
@@ -97,7 +106,8 @@ export const solarSystemConfig = [
         "parentId": "jupiter",
         "orbitDistance": 20,
         "orbitSpeed": 5,
-        "rotationSpeed": 0.8
+        "rotationSpeed": 0.8,
+        "renderMode": "toon"
     },
     {
         "id": "europa",
@@ -107,7 +117,8 @@ export const solarSystemConfig = [
         "parentId": "jupiter",
         "orbitDistance": 35,
         "orbitSpeed": 4,
-        "rotationSpeed": 0.6
+        "rotationSpeed": 0.6,
+        "renderMode": "toon"
     },
     {
         "id": "saturn",
@@ -117,7 +128,8 @@ export const solarSystemConfig = [
         "parentId": "sun",
         "orbitDistance": 395,
         "orbitSpeed": 0.3,
-        "rotationSpeed": 0.9
+        "rotationSpeed": 0.9,
+        "renderMode": "toon"
     },
     {
         "id": "uranus",
@@ -127,7 +139,8 @@ export const solarSystemConfig = [
         "parentId": "sun",
         "orbitDistance": 430,
         "orbitSpeed": 0.2,
-        "rotationSpeed": 0.7
+        "rotationSpeed": 0.7,
+        "renderMode": "toon"
     },
     {
         "id": "neptune",
@@ -137,7 +150,8 @@ export const solarSystemConfig = [
         "parentId": "sun",
         "orbitDistance": 465,
         "orbitSpeed": 0.15,
-        "rotationSpeed": 0.8
+        "rotationSpeed": 0.8,
+        "renderMode": "toon"
     }
 ];
 

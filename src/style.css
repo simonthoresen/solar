@@ -108,7 +108,8 @@ canvas {
   color: #aaa;
 }
 
-.field-row input {
+.field-row input,
+.field-row select {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
@@ -116,6 +117,11 @@ canvas {
   color: #fff;
   width: 100px;
   text-align: right;
+}
+
+.field-row select {
+  width: 130px;
+  text-align: left;
 }
 
 .field-row input[type="color"] {

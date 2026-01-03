@@ -54,7 +54,8 @@ export class Game {
                 data.orbitDistance,
                 data.orbitSpeed,
                 data.rotationSpeed,
-                data.id // Pass ID
+                data.id, // Pass ID
+                data.renderMode || 'lambert_wireframe'
             );
 
             bodiesMap.set(data.id, body);

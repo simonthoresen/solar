@@ -5,12 +5,13 @@ const _tempTangent = new THREE.Vector3();
 const _tempUp = new THREE.Vector3(0, 1, 0);
 
 export class CelestialBody {
-    constructor(scene, position, sizeRadius, color, rotationRadius, parent = null, orbitDistance = 0, orbitSpeed = 0, rotationSpeed = 0.5, configId = null) {
+    constructor(scene, position, sizeRadius, color, rotationRadius, parent = null, orbitDistance = 0, orbitSpeed = 0, rotationSpeed = 0.5, configId = null, renderMode = 'lambert_wireframe') {
         this.scene = scene;
         this.configId = configId;
         this.sizeRadius = sizeRadius;
         this.color = color;
         this.rotationRadius = rotationRadius;
+        this.renderMode = renderMode;
 
         this.parent = parent;
         this.orbitDistance = orbitDistance;
@@ -93,10 +94,40 @@ export class CelestialBody {
         // Small moons get detail 0 (default initialized)
 
         const geometry = new THREE.IcosahedronGeometry(this.sizeRadius, detail);
-        const material = new THREE.MeshLambertMaterial({ color: this.color, wireframe: true });
-        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh = new THREE.Mesh(geometry, this.createMaterial());
         this.updatePosition();
         this.scene.add(this.mesh);
+    }
+
+    createMaterial() {
+        const params = { color: this.color };
+        const isWireframe = this.renderMode.includes('wireframe');
+
+        // Extract base mode
+        const mode = this.renderMode.split('_')[0];
+
+        let material;
+        switch (mode) {
+            case 'toon':
+                material = new THREE.MeshToonMaterial(params);
+                break;
+            case 'basic':
+                material = new THREE.MeshBasicMaterial(params);
+                break;
+            case 'phong':
+                material = new THREE.MeshPhongMaterial(params);
+                break;
+            case 'standard':
+                material = new THREE.MeshStandardMaterial(params);
+                break;
+            case 'lambert':
+            default:
+                material = new THREE.MeshLambertMaterial(params);
+                break;
+        }
+
+        material.wireframe = isWireframe;
+        return material;
     }
 
     initRotationVisual() {
@@ -528,6 +559,14 @@ export class CelestialBody {
 
         if (key === 'rotationSpeed') {
             this.forceMagnitude = this.rotationSpeed * 10.0;
+        }
+
+        if (key === 'renderMode') {
+            if (this.mesh) {
+                const oldMaterial = this.mesh.material;
+                this.mesh.material = this.createMaterial();
+                if (oldMaterial) oldMaterial.dispose();
+            }
         }
     }
 

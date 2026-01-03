@@ -105,19 +105,43 @@ export class StudioUI {
             { key: 'rotationRadius', label: 'Gravity Radius', type: 'number' },
             { key: 'orbitDistance', label: 'Orbit Distance', type: 'number' },
             { key: 'orbitSpeed', label: 'Orbit Speed', type: 'number' },
-            { key: 'rotationSpeed', label: 'Rotation Speed', type: 'number' }
+            { key: 'rotationSpeed', label: 'Rotation Speed', type: 'number' },
+            {
+                key: 'renderMode',
+                label: 'Render Mode',
+                type: 'select',
+                options: [
+                    { value: 'lambert_wireframe', label: 'Lambert Wireframe' },
+                    { value: 'lambert', label: 'Lambert Solid' },
+                    { value: 'phong', label: 'Phong' },
+                    { value: 'standard', label: 'Standard' },
+                    { value: 'toon', label: 'Toon' },
+                    { value: 'basic', label: 'Unlit Basic' },
+                    { value: 'basic_wireframe', label: 'Basic Wireframe' }
+                ]
+            }
         ];
 
         fields.forEach(field => {
-            const value = field.type === 'hex' ? '#' + config[field.key].toString(16).padStart(6, '0') : config[field.key];
-            fieldsHtml += `
-                <div class="field-row">
-                    <label>${field.label}</label>
-                    <input type="${field.type === 'hex' ? 'color' : 'number'}" 
+            let inputHtml = '';
+            if (field.type === 'select') {
+                const optionsHtml = field.options.map(opt =>
+                    `<option value="${opt.value}" ${config[field.key] === opt.value ? 'selected' : ''}>${opt.label}</option>`
+                ).join('');
+                inputHtml = `<select data-key="${field.key}">${optionsHtml}</select>`;
+            } else {
+                const value = field.type === 'hex' ? '#' + config[field.key].toString(16).padStart(6, '0') : config[field.key];
+                inputHtml = `<input type="${field.type === 'hex' ? 'color' : 'number'}" 
                            data-key="${field.key}" 
                            value="${value}"
                            step="${field.type === 'number' ? '0.1' : ''}"
-                    >
+                    >`;
+            }
+
+            fieldsHtml += `
+                <div class="field-row">
+                    <label>${field.label}</label>
+                    ${inputHtml}
                 </div>
             `;
         });
@@ -126,13 +150,11 @@ export class StudioUI {
         editor.innerHTML = `<h4>Editing: ${config.id}</h4>` + fieldsHtml;
 
         // Add listeners
-        const inputs = editor.querySelectorAll('input');
+        const inputs = editor.querySelectorAll('input, select');
         inputs.forEach(input => {
-            input.addEventListener('change', (e) => {
-                this.updateBody(config, e.target.dataset.key, e.target.value, e.target.type);
-            });
-            input.addEventListener('input', (e) => {
-                this.updateBody(config, e.target.dataset.key, e.target.value, e.target.type);
+            const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
+            input.addEventListener(eventName, (e) => {
+                this.updateBody(config, e.target.dataset.key, e.target.value, e.target.type || 'select');
             });
         });
     }
@@ -146,6 +168,8 @@ export class StudioUI {
             }
         } else if (type === 'color') {
             parsedValue = parseInt(value.replace('#', ''), 16);
+        } else if (type === 'select') {
+            parsedValue = value;
         }
 
         // Update config
