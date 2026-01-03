@@ -95,6 +95,8 @@ export class CelestialBody {
 
         const geometry = new THREE.IcosahedronGeometry(this.sizeRadius, detail);
         this.mesh = new THREE.Mesh(geometry, this.createMaterial());
+        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
         this.updatePosition();
         this.scene.add(this.mesh);
     }

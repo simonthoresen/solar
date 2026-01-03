@@ -19,6 +19,8 @@ export class Game {
 
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.autoClear = false; // Important for multi-pass rendering
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
 
         this.setupLights();
@@ -63,12 +65,24 @@ export class Game {
 
             // Special handling for Sun
             if (data.id === 'sun') {
-                const sunLight = new THREE.PointLight(0xffffff, 2500, 0); // High intensity (2500), Infinite range (0)
+                const sunLight = new THREE.PointLight(0xffffff, 10000, 0); // Reduced intensity for better balance
+                sunLight.decay = 2; // Physical decay
+                sunLight.castShadow = true;
+
+                // Shadow map configuration
+                sunLight.shadow.mapSize.width = 4096;
+                sunLight.shadow.mapSize.height = 4096;
+                sunLight.shadow.camera.near = 0.5;
+                sunLight.shadow.camera.far = 1000;
+                sunLight.shadow.bias = -0.0001;
+                sunLight.shadow.normalBias = 0.05;
+
                 body.mesh.add(sunLight);
 
-                // Make Sun mesh emissive so it looks bright even if not lit by itself (which works for Basic/Lambert, but ensuring visuals)
-                // CelestialBody uses MeshLambertMaterial (based on previous edits/assumptions, or let's verify).
-                // If it uses Lambert, it reacts to light. Emissive helps it look like a source.
+                // IMPORTANT: Disable shadow casting for the Sun mesh itself to allow light to escape
+                body.mesh.castShadow = false;
+
+                // Make Sun mesh emissive
                 if (body.mesh.material) {
                     body.mesh.material.emissive = new THREE.Color(0xffff00);
                     body.mesh.material.emissiveIntensity = 1.0;
@@ -215,7 +229,7 @@ export class Game {
     }
 
     setupLights() {
-        const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); // Reduced ambient light for space atmosphere
         this.scene.add(ambientLight);
     }
 
