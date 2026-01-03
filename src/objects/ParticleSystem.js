@@ -161,6 +161,9 @@ export class ParticleSystem {
             const smoothFactor = Math.min(1.0, 3.0 * dt);
             p.smoothedInfluence.lerp(this._tempInfluence, smoothFactor);
 
+            // Velocity Decay (Drag)
+            p.velocity.multiplyScalar(1 - 3.0 * dt);
+
             this._tempEffectiveVel.copy(p.velocity).add(p.smoothedInfluence);
 
             // Move
@@ -219,6 +222,9 @@ export class ParticleSystem {
             const smoothFactor = Math.min(1.0, 3.0 * dt);
             p.smoothedInfluence.lerp(this._tempInfluence, smoothFactor);
 
+            // Velocity Decay (Drag)
+            p.velocity.multiplyScalar(1 - 3.0 * dt);
+
             this._tempEffectiveVel.copy(p.velocity).add(p.smoothedInfluence);
 
             p.position.addScaledVector(this._tempEffectiveVel, dt);
@@ -256,22 +262,17 @@ export class ParticleSystem {
         return itemsForViz;
     }
 
-    checkLaserCollisions(laserPos, laserRadius) {
-        const laserRadSq = laserRadius * laserRadius; // Simplify, assume particle radius is handled or small
-        // Actually, particle radius is roughly 1.0 * scale.
-        // Let's use a generous hit radius for satisfaction. 2.0?
+    checkLaserCollisions(laserPos, laserRadius, laserVelocity) {
+        // Generous hit radius for satisfaction
+        const hitRadSq = 4.0;
 
-        // Optimize: Check simple distance.
         // DUST
         for (let i = 0; i < this.dustCount; i++) {
             const p = this.dustData[i];
             const distSq = p.position.distanceToSquared(laserPos);
-            // Particle approx radius ~1.0. 
-            // Combined radius ~ (1.0 + 0.2)^2 = 1.44. Let's say 2.0 squared = 4 for ease.
-            if (distSq < 4.0) {
-                // Hit! Respawn.
-                p.life = 0; // Force respawn next frame
-                // Create a small "pop" viz? maybe later.
+            if (distSq < hitRadSq) {
+                // Apply impulse instead of killing
+                p.velocity.addScaledVector(laserVelocity, 0.2);
             }
         }
 
@@ -281,9 +282,9 @@ export class ParticleSystem {
             if (!p.active) continue;
 
             const distSq = p.position.distanceToSquared(laserPos);
-            if (distSq < 4.0) {
-                // Hit! Deactivate.
-                p.life = 0; // Will be deactivated next frame
+            if (distSq < hitRadSq) {
+                // Apply impulse instead of killing
+                p.velocity.addScaledVector(laserVelocity, 0.2);
             }
         }
     }

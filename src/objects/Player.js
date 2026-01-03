@@ -457,7 +457,7 @@ export class Player {
             if (particleSystem) {
                 // Check current position (or interpolated?)
                 // Just check current/next pos
-                particleSystem.checkLaserCollisions(nextPos, laserRadius);
+                particleSystem.checkLaserCollisions(nextPos, laserRadius, laser.velocity);
             }
 
             // Move
