@@ -113,13 +113,15 @@ export class Game {
 
         // Debug State
         this.debugState = {
-            rings: false,
-            axis: false,
+            planetRing: false,
+            playerRing: true,
+            planetAxis: false,
+            playerAxis: true,
             planetToParent: false,
             planetToPlayer: false,
             planetVelocity: false,
             dustVelocity: false,
-            vortex: false
+            playerVortex: true
         };
 
         this.initDebugUI();
@@ -132,7 +134,9 @@ export class Game {
 
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'h') {
-                this.handleMasterToggle();
+                if (this.debugUIContainer) {
+                    this.debugUIContainer.style.display = this.debugUIContainer.style.display === 'none' ? 'block' : 'none';
+                }
             }
             if (e.key === 'Escape') {
                 this.mainMenu.toggle();
@@ -142,16 +146,19 @@ export class Game {
 
     initDebugUI() {
         const container = document.createElement('div');
+        this.debugUIContainer = container; // Store reference
+
         container.style.position = 'absolute';
         container.style.top = '10px';
         container.style.right = '10px';
-        container.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        container.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // 50% transparent black
         container.style.padding = '10px';
-        container.style.borderRadius = '5px';
+        container.style.borderRadius = '15px'; // Rounded edges
+        container.style.border = '2px solid blue'; // Blue outline
         container.style.color = 'white';
         container.style.fontFamily = 'monospace';
         container.style.zIndex = '1000';
-        container.style.display = 'block';
+        container.style.display = 'none';
 
         const title = document.createElement('div');
         title.innerText = 'Debug Options';
@@ -162,13 +169,15 @@ export class Game {
         this.checkboxes = {};
 
         const labelMap = {
-            rings: 'Rings',
-            axis: 'Axis',
+            planetRing: 'Planet Ring',
+            playerRing: 'Player Ring',
+            planetAxis: 'Planet Axis',
+            playerAxis: 'Player Axis',
             planetToParent: 'Planet to Parent',
             planetToPlayer: 'Planet to Player',
             planetVelocity: 'Planet Velocity',
             dustVelocity: 'Dust Velocity',
-            vortex: 'Vortex'
+            playerVortex: 'Player Vortex'
         };
 
         Object.keys(this.debugState).forEach(key => {
@@ -200,24 +209,12 @@ export class Game {
         });
 
         document.body.appendChild(container);
-    }
 
-    handleMasterToggle() {
-        // If any is true -> set all false
-        // If all false -> set all true
-        const anyEnabled = Object.values(this.debugState).some(v => v);
-
-        const newState = !anyEnabled;
-
-        Object.keys(this.debugState).forEach(key => {
-            this.debugState[key] = newState;
-            if (this.checkboxes[key]) {
-                this.checkboxes[key].checked = newState;
-            }
-        });
-
+        // Apply initial state
         this.updateDebugVisibility();
     }
+
+
 
     updateDebugVisibility() {
         if (this.player.setDebugVisibility) {

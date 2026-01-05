@@ -155,14 +155,8 @@ export class CelestialBody {
     }
 
     initAxisVisual() {
-        const points = [];
-        points.push(new THREE.Vector3(0, -this.sizeRadius * 2, 0));
-        points.push(new THREE.Vector3(0, this.sizeRadius * 2, 0));
-
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
-
-        this.axisLine = new THREE.Line(geometry, material);
+        const size = this.sizeRadius * 2;
+        this.axisLine = new THREE.AxesHelper(size); // Reusing 'axisLine' property name to minimize refactoring
         this.axisLine.visible = false;
 
         // Attach to mesh so it rotates with the body
@@ -392,10 +386,10 @@ export class CelestialBody {
 
     setDebugVisibility(state) {
         if (this.ring) {
-            this.ring.visible = state.rings;
+            this.ring.visible = state.planetRing;
         }
         if (this.axisLine) {
-            this.axisLine.visible = state.axis;
+            this.axisLine.visible = state.planetAxis;
         }
         if (this.directionLine) {
             this.directionLine.visible = state.planetToParent;

@@ -68,28 +68,32 @@ export class Player {
             const zApex = 0; // Shift apex back for speed look?
             const vApex = [0, y, zApex];
 
-            let verticesArray = [
-                // Bottom/Deck Face (V1, V2, V3) - Actually handled by side faces usually, but let's include all faces
-                // Face 1: Front-Left-Apex
-                ...vFront, ...vBackL, ...vApex,
-                // Face 2: Front-Right-Apex
-                ...vFront, ...vApex, ...vBackR, // Reordered for normal?
-                // Face 3: Back-Apex
-                ...vBackL, ...vBackR, ...vApex,
-                // Face 4: Deck (V1, V2, V3) - Often hidden inside if we align two shapes
-                ...vFront, ...vBackR, ...vBackL
-            ];
+            let verticesArray;
 
-            if (!isTop) {
-                // Reverse winding for bottom hull (pointing down)
-                const reversed = [];
-                for (let i = 0; i < verticesArray.length; i += 9) {
-                    const v1 = verticesArray.slice(i, i + 3);
-                    const v2 = verticesArray.slice(i + 3, i + 6);
-                    const v3 = verticesArray.slice(i + 6, i + 9);
-                    reversed.push(...v1, ...v3, ...v2);
-                }
-                verticesArray = reversed;
+            if (isTop) {
+                verticesArray = [
+                    // Top (Cabin) - Faces Out
+                    // Face 1: Front-Left-Apex
+                    ...vFront, ...vBackL, ...vApex,
+                    // Face 2: Front-Apex-Right
+                    ...vFront, ...vApex, ...vBackR,
+                    // Face 3: Left-Right-Apex (Back)
+                    ...vBackL, ...vBackR, ...vApex,
+                    // Face 4: Deck (Bottom) - Front-Right-Left (Points Down)
+                    ...vFront, ...vBackR, ...vBackL
+                ];
+            } else {
+                verticesArray = [
+                    // Bottom (Hull) - Faces Out
+                    // Face 1: Front-Apex-Left
+                    ...vFront, ...vApex, ...vBackL,
+                    // Face 2: Front-Right-Apex
+                    ...vFront, ...vBackR, ...vApex,
+                    // Face 3: Left-Apex-Right (Back)
+                    ...vBackL, ...vApex, ...vBackR,
+                    // Face 4: Deck (Top) - Front-Left-Right (Points Up)
+                    ...vFront, ...vBackL, ...vBackR
+                ];
             }
 
             const vertices = new Float32Array(verticesArray);
@@ -121,6 +125,7 @@ export class Player {
         // Axis helper for debug
         this.axisHelper = new THREE.AxesHelper(2);
         this.axisHelper.visible = false;
+        this.axisHelper.scale.set(1, 1, -1); // Invert Z to point forward
         this.mesh.add(this.axisHelper);
 
         // Debug Collision Boundary (Radius 0.5)
@@ -344,9 +349,9 @@ export class Player {
 
     setDebugVisibility(visible) {
         if (typeof visible === 'object') {
-            if (this.axisHelper) this.axisHelper.visible = visible.axis;
-            if (this.boundaryLine) this.boundaryLine.visible = visible.axis; // Link boundary to axis
-            if (this.vortexLine) this.vortexLine.visible = visible.vortex;
+            if (this.axisHelper) this.axisHelper.visible = visible.playerAxis;
+            if (this.boundaryLine) this.boundaryLine.visible = visible.playerRing; // Linked to playerRing
+            if (this.vortexLine) this.vortexLine.visible = visible.playerVortex;
         } else {
             if (this.axisHelper) this.axisHelper.visible = visible;
             if (this.boundaryLine) this.boundaryLine.visible = visible;
