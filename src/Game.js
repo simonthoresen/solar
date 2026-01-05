@@ -266,15 +266,62 @@ export class Game {
                 RIGHT: THREE.MOUSE.ROTATE
             };
 
-            // Hide cursor while rotating with Right Click
+            // Pointer Lock for Right Click Rotation
+            // We do NOT disable controls, because we need controls.update() to run for manual rotation to work.
+            // OrbitControls ignores mousemove when pointer is locked (clientX/Y are constant).
+
             this.renderer.domElement.addEventListener('mousedown', (e) => {
                 if (e.button === 2) { // Right Click
-                    document.body.style.cursor = 'none';
+                    this.renderer.domElement.requestPointerLock();
                 }
             });
 
-            document.body.addEventListener('mouseup', () => {
-                document.body.style.cursor = 'default';
+            document.addEventListener('mouseup', () => {
+                // If we are locked and release right click, unlock
+                if (document.pointerLockElement === this.renderer.domElement) {
+                    document.exitPointerLock();
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (document.pointerLockElement === this.renderer.domElement) {
+                    const { movementX, movementY } = e;
+                    const rotateSpeed = this.controls.rotateSpeed || 1.0;
+                    const element = this.renderer.domElement;
+
+                    // Manual Rotation Logic using Spherical Coordinates
+                    const offset = new THREE.Vector3();
+                    const spherical = new THREE.Spherical();
+
+                    // 1. Get offset from target
+                    offset.copy(this.camera.position).sub(this.controls.target);
+
+                    // 2. Convert to Spherical
+                    spherical.setFromVector3(offset);
+
+                    // 3. Apply Deltas
+                    // Adjust sign to match desired drag behavior (Drag Left -> Camera Left -> Theta Increases)
+                    const deltaTheta = 2 * Math.PI * movementX / element.clientHeight * rotateSpeed; // Left/Right
+                    const deltaPhi = 2 * Math.PI * movementY / element.clientHeight * rotateSpeed;   // Up/Down
+
+                    spherical.theta -= deltaTheta;
+                    spherical.phi -= deltaPhi;
+
+                    // 4. Clamp Phi (Vertical Angle)
+                    const minPolarAngle = this.controls.minPolarAngle || 0;
+                    const maxPolarAngle = this.controls.maxPolarAngle || Math.PI;
+                    spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
+
+                    spherical.makeSafe();
+
+                    // 5. Apply back to Camera
+                    offset.setFromSpherical(spherical);
+                    this.camera.position.copy(this.controls.target).add(offset);
+                    this.camera.lookAt(this.controls.target);
+
+                    // OrbitControls.update() in loop will handle damping if enabled, but might conflict if we manually set pos?
+                    // Usually safe if we update pos, then calling update() will just re-sync.
+                }
             });
         }
 
@@ -289,6 +336,45 @@ export class Game {
         }
 
         this.controls.update();
+
+        // Custom Wheel Listener for Zooming while Rotating
+        this.renderer.domElement.addEventListener('wheel', (e) => {
+            // Check if Right Mouse Button is held (Bitmask 2)
+            if (e.buttons & 2) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const zoomSpeed = this.controls.zoomSpeed || 1.0;
+                const delta = -Math.sign(e.deltaY); // -1 for Zoom OUT (Scroll Down), +1 for Zoom IN (Scroll Up)
+                // Note: Standard DeltaY > 0 is Scroll Down.
+
+                if (delta === 0) return;
+
+                // Scale factor: 0.95 ^ speed
+                const scale = Math.pow(0.95, zoomSpeed);
+
+                // If Zooming IN (Delta < 0 -> e.deltaY < 0), we want distance to shrink -> multiply by scale < 1.
+                // If Zooming OUT (Delta > 0 -> e.deltaY > 0), we want distance to grow -> divide by scale (or mult by 1/scale).
+
+                const finalScale = (e.deltaY < 0) ? scale : (1 / scale);
+
+                const offset = new THREE.Vector3().copy(this.camera.position).sub(this.controls.target);
+                offset.multiplyScalar(finalScale);
+
+                // Clamp
+                const dist = offset.length();
+                if (dist < this.controls.minDistance) {
+                    offset.setLength(this.controls.minDistance);
+                } else if (dist > this.controls.maxDistance) {
+                    offset.setLength(this.controls.maxDistance);
+                }
+
+                this.camera.position.copy(this.controls.target).add(offset);
+
+                // Optional: Update controls? 
+                // controls.update() will be called in animate loop anyway, which reads camera position.
+            }
+        }, { passive: false }); // Passive false mostly needed for preventDefault, though 'wheel' is passive by default in some browsers
     }
 
     start() {

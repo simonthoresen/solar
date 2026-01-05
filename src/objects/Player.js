@@ -20,7 +20,6 @@ export class Player {
         this.keys = {
             w: false,
             a: false,
-            s: false,
             d: false,
             shift: false,
             space: false
@@ -226,12 +225,11 @@ export class Player {
         } else {
             if (this.wakeMesh) this.wakeMesh.visible = false;
         }
-        if (this.keys.s) {
-            this.velocity.add(forward.multiplyScalar(-playerConfig.acceleration * dt));
-        }
+        // Backwards movement disabled per request
+        // if (this.keys.s) { ... }
 
         // Friction/Deceleration
-        if (!this.keys.w && !this.keys.s) {
+        if (!this.keys.w) {
             this.velocity.multiplyScalar(1 - (playerConfig.deceleration * dt));
         }
 
