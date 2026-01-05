@@ -9,6 +9,7 @@ import { Nebula } from './objects/Nebula.js';
 import { StudioUI } from './StudioUI.js';
 import { MainMenu } from './MainMenu.js';
 import { solarSystemConfig, dustConfig, playerConfig } from './config.js';
+import { HUD } from './HUD.js';
 
 export class Game {
     constructor() {
@@ -101,6 +102,10 @@ export class Game {
         this.mainMenu = new MainMenu(this);
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
+
+        this.hud = new HUD(this, this.camera);
+        // Initialize HUD with bodies after they are created
+        this.hud.init(this.celestialBodies);
 
         this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
 
@@ -256,6 +261,24 @@ export class Game {
             this.controls.enableZoom = true; // Allow scroll zoom
             this.controls.enablePan = false; // Disable panning to keep target centered
             this.controls.screenSpacePanning = false;
+
+            // Remap controls: Right click to Rotate
+            this.controls.mouseButtons = {
+                LEFT: null,
+                MIDDLE: THREE.MOUSE.DOLLY,
+                RIGHT: THREE.MOUSE.ROTATE
+            };
+
+            // Hide cursor while rotating with Right Click
+            this.renderer.domElement.addEventListener('mousedown', (e) => {
+                if (e.button === 2) { // Right Click
+                    document.body.style.cursor = 'none';
+                }
+            });
+
+            document.body.addEventListener('mouseup', () => {
+                document.body.style.cursor = 'default';
+            });
         }
 
         if (this.gameMode === 'game') {
@@ -355,6 +378,13 @@ export class Game {
         }
 
         this.renderer.render(this.scene, this.camera);
+
+        // HUD Pass
+        if (this.gameMode === 'game') {
+            this.hud.update();
+            this.renderer.clearDepth(); // Ensure HUD draws on top
+            this.renderer.render(this.hud.scene, this.camera);
+        }
     }
 
     updateGameLogic(delta) {
@@ -410,11 +440,38 @@ export class Game {
     }
 
     onMouseClick(event) {
-        if (this.gameMode !== 'studio') return;
-
         // Calculate mouse position in normalized device coordinates
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        if (this.gameMode === 'game') {
+            // Check HUD interaction first
+            this.raycaster.setFromCamera(this.mouse, this.camera);
+
+            // HUD Scene check
+            // Note: Raycasting against LineLoop (box) is hard. Raycasting against invisible plane (hitMesh) is easy.
+            // We need to traverse HUD scene to find hitMeshes.
+
+            // Collect all hit meshes from overlays
+            const hitTargets = [];
+            this.hud.overlays.forEach(o => {
+                if (o.hitMesh) hitTargets.push(o.hitMesh);
+            });
+
+            const intersects = this.raycaster.intersectObjects(hitTargets, false);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                const target = hit.object.userData.target;
+                if (target) {
+                    // Update HUD selection
+                    this.hud.setSelected(target);
+                }
+            }
+            return;
+        }
+
+        if (this.gameMode !== 'studio') return;
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
