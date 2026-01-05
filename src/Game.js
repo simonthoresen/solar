@@ -30,7 +30,7 @@ export class Game {
         this.velocityField = new VelocityField(this.scene);
         this.particleSystem = new ParticleSystem(this.scene, dustConfig);
         this.player = new Player(this.scene);
-        this.nebula = new Nebula(this.backgroundScene); // Initialize Nebula
+        this.nebula = new Nebula(this.scene); // Initialize Nebula with main scene
 
         this.celestialBodies = [];
 
@@ -312,11 +312,7 @@ export class Game {
 
             // Static render
             this.renderer.clear();
-            if (this.gameMode === 'game') {
-                this.nebula.update(this.camera.position);
-                this.renderer.render(this.backgroundScene, this.camera);
-                this.renderer.clearDepth();
-            }
+            // Nebula background is now scene.background, no manual update/render needed.
             this.renderer.render(this.scene, this.camera);
             return;
         }
@@ -370,12 +366,7 @@ export class Game {
 
         // --- RENDER PASSES ---
         this.renderer.clear();
-
-        if (this.gameMode === 'game') {
-            this.nebula.update(this.camera.position);
-            this.renderer.render(this.backgroundScene, this.camera);
-            this.renderer.clearDepth();
-        }
+        // Background is handled by scene.background
 
         this.renderer.render(this.scene, this.camera);
 
