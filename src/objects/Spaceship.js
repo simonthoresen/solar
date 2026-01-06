@@ -26,7 +26,6 @@ export class Spaceship {
         this.initMesh(color);
         this.initWake();
 
-        this.lasers = [];
         this.shootCooldown = 0;
         this.smokeAccumulator = 0;
 
@@ -212,8 +211,9 @@ export class Spaceship {
         // Override in subclass
     }
 
-    update(dt, velocityField, celestialBodies = [], particleSystem = null, camera = null, ships = []) {
+    update(dt, velocityField, celestialBodies = [], particleSystem = null, projectileSystem = null, camera = null, ships = []) {
         this.particleSystemReference = particleSystem;
+        this.projectileSystemReference = projectileSystem;
         if (!this.isActive) return; // Stop updating if dead
         this.updateControls(dt);
 
@@ -304,7 +304,7 @@ export class Spaceship {
             this.shootCooldown = 0.25;
         }
 
-        this.updateLasers(dt, celestialBodies, particleSystem, ships);
+        // Removed updateLasers call, now handled by ProjectileSystem
         this.mesh.position.copy(this.position);
     }
 
@@ -360,16 +360,9 @@ export class Spaceship {
     }
 
     fireLaser() {
+        if (!this.projectileSystemReference) return;
+
         const laserColor = this.hasAttacked ? 0xff0000 : (playerConfig.laserColor !== undefined ? playerConfig.laserColor : 0x00ff00);
-        // Force player to always be Green? Player hasAttacked stays false usually.
-        // If this logic is shared, we rely on hasAttacked.
-
-        const laserLength = 5.0;
-        const laserRadius = 0.2;
-
-        const geometry = new THREE.CylinderGeometry(laserRadius, laserRadius, laserLength, 8);
-        geometry.rotateX(Math.PI / 2);
-        const material = new THREE.MeshBasicMaterial({ color: laserColor });
 
         const scale = playerConfig.modelScale || 1.0;
         const sideOffset = 1.0 * scale;
@@ -379,95 +372,15 @@ export class Spaceship {
         const offsets = [-sideOffset, sideOffset];
 
         offsets.forEach(offset => {
-            const laser = new THREE.Mesh(geometry, material);
             const initialPos = new THREE.Vector3(offset, verticalOffset, forwardOffset).applyEuler(this.rotation).add(this.position);
 
-            laser.position.copy(initialPos);
-            laser.quaternion.copy(this.mesh.quaternion);
-
-            this.scene.add(laser);
-            this.lasers.push({
-                mesh: laser,
-                velocity: new THREE.Vector3(0, 0, -1).applyEuler(this.rotation).multiplyScalar(150),
-                life: 5.0
-            });
+            this.projectileSystemReference.spawnLaser(
+                initialPos,
+                this.mesh.quaternion,
+                laserColor,
+                this
+            );
         });
-    }
-
-    updateLasers(dt, celestialBodies, particleSystem, ships = []) {
-        const maxRadius = dustConfig.fieldRadius;
-        const laserRadius = 0.2;
-
-        for (let i = this.lasers.length - 1; i >= 0; i--) {
-            const laser = this.lasers[i];
-            const nextPos = laser.mesh.position.clone().add(laser.velocity.clone().multiplyScalar(dt));
-
-            let hasHit = false;
-
-            // Check Planets
-            if (celestialBodies) {
-                for (const body of celestialBodies) {
-                    const distSq = nextPos.distanceToSquared(body.position);
-                    const hitRad = body.sizeRadius + 0.5;
-                    if (distSq < hitRad * hitRad) {
-                        hasHit = true;
-                        break;
-                    }
-                }
-            }
-
-            // Check Ships
-            if (!hasHit && ships) {
-                for (const ship of ships) {
-                    if (ship === this || !ship.isActive) continue;
-                    const distSq = nextPos.distanceToSquared(ship.position);
-                    // Hit radius approx 1.5
-                    if (distSq < 2.25) {
-                        ship.takeDamage(this.laserDamage);
-                        hasHit = true;
-                        break;
-                    }
-                }
-            }
-
-            if (hasHit) {
-                this.scene.remove(laser.mesh);
-                laser.mesh.geometry.dispose();
-                laser.mesh.material.dispose();
-                this.lasers.splice(i, 1);
-                continue;
-            }
-
-            if (particleSystem) {
-                particleSystem.checkLaserCollisions(nextPos, laserRadius, laser.velocity);
-            }
-
-            laser.mesh.position.copy(nextPos);
-            laser.life -= dt;
-
-            const distSq = laser.mesh.position.lengthSq();
-            const dist = Math.sqrt(distSq);
-
-            if (dist > maxRadius) {
-                laser.mesh.material.transparent = true;
-                const overshoot = dist - maxRadius;
-                const fadeDist = 50;
-                const opacity = 1.0 - Math.min(1.0, overshoot / fadeDist);
-                laser.mesh.material.opacity = opacity;
-
-                if (opacity <= 0.01 || laser.life <= 0) {
-                    this.scene.remove(laser.mesh);
-                    laser.mesh.geometry.dispose();
-                    laser.mesh.material.dispose();
-                    this.lasers.splice(i, 1);
-                }
-            } else if (laser.life <= 0) {
-                this.scene.remove(laser.mesh);
-                laser.mesh.geometry.dispose();
-                laser.mesh.material.dispose();
-                this.lasers.splice(i, 1);
-            }
-        }
     }
 
     // API

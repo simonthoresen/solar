@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { VelocityField } from './objects/VelocityField.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
+import { ProjectileSystem } from './objects/ProjectileSystem.js';
 import { Player } from './objects/Player.js';
 import { NPC } from './objects/NPC.js';
 import { CelestialBody } from './objects/CelestialBody.js';
@@ -30,6 +31,7 @@ export class Game {
         // Components
         this.velocityField = new VelocityField(this.scene);
         this.particleSystem = new ParticleSystem(this.scene, dustConfig);
+        this.projectileSystem = new ProjectileSystem(this.scene);
         this.player = new Player(this.scene);
         this.nebula = new Nebula(this.scene); // Initialize Nebula with main scene
 
@@ -486,8 +488,9 @@ export class Game {
 
     updateGameLogic(delta) {
         this.checkRespawns(delta);
-
         const allShips = [this.player, ...this.npcs];
+
+        this.projectileSystem.update(delta, this.celestialBodies, allShips, this.particleSystem);
 
         // Player Updates
         this.player.update(
@@ -495,6 +498,7 @@ export class Game {
             this.velocityField, // Pass Field directly now
             this.celestialBodies,
             this.particleSystem,
+            this.projectileSystem, // Pass Projectile System
             this.camera,
             allShips
         );
@@ -506,6 +510,7 @@ export class Game {
                 this.velocityField,
                 this.celestialBodies,
                 this.particleSystem,
+                this.projectileSystem, // Pass Projectile System
                 this.camera,
                 allShips
             );

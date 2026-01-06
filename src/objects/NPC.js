@@ -181,12 +181,12 @@ export class NPC extends Spaceship {
         }
     }
 
-    update(dt, velocityField, celestialBodies = [], particleSystem = null, camera = null, ships = []) {
+    update(dt, velocityField, celestialBodies = [], particleSystem = null, projectileSystem = null, camera = null, ships = []) {
         if (!this.isActive) {
             if (this.playerLine) this.playerLine.visible = false;
             return;
         }
-        super.update(dt, velocityField, celestialBodies, particleSystem, camera, ships);
+        super.update(dt, velocityField, celestialBodies, particleSystem, projectileSystem, camera, ships);
         this.updatePlayerLine();
     }
 
