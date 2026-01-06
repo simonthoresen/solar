@@ -164,6 +164,9 @@ export class Game {
                 }
             }
             if (e.key === 'Escape') {
+                this.deselectAll();
+            }
+            if (e.key === '|') {
                 this.mainMenu.toggle();
             }
         });
@@ -598,6 +601,29 @@ export class Game {
         }
     }
 
+    deselectAll() {
+        // Reset all 3D objects
+        this.celestialBodies.forEach(cb => cb.setSelected(false));
+        this.player.setSelected(false);
+        this.npcs.forEach(npc => npc.setSelected(false));
+
+        // Reset HUD selection
+        if (this.hud) {
+            this.hud.setSelected(null);
+        }
+
+        // Reset Studio selection
+        if (this.studioUI && this.studioUI.selectedBody) {
+            this.studioUI.selectedBody.setSelected(false);
+            // studioUI.selectedBody is just a reference, calling setSelected(false) on it is good.
+            // But we should also clear the studioUI reference?
+            // Actually studioUI might interpret explicit deselection.
+        }
+        if (this.studioUI) {
+            this.studioUI.hide();
+        }
+    }
+
     onMouseClick(event) {
         // Calculate mouse position in normalized device coordinates
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -623,16 +649,14 @@ export class Game {
                 const hit = intersects[0];
                 const target = hit.object.userData.target;
                 if (target) {
-                    // Update HUD selection
-                    this.hud.setSelected(target);
-
                     // Update 3D Object Selection (Exclusive)
                     // 1. Reset all
-                    this.celestialBodies.forEach(cb => cb.setSelected(false));
-                    this.player.setSelected(false);
-                    this.npcs.forEach(npc => npc.setSelected(false));
+                    this.deselectAll();
 
-                    // 2. Set new
+                    // Update HUD selection AFTER reset
+                    this.hud.setSelected(target);
+
+                    // 2. Set new 3D selection
                     if (target.setSelected) {
                         target.setSelected(true);
                     }
@@ -676,12 +700,7 @@ export class Game {
                 console.log("Selected Planet:", selectedBody);
 
                 // Deselect previous
-                if (this.studioUI.selectedBody) {
-                    this.studioUI.selectedBody.setSelected(false);
-                }
-
-                // Deselect Player
-                this.player.setSelected(false);
+                this.deselectAll();
 
                 selectedBody.setSelected(true);
                 this.studioUI.show(selectedBody);
@@ -713,10 +732,7 @@ export class Game {
             }
         } else {
             // Clicked empty space
-            if (this.studioUI.selectedBody) {
-                this.studioUI.selectedBody.setSelected(false);
-            }
-            this.studioUI.hide();
+            this.deselectAll();
         }
     }
 

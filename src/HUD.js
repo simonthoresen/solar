@@ -267,34 +267,35 @@ export class HUD {
             let desiredColor = item.baseColor;
             let desiredLineWidth = 2;
 
-            const isSelected = (this.selectedBody === t);
-
-            if (isSelected) {
-                desiredLineWidth = 3.5;
-            }
-
-            // Unified Logic:
-            // Aggressive -> Red
-            // Non-Aggressive (Planets, Player, Neutral Ships) -> Green
-
             // Determine Aggression
             let isAggressive = false;
             if (t.hasAttacked) isAggressive = true;
             if (t.type === 'kamikaze' || t.type === 'shooter') isAggressive = true;
 
-            if (isAggressive) {
-                desiredColor = 0xff0000; // Red
+            const isSelected = (this.selectedBody === t);
+
+            if (isSelected) {
+                desiredLineWidth = 4; // Approx 2x thickness
+                desiredColor = 0xffff00; // Yellow for selected
             } else {
-                desiredColor = 0x00ff00; // Green
+                if (isAggressive) {
+                    desiredColor = 0xff0000; // Red
+                } else {
+                    desiredColor = 0x00ff00; // Green
+                }
             }
 
             // Apply Changes
             if (item.material.color.getHex() !== desiredColor) {
                 item.material.color.setHex(desiredColor);
             }
-            if (item.material.linewidth !== desiredLineWidth) {
-                item.material.linewidth = desiredLineWidth;
+
+            // Force update via uniform if available
+            if (item.material.uniforms && item.material.uniforms.linewidth) {
+                item.material.uniforms.linewidth.value = desiredLineWidth;
             }
+            // Also set property for consistency
+            item.material.linewidth = desiredLineWidth;
 
             // Update Bars
             if (item.healthBar && item.shieldBar) {
