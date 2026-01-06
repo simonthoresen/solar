@@ -49,6 +49,39 @@ export class HUD {
         this.createOverlay(ship, color);
     }
 
+    removeSpaceship(ship) {
+        const index = this.overlays.findIndex(o => o.target === ship);
+        if (index > -1) {
+            const overlay = this.overlays[index];
+            this.scene.remove(overlay.mesh);
+
+            // Dispose basic resources
+            overlay.mesh.geometry.dispose();
+            overlay.mesh.material.dispose();
+
+            if (overlay.hitMesh) {
+                overlay.hitMesh.geometry.dispose();
+                overlay.hitMesh.material.dispose();
+            }
+
+            // Bars (Standard plane geometry usually shared or small enough, but let's be safe)
+            if (overlay.healthBar) {
+                overlay.healthBar.bg.geometry.dispose();
+                overlay.healthBar.bg.material.dispose();
+                overlay.healthBar.fg.geometry.dispose();
+                overlay.healthBar.fg.material.dispose();
+            }
+            if (overlay.shieldBar) {
+                overlay.shieldBar.bg.geometry.dispose();
+                overlay.shieldBar.bg.material.dispose();
+                overlay.shieldBar.fg.geometry.dispose();
+                overlay.shieldBar.fg.material.dispose();
+            }
+
+            this.overlays.splice(index, 1);
+        }
+    }
+
     createOverlay(celestialBody, colorOverride = null) {
         // Simple 2D box outline
         // LineLoop doesn't exist for Fat Lines, so we must close the loop manually

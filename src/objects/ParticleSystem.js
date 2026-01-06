@@ -68,6 +68,96 @@ export class ParticleSystem {
             this.dummy.updateMatrix();
             this.smokeMesh.setMatrixAt(i, this.dummy.matrix);
         }
+
+        this.initExplosions();
+    }
+
+    initExplosions() {
+        // --- Explosion System (Instanced) ---
+        this.explosionMaxCount = 2000;
+        this.explosionGeometry = new THREE.PlaneGeometry(1, 1);
+        this.explosionMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            transparent: true,
+            opacity: 1.0,
+            blending: THREE.AdditiveBlending
+        });
+
+        this.explosionMesh = new THREE.InstancedMesh(this.explosionGeometry, this.explosionMaterial, this.explosionMaxCount);
+        this.explosionMesh.frustumCulled = false;
+        this.scene.add(this.explosionMesh);
+
+        this.explosionData = new Array(this.explosionMaxCount).fill(null);
+        this.explosionCursor = 0;
+
+        for (let i = 0; i < this.explosionMaxCount; i++) {
+            this.explosionData[i] = {
+                active: false,
+                position: new THREE.Vector3(),
+                velocity: new THREE.Vector3(),
+                life: 0,
+                maxLife: 1,
+                color: new THREE.Color(),
+                scale: 1,
+                rotation: 0,
+                rotSpeed: 0
+            };
+            this.dummy.position.set(0, 0, 0);
+            this.dummy.scale.set(0, 0, 0);
+            this.dummy.updateMatrix();
+            this.explosionMesh.setMatrixAt(i, this.dummy.matrix);
+        }
+    }
+
+    spawnExplosion(position, color, count = 50) {
+        const baseColor = new THREE.Color(color);
+        const fireColors = [
+            new THREE.Color(0xffaa00), // Orange
+            new THREE.Color(0xff4400), // Red-Orange
+            new THREE.Color(0xffff00), // Yellow
+            new THREE.Color(0xffffff)  // White hot
+        ];
+
+        for (let i = 0; i < count; i++) {
+            const idx = this.explosionCursor;
+            this.explosionCursor = (this.explosionCursor + 1) % this.explosionMaxCount;
+
+            const p = this.explosionData[idx];
+            p.active = true;
+            p.position.copy(position);
+
+            // Random sphere velocity
+            const speed = 10 + Math.random() * 40;
+            const angle = Math.random() * Math.PI * 2;
+            const z = (Math.random() - 0.5) * 2;
+            const r = Math.sqrt(1 - z * z);
+
+            p.velocity.set(
+                r * Math.cos(angle) * speed,
+                (Math.random() - 0.5) * 10, // Flatter explosion
+                r * Math.sin(angle) * speed
+            );
+
+            p.life = 0.5 + Math.random() * 1.0;
+            p.maxLife = p.life;
+            p.scale = 0.5 + Math.random() * 2.5;
+            p.rotation = Math.random() * Math.PI;
+            p.rotSpeed = (Math.random() - 0.5) * 10;
+
+            // Mix ship color with fire colors
+            if (Math.random() > 0.3) {
+                p.color.copy(baseColor);
+                // Slight jitter
+                p.color.offsetHSL(0, 0, (Math.random() - 0.5) * 0.2);
+            } else {
+                p.color.copy(fireColors[Math.floor(Math.random() * fireColors.length)]);
+            }
+
+            this.explosionMesh.setColorAt(idx, p.color);
+        }
+        this.explosionMesh.instanceColor.needsUpdate = true;
     }
 
     initDust() {
@@ -258,6 +348,42 @@ export class ParticleSystem {
             }
         }
         this.smokeMesh.instanceMatrix.needsUpdate = true;
+
+
+        // --- Update Explosions ---
+        for (let i = 0; i < this.explosionMaxCount; i++) {
+            const p = this.explosionData[i];
+            if (!p.active) continue;
+
+            p.velocity.multiplyScalar(1 - 2.0 * dt); // Drag
+            p.position.addScaledVector(p.velocity, dt);
+
+            p.rotation += p.rotSpeed * dt;
+            p.life -= dt;
+
+            if (p.life <= 0) {
+                p.active = false;
+                this.updateInstance(this.explosionMesh, i, p.position, 0);
+            } else {
+                const lifeRatio = p.life / p.maxLife;
+                // Fade out by scaling down
+                const scale = p.scale * lifeRatio;
+
+                this.dummy.position.copy(p.position);
+                this.dummy.scale.setScalar(scale);
+                this.dummy.rotation.z = p.rotation;
+
+                // Billboard: Face camera
+                if (cameraQuaternion) {
+                    this.dummy.quaternion.copy(cameraQuaternion);
+                    this.dummy.rotateZ(p.rotation); // Apply local rotation after facing camera
+                }
+
+                this.dummy.updateMatrix();
+                this.explosionMesh.setMatrixAt(i, this.dummy.matrix);
+            }
+        }
+        this.explosionMesh.instanceMatrix.needsUpdate = true;
 
         return itemsForViz;
     }

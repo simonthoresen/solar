@@ -9,6 +9,7 @@ const _tempSmokeInfluence = new THREE.Vector3();
 export class Spaceship {
     constructor(scene, color, position) {
         this.scene = scene;
+        this.color = color;
         this.position = position.clone();
         this.velocity = new THREE.Vector3(0, 0, 0);
         this.smoothedVelocityInfluence = new THREE.Vector3(0, 0, 0); // For smoothing
@@ -41,6 +42,20 @@ export class Spaceship {
         this.laserDamage = 25;
     }
 
+    explode() {
+        if (!this.isActive) return;
+        this.isActive = false;
+
+        // Hide mesh
+        this.mesh.visible = false;
+        this.setDebugVisibility({ playerAxis: false, playerRing: false, playerVortex: false });
+
+        // Trigger particles
+        if (this.particleSystemReference) {
+            this.particleSystemReference.spawnExplosion(this.position, this.color);
+        }
+    }
+
     takeDamage(amount) {
         if (!this.isActive) return;
 
@@ -60,9 +75,7 @@ export class Spaceship {
             this.health -= amount;
             if (this.health <= 0) {
                 this.health = 0;
-                this.isActive = false;
-                // Handle destruction? 
-                // For now, just mark inactive.
+                this.explode();
             }
         }
     }
@@ -200,6 +213,8 @@ export class Spaceship {
     }
 
     update(dt, velocityField, celestialBodies = [], particleSystem = null, camera = null, ships = []) {
+        this.particleSystemReference = particleSystem;
+        if (!this.isActive) return; // Stop updating if dead
         this.updateControls(dt);
 
         // Calculate Velocity Influence at current position

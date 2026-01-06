@@ -153,6 +153,7 @@ export class Game {
         // Scratch objects
         this._tempSmokeInfluence = new THREE.Vector3();
         this.smokeAccumulator = 0;
+        this.playerRespawnTimer = 3.0;
 
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'h') {
@@ -484,6 +485,8 @@ export class Game {
     }
 
     updateGameLogic(delta) {
+        this.checkRespawns(delta);
+
         const allShips = [this.player, ...this.npcs];
 
         // Player Updates
@@ -521,6 +524,64 @@ export class Game {
         this.controls.update();
 
         this.lastPlayerPos.copy(currentPlayerPos);
+    }
+
+    checkRespawns(dt) {
+        // Player Logic
+        if (!this.player.isActive) {
+            this.playerRespawnTimer -= dt;
+            if (this.playerRespawnTimer <= 0) {
+                // Respawn
+                this.player.isActive = true;
+                this.player.health = this.player.maxHealth;
+                this.player.shield = this.player.maxShield;
+                this.player.mesh.visible = true;
+                this.player.velocity.set(0, 0, 0);
+
+                // Random pos in dust (Radius ~50-80)
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 50 + Math.random() * 30;
+                this.player.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+                this.player.mesh.position.copy(this.player.position);
+
+                // Reset Camera to player?
+                this.controls.target.copy(this.player.position);
+                // Keep camera offset?
+                this.camera.position.set(this.player.position.x, this.player.position.y + 10, this.player.position.z + 20);
+                this.playerRespawnTimer = 3.0;
+            }
+        } else {
+            this.playerRespawnTimer = 3.0; // Reset timer while alive
+        }
+
+        // NPC Logic
+        for (let i = this.npcs.length - 1; i >= 0; i--) {
+            const npc = this.npcs[i];
+            if (!npc.isActive) {
+                // Destroy Logic
+                if (this.hud) this.hud.removeSpaceship(npc);
+
+                this.scene.remove(npc.mesh);
+                if (npc.playerLine) this.scene.remove(npc.playerLine);
+
+                this.npcs.splice(i, 1);
+
+                // Respawn new one immediately (or after delay, but user said "a new random npc should spawn")
+                this.spawnRandomNPC();
+            }
+        }
+    }
+
+    spawnRandomNPC() {
+        const npcTypes = ['hopper', 'speedster', 'kamikaze', 'shooter'];
+        const type = npcTypes[Math.floor(Math.random() * npcTypes.length)];
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 50 + Math.random() * 50;
+        const pos = new THREE.Vector3(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+
+        const npc = new NPC(this.scene, type, pos, this.celestialBodies, this.player);
+        this.npcs.push(npc);
+        if (this.hud) this.hud.addSpaceship(npc);
     }
 
     onResize() {
