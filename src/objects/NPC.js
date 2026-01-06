@@ -25,6 +25,7 @@ export class NPC extends Spaceship {
         this.wanderOffset = 0;
 
         this.initPlayerLine();
+        this.isSelected = false;
     }
 
     updateControls(dt) {
@@ -176,9 +177,8 @@ export class NPC extends Spaceship {
 
     setSelected(isSelected) {
         super.setSelected(isSelected); // Call base handles axisHelper
-        if (this.playerLine) {
-            this.playerLine.visible = isSelected;
-        }
+        this.isSelected = isSelected;
+        this.updatePlayerLine();
     }
 
     update(dt, velocityField, celestialBodies = [], particleSystem = null, projectileSystem = null, camera = null, ships = []) {
@@ -191,7 +191,13 @@ export class NPC extends Spaceship {
     }
 
     updatePlayerLine() {
-        if (!this.playerLine || !this.playerLine.visible || !this.player) return;
+        if (!this.playerLine || !this.player) return;
+
+        // Visibility Check: Selected AND Player Active
+        const shouldBeVisible = this.isSelected && this.player.isActive;
+        this.playerLine.visible = shouldBeVisible;
+
+        if (!shouldBeVisible) return;
 
         const positions = this.playerLine.geometry.attributes.position.array;
 

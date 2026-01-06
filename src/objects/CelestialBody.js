@@ -273,6 +273,11 @@ export class CelestialBody {
 
         // Update player line
         if (this.playerLine && playerPosition) {
+            // Safety: Hide if player is destroyed
+            if (!player.isActive) {
+                this.playerLine.visible = false;
+            }
+
             const positions = this.playerLine.geometry.attributes.position.array;
             // Point 0: Player
             positions[0] = playerPosition.x;

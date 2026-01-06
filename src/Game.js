@@ -12,6 +12,7 @@ import { StudioUI } from './StudioUI.js';
 import { MainMenu } from './MainMenu.js';
 import { solarSystemConfig, dustConfig, playerConfig } from './config.js';
 import { HUD } from './HUD.js';
+import { DetailPanel } from './DetailPanel.js';
 
 export class Game {
     constructor() {
@@ -132,6 +133,8 @@ export class Game {
         });
 
         this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
+
+        this.detailPanel = new DetailPanel(this);
 
         this.clock = new THREE.Clock();
 
@@ -485,7 +488,13 @@ export class Game {
         if (this.gameMode === 'game') {
             this.hud.update();
             this.renderer.clearDepth(); // Ensure HUD draws on top
+            this.renderer.clearDepth(); // Ensure HUD draws on top
             this.renderer.render(this.hud.scene, this.hud.camera);
+        }
+
+        // Detail Panel 3D Preview Update
+        if (this.detailPanel) {
+            this.detailPanel.update(delta);
         }
     }
 
@@ -622,6 +631,9 @@ export class Game {
         if (this.studioUI) {
             this.studioUI.hide();
         }
+        if (this.detailPanel) {
+            this.detailPanel.hide();
+        }
     }
 
     onMouseClick(event) {
@@ -664,6 +676,11 @@ export class Game {
                     // 3. Studio UI sync (optional, if we want studio UI in game mode? Probably not)
                     if (this.gameMode === 'studio') {
                         this.studioUI.show(target);
+                    }
+
+                    // Show Detail Panel (Game Mode)
+                    if (this.detailPanel) {
+                        this.detailPanel.show(target);
                     }
                 }
             }
