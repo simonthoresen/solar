@@ -93,16 +93,27 @@ export class HUD {
         });
     }
 
-    setSelected(celestialBody) {
-        this.selectedBody = celestialBody;
+    setSelected(targetOrBody) {
+        this.selectedBody = targetOrBody;
         this.overlays.forEach(item => {
-            if (item.baseColor === 0x00ff00) return; // Skip player
-
-            if (item.target === celestialBody) {
+            if (item.target === targetOrBody) {
                 item.material.color.setHex(0xffff00); // Yellow
                 item.material.linewidth = 5; // Thick lines!
+                // Ensure depth test is false so it overlays? It is screen space so it should be fine.
             } else {
-                item.material.color.setHex(0x888888); // Gray
+                // Revert to base color? Or always Gray?
+                // User said: "changing the color of unselected planet HUD boxes to gray"
+                // Player base is Green. Should unselected player be Green? 
+                // "turn off all debug lines by default" - these are HUD lines.
+                // "make it possible to select the player ship... like for planets... line width... thicker if selected"
+                // Implicitly: Unselected player should probably stay Green or turn Gray?
+                // Let's keep Player Green if unselected, others Gray.
+                // The item.baseColor stores the original color.
+                if (item.baseColor === 0x00ff00) {
+                    item.material.color.setHex(0x00ff00);
+                } else {
+                    item.material.color.setHex(0x888888);
+                }
                 item.material.linewidth = 2; // Standard thickness
             }
         });

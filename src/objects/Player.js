@@ -540,4 +540,9 @@ export class Player {
             }
         }
     }
+    setSelected(isSelected) {
+        if (this.axisHelper) {
+            this.axisHelper.visible = isSelected;
+        }
+    }
 }

@@ -115,14 +115,14 @@ export class Game {
         // Debug State
         this.debugState = {
             planetRing: false,
-            playerRing: true,
+            playerRing: false,
             planetAxis: false,
-            playerAxis: true,
+            playerAxis: false,
             planetToParent: false,
             planetToPlayer: false,
             planetVelocity: false,
             dustVelocity: false,
-            playerVortex: true
+            playerVortex: false
         };
 
         this.initDebugUI();
@@ -544,6 +544,21 @@ export class Game {
                 if (target) {
                     // Update HUD selection
                     this.hud.setSelected(target);
+
+                    // Update 3D Object Selection (Exclusive)
+                    // 1. Reset all
+                    this.celestialBodies.forEach(cb => cb.setSelected(false));
+                    this.player.setSelected(false);
+
+                    // 2. Set new
+                    if (target.setSelected) {
+                        target.setSelected(true);
+                    }
+
+                    // 3. Studio UI sync (optional, if we want studio UI in game mode? Probably not)
+                    if (this.gameMode === 'studio') {
+                        this.studioUI.show(target);
+                    }
                 }
             }
             return;
@@ -576,15 +591,43 @@ export class Game {
             });
 
             if (selectedBody) {
-                console.log("Selected:", selectedBody);
+                console.log("Selected Planet:", selectedBody);
 
                 // Deselect previous
                 if (this.studioUI.selectedBody) {
                     this.studioUI.selectedBody.setSelected(false);
                 }
 
+                // Deselect Player
+                this.player.setSelected(false);
+
                 selectedBody.setSelected(true);
                 this.studioUI.show(selectedBody);
+
+                // HUD update handled via onMouseClick logic in HUD pass?
+                // Wait, HUD click is separate. Studio Click is 3D raycast.
+                // If we are in STUDIO mode, we use this logic.
+                // If we are in GAME mode, we use HUD raycast logic below (which was at top of function).
+                // User wants "select the player ship by clicking on it" -> In GAME Mode?
+                // Previously, GAME mode logic was:
+                // if (gameMode === 'game') ... check HUD ... return.
+
+                // If user clicks on Player Ship in GAME mode (3D mesh click):
+                // The existing code checked HUD overlays.
+                // Player has a HUD overlay.
+                // So clicking HUD box overlay should select it.
+                // The HUD overlay for player was added in Game.js line 109.
+                // HUD.js line 81 sets userData.target = celestialBody.
+                // HUD.js line 43: addPlayer calls createOverlay(player).
+                // So player overlay has userData.target = player.
+
+                // So if I click player's HUD box, `hud.setSelected(target)` is called.
+                // I need to ensure that `hud.setSelected(player)` ALSO calls `player.setSelected(true)`.
+                // HUD.js is purely visual (2D lines). It calls `setSelected` on itself.
+                // It does NOT call back to game or object.
+
+                // I should move selection logic management to Game.js/central controller to ensure sync.
+                // OR update HUD logic in Game.js to handle the side effects.
             }
         } else {
             // Clicked empty space

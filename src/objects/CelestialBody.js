@@ -78,9 +78,21 @@ export class CelestialBody {
     }
 
     setSelected(isSelected) {
-        if (this.selectionBox) {
-            this.selectionBox.visible = isSelected;
-            this.updatePosition(); // Ensure it's at right spot immediately
+        // Requested visuals:
+        // 1. Wireframe circle (rotation radius) -> this.ring
+        // 2. Line to parent -> this.directionLine
+        // 3. Axis -> this.axisLine
+
+        if (this.ring) this.ring.visible = isSelected;
+        if (this.directionLine) this.directionLine.visible = isSelected;
+        if (this.axisLine) this.axisLine.visible = isSelected;
+
+        // Old selection box (square) - Disable or remove?
+        // User didn't ask for it, they asked for circle + line.
+        if (this.selectionBox) this.selectionBox.visible = false;
+
+        if (isSelected) {
+            this.updatePosition(); // Update visuals immediately
         }
     }
 
@@ -172,7 +184,7 @@ export class CelestialBody {
         ];
 
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ color: 0xff0000 }); // Red line
+        const material = new THREE.LineBasicMaterial({ color: 0xffff00 }); // Yellow line to match selection
 
         this.directionLine = new THREE.Line(geometry, material);
         this.directionLine.visible = false;
