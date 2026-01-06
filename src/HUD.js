@@ -272,17 +272,19 @@ export class HUD {
             if (t.hasAttacked) isAggressive = true;
             if (t.type === 'kamikaze' || t.type === 'shooter') isAggressive = true;
 
-            const isSelected = (this.selectedBody === t);
-
-            if (isSelected) {
-                desiredLineWidth = 4; // Approx 2x thickness
-                desiredColor = 0xffff00; // Yellow for selected
+            // Set Color based on Aggression (or base behavior)
+            if (isAggressive) {
+                desiredColor = 0xff0000; // Red
             } else {
-                if (isAggressive) {
-                    desiredColor = 0xff0000; // Red
-                } else {
-                    desiredColor = 0x00ff00; // Green
-                }
+                desiredColor = 0x00ff00; // Green
+            }
+
+            // Set Thickness based on Selection
+            const isSelected = (this.selectedBody === t);
+            if (isSelected) {
+                desiredLineWidth = 4; // Thicker for selected
+            } else {
+                desiredLineWidth = 2; // Standard
             }
 
             // Apply Changes
