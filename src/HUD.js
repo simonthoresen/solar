@@ -238,6 +238,32 @@ export class HUD {
             const t = item.target;
             if (!t) return;
 
+            // Check if target is destroyed/inactive
+            if (t.isActive !== undefined && !t.isActive) {
+                item.mesh.visible = false;
+                // Also hide bars
+                if (item.healthBar) {
+                    item.healthBar.bg.visible = false;
+                    item.healthBar.fg.visible = false;
+                }
+                if (item.shieldBar) {
+                    item.shieldBar.bg.visible = false;
+                    item.shieldBar.fg.visible = false;
+                }
+                return;
+            } else {
+                // Restore visibility of bars (in case they were hidden previously)
+                if (item.healthBar) {
+                    item.healthBar.bg.visible = true;
+                    item.healthBar.fg.visible = true;
+                }
+                if (item.shieldBar) {
+                    item.shieldBar.bg.visible = true;
+                    item.shieldBar.fg.visible = true;
+                }
+            }
+
+
             let desiredColor = item.baseColor;
             let desiredLineWidth = 2;
 
@@ -293,6 +319,13 @@ export class HUD {
 
             const r = item.target.sizeRadius;
             const targetPos = item.target.position;
+
+            // Fix: Check isActive again to ensure we don't accidentally show it
+            if (item.target.isActive !== undefined && !item.target.isActive) {
+                item.mesh.visible = false;
+                return;
+            }
+
 
             // Vector from Camera to Sphere Center
             _viewDir.subVectors(targetPos, camPos);
@@ -610,6 +643,20 @@ export class HUD {
             if (tX > this.compassWidth - capMargin) tX = this.compassWidth - capMargin;
 
             this.targetTriangle.style.left = tX + 'px';
+
+            // Update Color based on Aggression (Matches HUD Box)
+            let isAggressive = false;
+            if (this.selectedBody.hasAttacked) isAggressive = true;
+            if (this.selectedBody.type === 'kamikaze' || this.selectedBody.type === 'shooter') isAggressive = true;
+
+            // Target Triangle is an Up-pointing triangle (border-bottom has color)
+            // Wait, CSS says: query ".compass-triangle.target"
+            // border-width: 0 7px 10px 7px;
+            // border-color: transparent transparent #ffcc00 transparent;
+            // So we need to change borderBottomColor.
+
+            const color = isAggressive ? '#ff0000' : '#00ff00';
+            this.targetTriangle.style.borderBottomColor = color;
 
         } else {
             this.targetTriangle.classList.add('hidden');

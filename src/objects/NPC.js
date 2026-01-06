@@ -94,7 +94,7 @@ export class NPC extends Spaceship {
     }
 
     updateKamikaze(dt) {
-        if (this.player) {
+        if (this.player && this.player.isActive) {
             this.flyTowards(this.player.position);
             this.controls.thrust = true;
 
@@ -106,7 +106,7 @@ export class NPC extends Spaceship {
     }
 
     updateShooter(dt) {
-        if (this.player) {
+        if (this.player && this.player.isActive) {
             const dist = this.position.distanceTo(this.player.position);
 
             this.flyTowards(this.player.position);
