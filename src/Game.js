@@ -169,14 +169,14 @@ export class Game {
         this.checkboxes = {};
 
         const labelMap = {
-            planetRing: 'Planet Ring',
-            playerRing: 'Player Ring',
+            dustVelocity: 'Dust Velocity',
             planetAxis: 'Planet Axis',
-            playerAxis: 'Player Axis',
+            planetRing: 'Planet Ring',
             planetToParent: 'Planet to Parent',
             planetToPlayer: 'Planet to Player',
             planetVelocity: 'Planet Velocity',
-            dustVelocity: 'Dust Velocity',
+            playerAxis: 'Player Axis',
+            playerRing: 'Player Ring',
             playerVortex: 'Player Vortex'
         };
 
@@ -457,7 +457,7 @@ export class Game {
         if (this.gameMode === 'game') {
             this.hud.update();
             this.renderer.clearDepth(); // Ensure HUD draws on top
-            this.renderer.render(this.hud.scene, this.camera);
+            this.renderer.render(this.hud.scene, this.hud.camera);
         }
     }
 
@@ -511,6 +511,9 @@ export class Game {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        if (this.hud && this.hud.onResize) {
+            this.hud.onResize(window.innerWidth, window.innerHeight);
+        }
     }
 
     onMouseClick(event) {
@@ -520,10 +523,10 @@ export class Game {
 
         if (this.gameMode === 'game') {
             // Check HUD interaction first
-            this.raycaster.setFromCamera(this.mouse, this.camera);
+            // For Screen Space HUD, we raycast using HUD camera or just 2D check
+            this.raycaster.setFromCamera(this.mouse, this.hud.camera);
 
             // HUD Scene check
-            // Note: Raycasting against LineLoop (box) is hard. Raycasting against invisible plane (hitMesh) is easy.
             // We need to traverse HUD scene to find hitMeshes.
 
             // Collect all hit meshes from overlays
