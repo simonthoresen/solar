@@ -103,7 +103,10 @@ export class Player {
             geom.computeVertexNormals();
 
             const mat = new THREE.MeshLambertMaterial({ color: color });
-            return new THREE.Mesh(geom, mat);
+            const mesh = new THREE.Mesh(geom, mat);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
         }
 
         const hullHeight = 0.5 * scale;
