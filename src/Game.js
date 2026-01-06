@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { VelocityField } from './objects/VelocityField.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Player } from './objects/Player.js';
+import { NPC } from './objects/NPC.js';
 import { CelestialBody } from './objects/CelestialBody.js';
 import { Nebula } from './objects/Nebula.js';
 import { StudioUI } from './StudioUI.js';
@@ -91,6 +92,21 @@ export class Game {
             }
         });
 
+        // Initialize NPCs
+        this.npcs = [];
+        const npcTypes = ['hopper', 'speedster', 'kamikaze', 'shooter'];
+        for (let i = 0; i < 3; i++) {
+            const type = npcTypes[Math.floor(Math.random() * npcTypes.length)];
+            // Random position away from center but within reasonable bounds
+            // Solar systems can be large, Player starts at 0,0,15.
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 50 + Math.random() * 50; // 50-100 units away
+            const pos = new THREE.Vector3(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+
+            const npc = new NPC(this.scene, type, pos, this.celestialBodies, this.player);
+            this.npcs.push(npc);
+        }
+
         this.setupCamera();
         this.setupControls();
 
@@ -107,6 +123,11 @@ export class Game {
         // Initialize HUD with bodies after they are created
         this.hud.init(this.celestialBodies);
         this.hud.addPlayer(this.player);
+
+        // Add NPCs to HUD
+        this.npcs.forEach(npc => {
+            this.hud.addSpaceship(npc);
+        });
 
         this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
 
@@ -463,37 +484,27 @@ export class Game {
     }
 
     updateGameLogic(delta) {
-        // 2. Player Velocity Influence & Update
-        const playerInfluence = this.velocityField.calculateTotalVelocity(
-            this.player.getPosition(),
+        // Player Updates
+        this.player.update(
+            delta,
+            this.velocityField, // Pass Field directly now
             this.celestialBodies,
-            null
+            this.particleSystem,
+            this.camera
         );
 
-        this.player.update(delta, playerInfluence, this.celestialBodies, this.particleSystem);
+        // Update NPCs
+        this.npcs.forEach(npc => {
+            npc.update(
+                delta,
+                this.velocityField,
+                this.celestialBodies,
+                this.particleSystem,
+                this.camera
+            );
+        });
 
-        // 5. Smoke Trails (Moved down, numbered for history)
-        if (this.player.keys.w) {
-            this.smokeAccumulator += delta;
-            if (this.smokeAccumulator >= playerConfig.smokeEmissionInterval) {
-                this.smokeAccumulator = 0; // Reset accumulator
-
-                const wakePos = this.player.getRandomWakePosition();
-
-                // Calculate field influence at this position
-                this.velocityField.calculateTotalVelocity(
-                    wakePos,
-                    this.celestialBodies,
-                    null, // Do not include player/vortex in initial influence. Let it lerp in.
-                    this._tempSmokeInfluence
-                );
-
-                this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, this.camera);
-            }
-        } else {
-            // Reset to interval so it spawns immediately when pressing W
-            this.smokeAccumulator = playerConfig.smokeEmissionInterval;
-        }
+        // Legacy smoke code removed (now in Spaceship.update)
 
         // Camera follow update
         const currentPlayerPos = this.player.getPosition();

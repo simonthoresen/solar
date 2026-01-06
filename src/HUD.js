@@ -43,6 +43,12 @@ export class HUD {
         this.createOverlay(player, 0x00ff00);
     }
 
+    addSpaceship(ship) {
+        // Ships start as Yellow (Neutral) unless Player
+        const color = 0xffff00;
+        this.createOverlay(ship, color);
+    }
+
     createOverlay(celestialBody, colorOverride = null) {
         // Simple 2D box outline
         // LineLoop doesn't exist for Fat Lines, so we must close the loop manually
@@ -112,7 +118,17 @@ export class HUD {
                 if (item.baseColor === 0x00ff00) {
                     item.material.color.setHex(0x00ff00);
                 } else {
-                    item.material.color.setHex(0x888888);
+                    // Check target status
+                    const t = item.target;
+                    if (t.hasAttacked) { // Enemy
+                        item.material.color.setHex(0xff0000);
+                    } else if (t.isPlayer) {
+                        item.material.color.setHex(0x00ff00);
+                    } else if (item.baseColor === 0xffff00) { // Spaceship Neutral
+                        item.material.color.setHex(0xffff00);
+                    } else {
+                        item.material.color.setHex(0x888888);
+                    }
                 }
                 item.material.linewidth = 2; // Standard thickness
             }
@@ -140,6 +156,43 @@ export class HUD {
             this.scene.visible = false;
             return;
         }
+
+        // Update Dynamic Status Colors every frame? 
+        // Or only on selection change?
+        // User said: "if a spacecraft has attacked a player they are considered enemy and have a red box"
+        // This state changes at runtime. So we must update visuals.
+        // We can do it inside the main loop iteration below or separate loop.
+        // But the main loop handles Visibility/Position. Color is handled in setSelected logic mostly.
+        // Let's add color update here for non-selected items too.
+
+        this.overlays.forEach(item => {
+            // Only update if NOT selected (Selected overrides with Yellow Thick)
+            // Wait, selected is Yellow. Neutral is Yellow. 
+            // If I select an Enemy (Red), should it turn Yellow?
+            // "Display a thicker, yellow HUD box for selected items" - Standard behavior.
+            // So if selected -> Yellow.
+            // If not selected -> Status Color.
+
+            if (this.selectedBody === item.target) {
+                // Handled by setSelected mostly, but ensure loop keeps it yellow?
+                // setSelected sets it once.
+            } else {
+                const t = item.target;
+                if (t) {
+                    let desiredColor = item.baseColor;
+
+                    // Dynamic Overrides
+                    if (t.hasAttacked) desiredColor = 0xff0000;
+                    else if (t.isPlayer) desiredColor = 0x00ff00;
+                    else if (typeof t.hasAttacked !== 'undefined') desiredColor = 0xffff00; // Neutral ship
+
+                    // Only apply if changed
+                    if (item.material.color.getHex() !== desiredColor) {
+                        item.material.color.setHex(desiredColor);
+                    }
+                }
+            }
+        });
 
         this.scene.visible = true;
 
