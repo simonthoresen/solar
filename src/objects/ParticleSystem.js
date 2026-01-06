@@ -111,7 +111,7 @@ export class ParticleSystem {
         }
     }
 
-    spawnExplosion(position, color, count = 50) {
+    spawnExplosion(position, color, count = 50, initialVelocity = new THREE.Vector3()) {
         const baseColor = new THREE.Color(color);
         const fireColors = [
             new THREE.Color(0xffaa00), // Orange
@@ -138,7 +138,7 @@ export class ParticleSystem {
                 r * Math.cos(angle) * speed,
                 (Math.random() - 0.5) * 10, // Flatter explosion
                 r * Math.sin(angle) * speed
-            );
+            ).add(initialVelocity);
 
             p.life = 0.5 + Math.random() * 1.0;
             p.maxLife = p.life;

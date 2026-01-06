@@ -51,7 +51,7 @@ export class Spaceship {
 
         // Trigger particles
         if (this.particleSystemReference) {
-            this.particleSystemReference.spawnExplosion(this.position, this.color);
+            this.particleSystemReference.spawnExplosion(this.position, this.color, 50, this.velocity);
         }
     }
 
@@ -77,6 +77,10 @@ export class Spaceship {
                 this.explode();
             }
         }
+    }
+
+    applyImpulse(force) {
+        this.velocity.add(force);
     }
 
     initMesh(color) {
@@ -280,9 +284,12 @@ export class Spaceship {
             this.smokeAccumulator = 0.05;
         }
 
-        // Clamp Speed
-        if (this.velocity.length() > playerConfig.maxSpeed) {
-            this.velocity.setLength(playerConfig.maxSpeed);
+        // Soft Clamp Logic: Allow overspeed but decay back to max
+        const currentSpeed = this.velocity.length();
+        if (currentSpeed > playerConfig.maxSpeed) {
+            const decay = 2.0 * dt;
+            const newSpeed = THREE.MathUtils.lerp(currentSpeed, playerConfig.maxSpeed, decay);
+            this.velocity.setLength(newSpeed);
         }
 
         // Effective Move

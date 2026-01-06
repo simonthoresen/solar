@@ -67,6 +67,14 @@ export class ProjectileSystem {
                     // Hit radius approx 1.5 (Match previous logic)
                     if (distSq < 2.25) {
                         ship.takeDamage(laser.damage);
+
+                        // Apply impulse
+                        // Apply impulse
+                        // Direction is normalized laser velocity (direction of beam)
+                        const impulseDir = laser.velocity.clone().normalize();
+                        const impulseMagnitude = 15; // Hardcoded impulse strength
+                        ship.applyImpulse(impulseDir.multiplyScalar(impulseMagnitude));
+
                         hasHit = true;
                         break;
                     }
