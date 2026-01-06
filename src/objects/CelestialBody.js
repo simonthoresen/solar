@@ -155,7 +155,7 @@ export class CelestialBody {
 
         const points = curve.getPoints(50);
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
+        const material = new THREE.LineBasicMaterial({ color: 0x00ff00 }); // Green to match HUD
 
         // Create the final object to add to the scene
         this.ring = new THREE.LineLoop(geometry, material);
@@ -184,7 +184,7 @@ export class CelestialBody {
         ];
 
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ color: 0xffff00 }); // Yellow line to match selection
+        const material = new THREE.LineBasicMaterial({ color: 0x00ff00 }); // Green to match HUD
 
         this.directionLine = new THREE.Line(geometry, material);
         this.directionLine.visible = false;

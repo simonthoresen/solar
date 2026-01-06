@@ -101,38 +101,7 @@ export class HUD {
 
     setSelected(targetOrBody) {
         this.selectedBody = targetOrBody;
-        this.overlays.forEach(item => {
-            if (item.target === targetOrBody) {
-                item.material.color.setHex(0xffff00); // Yellow
-                item.material.linewidth = 5; // Thick lines!
-                // Ensure depth test is false so it overlays? It is screen space so it should be fine.
-            } else {
-                // Revert to base color? Or always Gray?
-                // User said: "changing the color of unselected planet HUD boxes to gray"
-                // Player base is Green. Should unselected player be Green? 
-                // "turn off all debug lines by default" - these are HUD lines.
-                // "make it possible to select the player ship... like for planets... line width... thicker if selected"
-                // Implicitly: Unselected player should probably stay Green or turn Gray?
-                // Let's keep Player Green if unselected, others Gray.
-                // The item.baseColor stores the original color.
-                if (item.baseColor === 0x00ff00) {
-                    item.material.color.setHex(0x00ff00);
-                } else {
-                    // Check target status
-                    const t = item.target;
-                    if (t.hasAttacked) { // Enemy
-                        item.material.color.setHex(0xff0000);
-                    } else if (t.isPlayer) {
-                        item.material.color.setHex(0x00ff00);
-                    } else if (item.baseColor === 0xffff00) { // Spaceship Neutral
-                        item.material.color.setHex(0xffff00);
-                    } else {
-                        item.material.color.setHex(0x888888);
-                    }
-                }
-                item.material.linewidth = 2; // Standard thickness
-            }
-        });
+        // Visual updates are handled in the update() loop
     }
 
     onResize(width, height) {
@@ -166,31 +135,39 @@ export class HUD {
         // Let's add color update here for non-selected items too.
 
         this.overlays.forEach(item => {
-            // Only update if NOT selected (Selected overrides with Yellow Thick)
-            // Wait, selected is Yellow. Neutral is Yellow. 
-            // If I select an Enemy (Red), should it turn Yellow?
-            // "Display a thicker, yellow HUD box for selected items" - Standard behavior.
-            // So if selected -> Yellow.
-            // If not selected -> Status Color.
+            const t = item.target;
+            if (!t) return;
 
-            if (this.selectedBody === item.target) {
-                // Handled by setSelected mostly, but ensure loop keeps it yellow?
-                // setSelected sets it once.
+            let desiredColor = item.baseColor;
+            let desiredLineWidth = 2;
+
+            const isSelected = (this.selectedBody === t);
+
+            if (isSelected) {
+                desiredLineWidth = 3.5;
+            }
+
+            // Unified Logic:
+            // Aggressive -> Red
+            // Non-Aggressive (Planets, Player, Neutral Ships) -> Green
+
+            // Determine Aggression
+            let isAggressive = false;
+            if (t.hasAttacked) isAggressive = true;
+            if (t.type === 'kamikaze' || t.type === 'shooter') isAggressive = true;
+
+            if (isAggressive) {
+                desiredColor = 0xff0000; // Red
             } else {
-                const t = item.target;
-                if (t) {
-                    let desiredColor = item.baseColor;
+                desiredColor = 0x00ff00; // Green
+            }
 
-                    // Dynamic Overrides
-                    if (t.hasAttacked) desiredColor = 0xff0000;
-                    else if (t.isPlayer) desiredColor = 0x00ff00;
-                    else if (typeof t.hasAttacked !== 'undefined') desiredColor = 0xffff00; // Neutral ship
-
-                    // Only apply if changed
-                    if (item.material.color.getHex() !== desiredColor) {
-                        item.material.color.setHex(desiredColor);
-                    }
-                }
+            // Apply Changes
+            if (item.material.color.getHex() !== desiredColor) {
+                item.material.color.setHex(desiredColor);
+            }
+            if (item.material.linewidth !== desiredLineWidth) {
+                item.material.linewidth = desiredLineWidth;
             }
         });
 
