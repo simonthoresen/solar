@@ -12,6 +12,7 @@ export class Player {
         this.velocity = new THREE.Vector3(0, 0, 0);
         this.smoothedVelocityInfluence = new THREE.Vector3(0, 0, 0); // For smoothing
         this.rotation = new THREE.Euler(0, 0, 0);
+        this.sizeRadius = 2.0; // For HUD size calculation
 
         this.initMesh();
         this.initWake();

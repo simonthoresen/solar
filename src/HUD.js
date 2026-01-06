@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 
 const _viewPos = new THREE.Vector3();
 const _viewDir = new THREE.Vector3();
@@ -22,6 +25,7 @@ export class HUD {
         const height = window.innerHeight;
         this.camera = new THREE.OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, 0, 10);
         this.camera.position.z = 5;
+        this.resolution = new THREE.Vector2(width, height);
 
         this.scene = new THREE.Scene();
         this.overlays = [];
@@ -34,45 +38,72 @@ export class HUD {
         });
     }
 
-    createOverlay(celestialBody) {
+    addPlayer(player) {
+        // Player gets a green box
+        this.createOverlay(player, 0x00ff00);
+    }
+
+    createOverlay(celestialBody, colorOverride = null) {
         // Simple 2D box outline
-        const points = [
-            new THREE.Vector3(-0.5, -0.5, 0),
-            new THREE.Vector3(0.5, -0.5, 0),
-            new THREE.Vector3(0.5, 0.5, 0),
-            new THREE.Vector3(-0.5, 0.5, 0)
+        // LineLoop doesn't exist for Fat Lines, so we must close the loop manually
+        // Points: Bottom-Left -> Bottom-Right -> Top-Right -> Top-Left -> Bottom-Left
+        const positions = [
+            -0.5, -0.5, 0,
+            0.5, -0.5, 0,
+            0.5, 0.5, 0,
+            -0.5, 0.5, 0,
+            -0.5, -0.5, 0
         ];
 
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ color: 0xffff00 });
+        const geometry = new LineGeometry();
+        geometry.setPositions(positions);
 
-        const box = new THREE.LineLoop(geometry, material);
+        // Default color Gray (0x888888) if not specified
+        const color = colorOverride !== null ? colorOverride : 0x888888;
+
+        const material = new LineMaterial({
+            color: color,
+            linewidth: 2, // pixels
+            resolution: this.resolution, // Resolution of the viewport
+            dashed: false
+        });
+
+        const box = new Line2(geometry, material);
         box.frustumCulled = false;
 
         // Invisible Hit Mesh for Raycasting
-        const hitGeometry = new THREE.PlaneGeometry(1, 1);
-        const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
-        const hitMesh = new THREE.Mesh(hitGeometry, hitMaterial);
-        hitMesh.userData = { target: celestialBody };
+        // Only valid if target is a CelestialBody (has a mesh)
+        let hitMesh = null;
+        if (celestialBody.mesh) {
+            const hitGeometry = new THREE.PlaneGeometry(1, 1);
+            const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
+            hitMesh = new THREE.Mesh(hitGeometry, hitMaterial);
+            hitMesh.userData = { target: celestialBody };
+            box.add(hitMesh);
+        }
 
-        box.add(hitMesh);
         this.scene.add(box);
 
         this.overlays.push({
             mesh: box,
             hitMesh: hitMesh,
             target: celestialBody,
-            material: material
+            material: material,
+            baseColor: color // Store base color to revert to
         });
     }
 
     setSelected(celestialBody) {
         this.selectedBody = celestialBody;
         this.overlays.forEach(item => {
+            if (item.baseColor === 0x00ff00) return; // Skip player
+
             if (item.target === celestialBody) {
-                item.material.color.setHex(0x33ccff);
+                item.material.color.setHex(0xffff00); // Yellow
+                item.material.linewidth = 5; // Thick lines!
             } else {
-                item.material.color.setHex(0xffff00);
+                item.material.color.setHex(0x888888); // Gray
+                item.material.linewidth = 2; // Standard thickness
             }
         });
     }
@@ -83,6 +114,14 @@ export class HUD {
         this.camera.top = height / 2;
         this.camera.bottom = -height / 2;
         this.camera.updateProjectionMatrix();
+
+        // Update resolution for all Fat Lines
+        this.resolution.set(width, height);
+        this.overlays.forEach(item => {
+            if (item.material && item.material.resolution) {
+                item.material.resolution.set(width, height);
+            }
+        });
     }
 
     update() {

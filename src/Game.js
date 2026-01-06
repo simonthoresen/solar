@@ -106,6 +106,7 @@ export class Game {
         this.hud = new HUD(this, this.camera);
         // Initialize HUD with bodies after they are created
         this.hud.init(this.celestialBodies);
+        this.hud.addPlayer(this.player);
 
         this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
 
