@@ -484,13 +484,16 @@ export class Game {
     }
 
     updateGameLogic(delta) {
+        const allShips = [this.player, ...this.npcs];
+
         // Player Updates
         this.player.update(
             delta,
             this.velocityField, // Pass Field directly now
             this.celestialBodies,
             this.particleSystem,
-            this.camera
+            this.camera,
+            allShips
         );
 
         // Update NPCs
@@ -500,7 +503,8 @@ export class Game {
                 this.velocityField,
                 this.celestialBodies,
                 this.particleSystem,
-                this.camera
+                this.camera,
+                allShips
             );
         });
 
@@ -560,6 +564,7 @@ export class Game {
                     // 1. Reset all
                     this.celestialBodies.forEach(cb => cb.setSelected(false));
                     this.player.setSelected(false);
+                    this.npcs.forEach(npc => npc.setSelected(false));
 
                     // 2. Set new
                     if (target.setSelected) {

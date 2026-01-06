@@ -95,8 +95,75 @@ export class HUD {
             hitMesh: hitMesh,
             target: celestialBody,
             material: material,
-            baseColor: color // Store base color to revert to
+            baseColor: color, // Store base color to revert to
+            healthBar: null,
+            shieldBar: null
         });
+
+        // Initialize Health/Shield Bars for Ships
+        if (celestialBody.maxHealth !== undefined) {
+            const overlayIndex = this.overlays.length - 1;
+            const overlay = this.overlays[overlayIndex];
+
+            // Health Bar (Green)
+            // Position: Just above top edge (0.5).
+            // Height: 0.1 relative to box height? 
+            // If box is square, 0.1 is 10%. 
+            // Ships are usually small on screen, maybe 50px? 5px bar. Reasonable.
+
+            // Background (Gray/Red)
+            const hpBg = this.createBarMesh(0xff0000);
+            hpBg.position.set(0, 0.6, 0); // Center x=0. Top edge is 0.5. +0.1 margin.
+            hpBg.scale.set(1, 0.1, 1);
+            box.add(hpBg);
+
+            // Foreground (Green)
+            const hpFg = this.createBarMesh(0x00ff00);
+            hpFg.position.set(0, 0, 0.01); // Slightly in front
+            hpBg.add(hpFg); // Attach to BG so it moves with it
+
+            // Shield Bar (Blue/Cyan) - Above Health
+            const shBg = this.createBarMesh(0x000055);
+            shBg.position.set(0, 0.75, 0); // Above HP (0.6 + 0.1 height + gap)
+            shBg.scale.set(1, 0.1, 1);
+            box.add(shBg);
+
+            const shFg = this.createBarMesh(0x00ffff);
+            shFg.position.set(0, 0, 0.01);
+            shBg.add(shFg);
+
+            overlay.healthBar = { bg: hpBg, fg: hpFg };
+            overlay.shieldBar = { bg: shBg, fg: shFg };
+        }
+    }
+
+    createBarMesh(color) {
+        const geometry = new THREE.PlaneGeometry(1, 1);
+        const material = new THREE.MeshBasicMaterial({ color: color });
+        // Pivot adjustment? Plane is centered. 
+        // If we scale X, it scales from center.
+        // Health bars usually drain L->R.
+        // We can manually adjust position or Use geometry translation.
+        // Let's Translate geometry so X=0 is Left edge. (-0.5 to 0.5) -> (0 to 1).
+        geometry.translate(-0.5, 0, 0); // Now pivots on Right edge? 
+        // Wait. Center is 0. Width 1. Range -0.5 to 0.5.
+        // If we Translate(0.5, 0, 0), range 0 to 1. Pivot at 0 (Left).
+        // Yes, verify this.
+
+        // Let's create a new geometry for this to avoid shared geometry issues?
+        // PlaneGeometry defaults are fine.
+        // We want pivot at LEFT.
+        // Current: Center (0,0). Vertices at -0.5 and 0.5.
+        // Operation: Translate vertices by +0.5. New vertices: 0 and 1.
+        // Center of mesh object (0,0) is now at vertex 0 (Left edge).
+        // Correct.
+        geometry.translate(0.5, 0, 0);
+        // But wait, if I put it at x=-0.5 relative to parent, it spans -0.5 to 0.5.
+        // If I use the default Center pivot, and scale X by 0.5, it shrinks to center.
+        // I want it to shrink to Left.
+
+        const mesh = new THREE.Mesh(geometry, material);
+        return mesh;
     }
 
     setSelected(targetOrBody) {
@@ -168,6 +235,15 @@ export class HUD {
             }
             if (item.material.linewidth !== desiredLineWidth) {
                 item.material.linewidth = desiredLineWidth;
+            }
+
+            // Update Bars
+            if (item.healthBar && item.shieldBar) {
+                const hpPct = t.health / t.maxHealth;
+                const shPct = t.shield / t.maxShield;
+
+                item.healthBar.fg.scale.set(Math.max(0, Math.min(1, hpPct)), 1, 1);
+                item.shieldBar.fg.scale.set(Math.max(0, Math.min(1, shPct)), 1, 1);
             }
         });
 

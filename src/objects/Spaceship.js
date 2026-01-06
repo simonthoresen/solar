@@ -32,6 +32,39 @@ export class Spaceship {
         this.hasAttacked = false;
 
         this.isActive = true; // Use to track if destroyed?
+
+        // Stats
+        this.maxHealth = 100;
+        this.health = this.maxHealth;
+        this.maxShield = 100;
+        this.shield = this.maxShield;
+        this.laserDamage = 25;
+    }
+
+    takeDamage(amount) {
+        if (!this.isActive) return;
+
+        // 1. Shield absorbs damages
+        if (this.shield > 0) {
+            if (this.shield >= amount) {
+                this.shield -= amount;
+                amount = 0;
+            } else {
+                amount -= this.shield;
+                this.shield = 0;
+            }
+        }
+
+        // 2. Remaining damage to health
+        if (amount > 0) {
+            this.health -= amount;
+            if (this.health <= 0) {
+                this.health = 0;
+                this.isActive = false;
+                // Handle destruction? 
+                // For now, just mark inactive.
+            }
+        }
     }
 
     initMesh(color) {
@@ -166,7 +199,7 @@ export class Spaceship {
         // Override in subclass
     }
 
-    update(dt, velocityField, celestialBodies = [], particleSystem = null, camera = null) {
+    update(dt, velocityField, celestialBodies = [], particleSystem = null, camera = null, ships = []) {
         this.updateControls(dt);
 
         // Calculate Velocity Influence at current position
@@ -256,7 +289,7 @@ export class Spaceship {
             this.shootCooldown = 0.25;
         }
 
-        this.updateLasers(dt, celestialBodies, particleSystem);
+        this.updateLasers(dt, celestialBodies, particleSystem, ships);
         this.mesh.position.copy(this.position);
     }
 
@@ -346,7 +379,7 @@ export class Spaceship {
         });
     }
 
-    updateLasers(dt, celestialBodies, particleSystem) {
+    updateLasers(dt, celestialBodies, particleSystem, ships = []) {
         const maxRadius = dustConfig.fieldRadius;
         const laserRadius = 0.2;
 
@@ -354,19 +387,35 @@ export class Spaceship {
             const laser = this.lasers[i];
             const nextPos = laser.mesh.position.clone().add(laser.velocity.clone().multiplyScalar(dt));
 
-            let hitPlanet = false;
+            let hasHit = false;
+
+            // Check Planets
             if (celestialBodies) {
                 for (const body of celestialBodies) {
                     const distSq = nextPos.distanceToSquared(body.position);
                     const hitRad = body.sizeRadius + 0.5;
                     if (distSq < hitRad * hitRad) {
-                        hitPlanet = true;
+                        hasHit = true;
                         break;
                     }
                 }
             }
 
-            if (hitPlanet) {
+            // Check Ships
+            if (!hasHit && ships) {
+                for (const ship of ships) {
+                    if (ship === this || !ship.isActive) continue;
+                    const distSq = nextPos.distanceToSquared(ship.position);
+                    // Hit radius approx 1.5
+                    if (distSq < 2.25) {
+                        ship.takeDamage(this.laserDamage);
+                        hasHit = true;
+                        break;
+                    }
+                }
+            }
+
+            if (hasHit) {
                 this.scene.remove(laser.mesh);
                 laser.mesh.geometry.dispose();
                 laser.mesh.material.dispose();

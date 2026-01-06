@@ -23,6 +23,8 @@ export class NPC extends Spaceship {
 
         // Avoidance randomizer
         this.wanderOffset = 0;
+
+        this.initPlayerLine();
     }
 
     updateControls(dt) {
@@ -155,6 +157,61 @@ export class NPC extends Spaceship {
             } else {
                 this.targetBody = this.celestialBodies[0];
             }
+        }
+    }
+
+    initPlayerLine() {
+        const points = [
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0, 0)
+        ];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+
+        this.playerLine = new THREE.Line(geometry, material);
+        this.playerLine.visible = false;
+        this.playerLine.frustumCulled = false;
+        this.scene.add(this.playerLine);
+    }
+
+    setSelected(isSelected) {
+        super.setSelected(isSelected); // Call base handles axisHelper
+        if (this.playerLine) {
+            this.playerLine.visible = isSelected;
+        }
+    }
+
+    update(dt, velocityField, celestialBodies = [], particleSystem = null, camera = null, ships = []) {
+        super.update(dt, velocityField, celestialBodies, particleSystem, camera, ships);
+        this.updatePlayerLine();
+    }
+
+    updatePlayerLine() {
+        if (!this.playerLine || !this.playerLine.visible || !this.player) return;
+
+        const positions = this.playerLine.geometry.attributes.position.array;
+
+        // Start: NPC
+        positions[0] = this.position.x;
+        positions[1] = this.position.y;
+        positions[2] = this.position.z;
+
+        // End: Player
+        const pPos = this.player.getPosition();
+        positions[3] = pPos.x;
+        positions[4] = pPos.y;
+        positions[5] = pPos.z;
+
+        this.playerLine.geometry.attributes.position.needsUpdate = true;
+
+        // Update Color
+        let isAggressive = false;
+        if (this.hasAttacked) isAggressive = true;
+        if (this.type === 'kamikaze' || this.type === 'shooter') isAggressive = true;
+
+        const color = isAggressive ? 0xff0000 : 0x00ff00;
+        if (this.playerLine.material.color.getHex() !== color) {
+            this.playerLine.material.color.setHex(color);
         }
     }
 }
