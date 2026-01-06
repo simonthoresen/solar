@@ -211,5 +211,219 @@ export class HUD {
             item.mesh.position.set(cx, cy, 0);
             item.mesh.scale.set(w, h, 1);
         });
+
+        // Compass Update
+        this.updateCompass();
+    }
+
+    initCompass() {
+        if (this.compassContainer) return;
+
+        // Container
+        this.compassContainer = document.createElement('div');
+        this.compassContainer.className = 'compass-container';
+        document.body.appendChild(this.compassContainer);
+
+        // Tape
+        this.compassTape = document.createElement('div');
+        this.compassTape.className = 'compass-tape';
+        this.compassContainer.appendChild(this.compassTape);
+
+        // Indicators
+        this.compassIndicators = document.createElement('div');
+        this.compassIndicators.className = 'compass-indicators';
+        document.body.appendChild(this.compassIndicators);
+
+        // Player Triangle (Blue)
+        this.playerTriangle = document.createElement('div');
+        this.playerTriangle.className = 'compass-triangle player';
+        this.compassIndicators.appendChild(this.playerTriangle);
+
+        // Target Triangle (Yellow)
+        this.targetTriangle = document.createElement('div');
+        this.targetTriangle.className = 'compass-triangle target';
+        this.compassIndicators.appendChild(this.targetTriangle);
+
+        // Config
+        this.compassPPD = 5; // Pixels Per Degree
+        this.compassWidth = 600; // Matches CSS
+        const step = 15;
+
+        // Generate Ticks (3 sets: -360..0, 0..360, 360..720 effectively)
+        // We use 3 sets of 0..360 for seamless scrolling.
+        // Index 0: -360 to 0 (conceptually) -> Real positions -360*PPD to 0
+        // Index 1: 0 to 360 -> Real positions 0 to 360*PPD
+        // Index 2: 360 to 720
+
+        const labels = {
+            0: 'N', 45: 'NE', 90: 'E', 135: 'SE',
+            180: 'S', 225: 'SW', 270: 'W', 315: 'NW'
+        };
+
+        for (let set = -1; set <= 1; set++) {
+            const offsetDeg = set * 360;
+            for (let deg = 0; deg < 360; deg += step) {
+                const tick = document.createElement('div');
+                tick.className = 'compass-tick';
+
+                const currentDeg = deg;
+                const totalDeg = offsetDeg + currentDeg;
+                const pos = totalDeg * this.compassPPD;
+
+                tick.style.left = pos + 'px';
+
+                if (currentDeg % 45 === 0 || currentDeg === 0) {
+                    tick.classList.add('major');
+                    const label = document.createElement('span');
+                    label.className = 'compass-label';
+                    label.innerText = labels[currentDeg];
+                    // Label should be centered on tick
+                    // But styling handles transform x -50
+                    tick.appendChild(label);
+                }
+
+                this.compassTape.appendChild(tick);
+            }
+        }
+    }
+
+    updateCompass() {
+        if (!this.compassContainer) {
+            this.initCompass();
+        }
+        if (!this.compassContainer) return;
+
+        // Ensure visible matches game mode
+        const isGame = this.game.gameMode === 'game';
+        this.compassContainer.style.display = isGame ? 'block' : 'none';
+        this.compassIndicators.style.display = isGame ? 'block' : 'none';
+
+        if (!isGame) return;
+
+        // 1. Camera Heading
+        // Three.js: -Z is forward.
+        // World North = -Z?
+        // Let's assume standard map: North = -Z (0 deg), East = +X (90 deg), South = +Z (180), West = -X (270).
+        // Camera Direction vector (x, z).
+        // atan2(x, z)? 
+        // If x=0, z=-1. atan2(0, -1) = 180 (In JS atan2(y,x)). Here z is 'y' param?
+        // Let's use standard math `Math.atan2(z, x)`.
+        // x=0, z=-1 (N). atan2(-1, 0) = -PI/2 = -90. We want 0.
+        // x=1, z=0 (E). atan2(0, 1) = 0. We want 90.
+        // x=0, z=1 (S). atan2(1, 0) = PI/2 = 90. We want 180.
+        // x=-1, z=0 (W). atan2(0, -1) = PI = 180. We want 270 (-90).
+        // Formula: `degrees = Math.atan2(x, -z) * (180 / Math.PI)` ?
+        // x=0, z=-1 (-z=1). atan2(0, 1) = 0. (Math.atan2(y, x) -> x, y order swapped?). 
+        // JS: atan2(y, x).
+        // Try `atan2(x, -z)`.
+        // N: atan2(0, 1) = 0. Correct.
+        // E: x=1, z=0. atan2(1, 0) = 90. Correct.
+        // S: x=0, z=1 (-z=-1). atan2(0, -1) = 180. Correct.
+        // W: x=-1, z=0. atan2(-1, 0) = -90 (270). Correct.
+
+        this.mainCamera.getWorldDirection(_viewDir);
+        let camHeading = Math.atan2(_viewDir.x, -_viewDir.z) * (180 / Math.PI);
+        if (camHeading < 0) camHeading += 360; // 0..360
+
+        // Tape Position
+        // We want 'camHeading' to be at Center of Container.
+        // Tape origin (0 deg) is at 0px.
+        // Center of container is at `width / 2`.
+        // We want `camHeading * PPD` to be at `width / 2`.
+        // So `TapePos + camHeading * PPD = width / 2`.
+        // `TapePos = width / 2 - camHeading * PPD`.
+        // But we have 3 sets. Center set starts at 0.
+        // We want to map to the center set mostly.
+        // But if camHeading is 0, we view [-Region..+Region]. 
+        // Logic: Use the value `camHeading` (0..360) projected onto the geometry.
+        // Geometry range: -360..720.
+        // We track `camHeading` in continuous space? No, just map 0-360 to the middle set?
+        // If CamHeading is 0. We want to show 0.
+        // Position on tape = 0.
+        // Tape X = 300 - 0 = 300.
+        // At X=300, we see tick 0.
+        // Left of 0 is -15, -30... (Set -1).
+        // It works perfectly with the default math if sets are contiguous.
+        // Tape Shift = `center - camHeading * PPD`.
+        // Wait, if camHeading is 0, we use tick at 0.
+        // If we use tick at 0 (start of Set 1), left is Set 0 (-360..0). Correct.
+        // Effectively we treat our tape as infinite universe.
+        // `translateX` should be based on `camHeading`.
+
+        const centerX = this.compassWidth / 2;
+        const tapeX = centerX - camHeading * this.compassPPD;
+        this.compassTape.style.transform = `translateX(${tapeX}px)`;
+
+        // 2. Playe Heading (Blue Triangle)
+        // Player Rotation Y. 
+        // 0 -> -Z?
+        // Player model: Forward is -Z.
+        // `player.rotation.y` is Euler.
+        // If rotY = 0, facing -Z (North).
+        // If rotY = -90 (deg), facing +X?
+        // Three.js RotY: Positive is Counter-Clockwise around Y.
+        // N (0). Rot+ -> Face Left (West, -X).
+        // Wait. `rotY` rotates the object. 
+        // Object forward (-Z). Apply RotY(+90).
+        // (-Z) x (+90 deg around Y) -> (-X). (West).
+        // So RotY is Positive = West / Left Turn.
+        // Compass: N(0) -> E(90) -> S(180) -> W(270/-90).
+        // Standard Angle: CCW?
+        // Math.atan2(x,-z):
+        // N(0, -1) -> 0.
+        // E(1, 0) -> 90.
+        // W(-1, 0) -> -90.
+        // So my Compass math is CW (Clockwise positive).
+        // N->E->S is 0->90->180.
+        // Player RotY is typically CCW (Standard Math/GL).
+        // So `PlayerHeading = -PlayerRotY`.
+
+        let playerHeading = -this.game.player.rotation.y * (180 / Math.PI);
+        // Normalize
+        playerHeading = playerHeading % 360;
+        if (playerHeading < 0) playerHeading += 360;
+
+        // Relative Angle
+        let diff = playerHeading - camHeading;
+        // Normalize diff to -180..180
+        if (diff < -180) diff += 360;
+        if (diff > 180) diff -= 360;
+
+        // Position
+        // Center + Diff * PPD
+        let pX = centerX + diff * this.compassPPD;
+
+        // Clamp (Cap to edges)
+        // Triangle width ~14px.
+        const capMargin = 10;
+        if (pX < capMargin) pX = capMargin;
+        if (pX > this.compassWidth - capMargin) pX = this.compassWidth - capMargin;
+
+        this.playerTriangle.style.left = pX + 'px';
+
+        // 3. Target (Yellow Triangle)
+        if (this.selectedBody) {
+            this.targetTriangle.classList.remove('hidden');
+            const targetPos = this.selectedBody.position;
+            // Vector from Camera to Target
+            _tempPoint.subVectors(targetPos, this.mainCamera.position);
+
+            // Heading
+            let targetHeading = Math.atan2(_tempPoint.x, -_tempPoint.z) * (180 / Math.PI);
+            if (targetHeading < 0) targetHeading += 360;
+
+            let tDiff = targetHeading - camHeading;
+            if (tDiff < -180) tDiff += 360;
+            if (tDiff > 180) tDiff -= 360;
+
+            let tX = centerX + tDiff * this.compassPPD;
+            if (tX < capMargin) tX = capMargin;
+            if (tX > this.compassWidth - capMargin) tX = this.compassWidth - capMargin;
+
+            this.targetTriangle.style.left = tX + 'px';
+
+        } else {
+            this.targetTriangle.classList.add('hidden');
+        }
     }
 }

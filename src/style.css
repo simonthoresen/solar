@@ -202,3 +202,107 @@ canvas {
   color: rgba(255, 255, 255, 0.5);
   margin-top: 4px;
 }
+
+/* Compass HUD */
+.compass-container {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  max-width: 90vw;
+  height: 45px;
+  background: linear-gradient(to right,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(10, 15, 30, 0.8) 15%,
+      rgba(10, 15, 30, 0.8) 85%,
+      rgba(0, 0, 0, 0) 100%);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1500;
+  /* Above HUD scene but below Studio UI */
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+}
+
+.compass-tape {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  will-change: transform;
+  /* Tape width will be very wide, constructed in JS */
+}
+
+.compass-tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.compass-tick.major {
+  height: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  width: 2px;
+}
+
+.compass-label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: monospace;
+  text-shadow: 0 1px 2px black;
+}
+
+/* Indicators Container - Same size as compass to map positions easily */
+.compass-indicators {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  max-width: 90vw;
+  height: 45px;
+  pointer-events: none;
+  z-index: 1501;
+}
+
+.compass-triangle {
+  position: absolute;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  transform: translateX(-50%);
+  transition: opacity 0.2s;
+}
+
+/* Blue Triangle (Player) - Over the compass */
+.compass-triangle.player {
+  top: -8px;
+  /* Slightly above */
+  border-width: 10px 7px 0 7px;
+  border-color: #00ccff transparent transparent transparent;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+}
+
+/* Yellow Triangle (Target) - Under the compass */
+.compass-triangle.target {
+  bottom: -8px;
+  /* Slightly below */
+  border-width: 0 7px 10px 7px;
+  border-color: transparent transparent #ffcc00 transparent;
+  filter: drop-shadow(0 -2px 4px rgba(0, 0, 0, 0.8));
+}
+
+.compass-triangle.hidden {
+  opacity: 0;
+}
