@@ -130,7 +130,11 @@ export class Spaceship {
             geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
             geom.computeVertexNormals();
 
-            const mat = new THREE.MeshLambertMaterial({ color: colorVal });
+            const mat = new THREE.MeshLambertMaterial({
+                color: colorVal,
+                emissive: colorVal,
+                emissiveIntensity: 0.3
+            });
             const mesh = new THREE.Mesh(geom, mat);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
