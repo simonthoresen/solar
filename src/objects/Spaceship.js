@@ -59,7 +59,7 @@ export class Spaceship {
 
         // Trigger particles
         if (this.particleSystemReference) {
-            this.particleSystemReference.spawnExplosion(this.position, this.color, 150, this.velocity);
+            this.particleSystemReference.spawnExplosion(this.position, this.color, 150);
             this.particleSystemReference.spawnBlastSphere(this.position, this.color);
         }
 
