@@ -195,6 +195,10 @@ export class Game {
                     this.player.takeDamage(Infinity);
                 }
             }
+            if (e.key === 'Tab') {
+                e.preventDefault(); // Prevent default tab behavior
+                this.selectNearestItem();
+            }
             // Track arrow keys for camera rotation
             if (e.key === 'ArrowUp') this.arrowKeys.up = true;
             if (e.key === 'ArrowDown') this.arrowKeys.down = true;
@@ -728,6 +732,67 @@ export class Game {
 
         if (this.detailPanel) {
             this.detailPanel.hide();
+        }
+    }
+
+    selectNearestItem() {
+        // Collect all selectable items
+        const selectableItems = [];
+
+        // Add celestial bodies
+        this.celestialBodies.forEach(body => {
+            selectableItems.push({
+                object: body,
+                position: body.position
+            });
+        });
+
+        // Add NPCs
+        this.npcs.forEach(npc => {
+            if (npc.isActive) {
+                selectableItems.push({
+                    object: npc,
+                    position: npc.position
+                });
+            }
+        });
+
+        // Add player
+        if (this.player.isActive) {
+            selectableItems.push({
+                object: this.player,
+                position: this.player.position
+            });
+        }
+
+        if (selectableItems.length === 0) return;
+
+        // Find nearest item to camera position
+        const cameraPos = this.camera.position;
+        let nearest = null;
+        let minDistance = Infinity;
+
+        selectableItems.forEach(item => {
+            const distance = cameraPos.distanceTo(item.position);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearest = item;
+            }
+        });
+
+        if (nearest) {
+            // Deselect current
+            this.deselectAll();
+
+            // Select nearest
+            const target = nearest.object;
+            this.hud.setSelected(target);
+            if (target.setSelected) {
+                target.setSelected(true);
+            }
+            if (this.detailPanel) {
+                this.detailPanel.show(target);
+            }
         }
     }
 
