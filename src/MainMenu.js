@@ -14,8 +14,15 @@ export class MainMenu {
 
         this.container.innerHTML = `
             <div class="menu-content">
-                <h1 class="menu-title">SOLAR SYSTEM</h1>
+                <h1 class="menu-title">SOLAR</h1>
                 <div class="menu-buttons">
+                    <button id="menu-game-btn" class="menu-btn">
+                        <span class="btn-icon">🚀</span>
+                        <div class="btn-text">
+                            <span class="btn-title">Play Game</span>
+                            <span class="btn-desc">Explore the system in game mode</span>
+                        </div>
+                    </button>
                     <button id="menu-studio-btn" class="menu-btn">
                         <span class="btn-icon">🛠️</span>
                         <div class="btn-text">
@@ -23,11 +30,11 @@ export class MainMenu {
                             <span class="btn-desc">Design and edit celestial bodies</span>
                         </div>
                     </button>
-                    <button id="menu-game-btn" class="menu-btn">
-                        <span class="btn-icon">🚀</span>
+                    <button id="menu-model-btn" class="menu-btn">
+                        <span class="btn-icon">📐</span>
                         <div class="btn-text">
-                            <span class="btn-title">Play Game</span>
-                            <span class="btn-desc">Explore the system in game mode</span>
+                            <span class="btn-title">Model Studio</span>
+                            <span class="btn-desc">Design and edit 3D models</span>
                         </div>
                     </button>
                 </div>
@@ -36,14 +43,16 @@ export class MainMenu {
 
         document.body.appendChild(this.container);
 
-        this.container.querySelector('#menu-studio-btn').addEventListener('click', () => {
-            this.game.setMode('studio');
-            this.hide();
+        this.container.querySelector('#menu-game-btn').addEventListener('click', () => {
+            window.location.href = 'game.html';
         });
 
-        this.container.querySelector('#menu-game-btn').addEventListener('click', () => {
-            this.game.setMode('game');
-            this.hide();
+        this.container.querySelector('#menu-studio-btn').addEventListener('click', () => {
+            window.location.href = 'solar_studio.html';
+        });
+
+        this.container.querySelector('#menu-model-btn').addEventListener('click', () => {
+            window.location.href = 'model_studio.html';
         });
     }
 

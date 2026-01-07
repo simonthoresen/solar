@@ -70,6 +70,7 @@ export class ParticleSystem {
         }
 
         this.initExplosions();
+        this.initBlastSpheres();
     }
 
     initExplosions() {
@@ -111,6 +112,128 @@ export class ParticleSystem {
         }
     }
 
+    initBlastSpheres() {
+        // --- Blast Sphere System (Instanced) ---
+        this.blastMaxCount = 50; // Max concurrent blasts
+        // Use Icosahedron for low poly look (Detail 1 = ~80 faces)
+        this.blastGeometry = new THREE.IcosahedronGeometry(1, 1);
+        this.blastMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 1.0, // Fully opaque start
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+
+        this.blastMesh = new THREE.InstancedMesh(this.blastGeometry, this.blastMaterial, this.blastMaxCount);
+        this.blastMesh.frustumCulled = false;
+        this.scene.add(this.blastMesh);
+
+        // --- Blast Wireframe ---
+        this.blastWireMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 1.0,
+            wireframe: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        this.blastWireMesh = new THREE.InstancedMesh(this.blastGeometry, this.blastWireMaterial, this.blastMaxCount);
+        this.blastWireMesh.frustumCulled = false;
+        this.scene.add(this.blastWireMesh);
+
+        this.blastData = new Array(this.blastMaxCount).fill(null);
+        this.blastCursor = 0;
+
+        for (let i = 0; i < this.blastMaxCount; i++) {
+            this.blastData[i] = {
+                active: false,
+                position: new THREE.Vector3(),
+                life: 0,
+                maxLife: 1,
+                color: new THREE.Color(),
+                maxRadius: 10 // Grown to 2x (was 5)
+            };
+            this.dummy.position.set(0, 0, 0);
+            this.dummy.scale.set(0, 0, 0);
+            this.dummy.updateMatrix();
+            this.blastMesh.setMatrixAt(i, this.dummy.matrix);
+            this.blastWireMesh.setMatrixAt(i, this.dummy.matrix);
+        }
+    }
+
+    spawnBlastSphere(position, color) {
+        const idx = this.blastCursor;
+        this.blastCursor = (this.blastCursor + 1) % this.blastMaxCount;
+
+        const p = this.blastData[idx];
+        p.active = true;
+        p.position.copy(position);
+        p.life = 0.6;
+        p.maxLife = p.life;
+        p.color.set(color);
+        p.maxRadius = 10.0; // Enforce new max radius
+
+        this.blastMesh.setColorAt(idx, p.color);
+        this.blastWireMesh.setColorAt(idx, new THREE.Color(0xffffff)); // White wireframe
+
+        // Reset rotation (No rotation allowed)
+        this.dummy.position.copy(position);
+        this.dummy.scale.set(0, 0, 0); // Start at 0
+        this.dummy.rotation.set(0, 0, 0);
+        this.dummy.updateMatrix();
+        this.blastMesh.setMatrixAt(idx, this.dummy.matrix);
+        this.blastWireMesh.setMatrixAt(idx, this.dummy.matrix);
+
+        this.blastMesh.instanceColor.needsUpdate = true;
+        if (this.blastWireMesh.instanceColor) this.blastWireMesh.instanceColor.needsUpdate = true;
+        this.blastMesh.instanceMatrix.needsUpdate = true;
+        this.blastWireMesh.instanceMatrix.needsUpdate = true;
+
+        // Apply Shockwave to particles
+        // Radius matches visual (10.0), Strength increased significantly
+        this.applyBlastImpulse(position, 10.0, 100.0);
+    }
+
+    applyBlastImpulse(center, radius, strength) {
+        const radiusSq = radius * radius;
+        const _tempVec = new THREE.Vector3();
+
+        // 1. Dust
+        for (let i = 0; i < this.dustCount; i++) {
+            const p = this.dustData[i];
+            const distSq = p.position.distanceToSquared(center);
+            if (distSq < radiusSq && distSq > 0.01) {
+                const dist = Math.sqrt(distSq);
+                _tempVec.subVectors(p.position, center).normalize();
+
+                // Falloff: Strongest at center
+                const falloff = 1.0 - (dist / radius);
+                if (falloff > 0) {
+                    p.velocity.addScaledVector(_tempVec, strength * falloff);
+                }
+            }
+        }
+
+        // 2. Smoke
+        for (let i = 0; i < this.smokeMaxCount; i++) {
+            const p = this.smokeData[i];
+            if (!p.active) continue;
+
+            const distSq = p.position.distanceToSquared(center);
+            if (distSq < radiusSq && distSq > 0.01) {
+                const dist = Math.sqrt(distSq);
+                _tempVec.subVectors(p.position, center).normalize();
+
+                const falloff = 1.0 - (dist / radius);
+                if (falloff > 0) {
+                    p.velocity.addScaledVector(_tempVec, strength * falloff);
+                }
+            }
+        }
+    }
+
     spawnExplosion(position, color, count = 50, initialVelocity = new THREE.Vector3()) {
         const baseColor = new THREE.Color(color);
         const fireColors = [
@@ -136,7 +259,7 @@ export class ParticleSystem {
 
             p.velocity.set(
                 r * Math.cos(angle) * speed,
-                (Math.random() - 0.5) * 10, // Flatter explosion
+                z * speed, // Use spherical Z (mapped to Y here) for full 3D explosion
                 r * Math.sin(angle) * speed
             ).add(initialVelocity);
 
@@ -201,7 +324,7 @@ export class ParticleSystem {
         p.position.z += (Math.random() - 0.5) * 0.5;
 
         p.velocity.set(0, 0, 0);
-        p.life = 6 + Math.random() * 9;
+        p.life = 3 + Math.random() * 6;
         p.maxLife = p.life;
         p.initialScale = 0.1 + Math.random() * 0.9;
 
@@ -384,6 +507,61 @@ export class ParticleSystem {
             }
         }
         this.explosionMesh.instanceMatrix.needsUpdate = true;
+
+
+        // --- Update Blast Spheres ---
+        for (let i = 0; i < this.blastMaxCount; i++) {
+            const p = this.blastData[i];
+            if (!p.active) continue;
+
+            p.life -= dt;
+
+            if (p.life <= 0) {
+                p.active = false;
+                this.updateInstance(this.blastMesh, i, p.position, 0);
+                this.updateInstance(this.blastWireMesh, i, p.position, 0);
+            } else {
+                const lifeRatio = p.life / p.maxLife; // 1.0 -> 0.0
+                const progress = 1.0 - lifeRatio; // 0.0 -> 1.0
+
+                // Grow from 0 to maxRadius
+                const currentRadius = progress * p.maxRadius;
+
+                // Fade from 50% (0.5) to 0% (0.0)
+                // Note: Material opacity is 0.5. So color alpha doesn't matter much if not using vertex colors for alpha?
+                // InstancedMesh supports color, but Three.js basic material doesn't support per-instance opacity easily without ShaderMaterial or custom depth.
+                // However, we can simulate fade by scaling strictly or...
+                // Actually, standard InstancedMesh with MeshBasicMaterial DOES NOT support per-instance opacity.
+                // WE HAVE TO USE A TRICK: Scale is handled. Opacity is global.
+                // Alternative: Use color to fade to black? No, AdditiveBlending expects black to be transparent.
+                // YES! AdditiveBlending: Black = Invisible.
+                // So we darken the color over time.
+
+                // Start Color: p.color (at 50% opacity from material)
+                // End Color: Black
+
+                this.dummy.position.copy(p.position);
+                this.dummy.scale.setScalar(currentRadius);
+                this.dummy.rotation.set(0, 0, 0); // NO ROTATION
+                this.dummy.updateMatrix();
+                this.blastMesh.setMatrixAt(i, this.dummy.matrix);
+                this.blastWireMesh.setMatrixAt(i, this.dummy.matrix);
+
+                // Fade to black as life -> 0 (Additive Blending makes it fade out)
+
+                const displayColor = p.color.clone().multiplyScalar(lifeRatio); // Fade to black as life -> 0
+                this.blastMesh.setColorAt(i, displayColor);
+
+                // Wireframe always white but fades
+                const wireColor = new THREE.Color(0xffffff).multiplyScalar(lifeRatio);
+                this.blastWireMesh.setColorAt(i, wireColor);
+            }
+        }
+        this.blastMesh.instanceMatrix.needsUpdate = true;
+        if (this.blastMesh.instanceColor) this.blastMesh.instanceColor.needsUpdate = true;
+
+        this.blastWireMesh.instanceMatrix.needsUpdate = true;
+        if (this.blastWireMesh.instanceColor) this.blastWireMesh.instanceColor.needsUpdate = true;
 
         return itemsForViz;
     }

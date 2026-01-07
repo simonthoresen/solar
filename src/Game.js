@@ -115,6 +115,11 @@ export class Game {
 
         this.lastPlayerPos = this.player.getPosition().clone();
 
+        // Assign Physics Callbacks
+        this.player.onExplode = this.handleShipExplosion.bind(this);
+        this.npcs.forEach(npc => npc.onExplode = this.handleShipExplosion.bind(this));
+        // Hook new NPCs in spawnRandomNPC too
+
         this.gameMode = 'game';
         this.isOrbitPaused = false;
         this.studioUI = new StudioUI(this);
@@ -167,10 +172,17 @@ export class Game {
                 }
             }
             if (e.key === 'Escape') {
-                this.deselectAll();
+                const hasSelection = (this.hud && this.hud.selectedBody) || (this.studioUI && this.studioUI.selectedBody);
+                if (hasSelection) {
+                    this.deselectAll();
+                } else {
+                    this.mainMenu.toggle();
+                }
             }
-            if (e.key === '|') {
-                this.mainMenu.toggle();
+            if (e.key === 'Backspace') {
+                if (this.player && this.player.isActive) {
+                    this.player.takeDamage(Infinity);
+                }
             }
         });
     }
@@ -597,8 +609,33 @@ export class Game {
         const pos = new THREE.Vector3(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
 
         const npc = new NPC(this.scene, type, pos, this.celestialBodies, this.player);
+        // Re-bind onExplode (referencing local function from constructor is hard here. easier to make it a method)
+        npc.onExplode = this.handleShipExplosion.bind(this);
+
         this.npcs.push(npc);
         if (this.hud) this.hud.addSpaceship(npc);
+    }
+
+    handleShipExplosion(pos, radius) {
+        const allShips = [this.player, ...this.npcs];
+        const forceStrength = 200.0; // Strong impulse to be clearly visible
+        const radiusSq = radius * radius;
+        const _tempVec = new THREE.Vector3();
+
+        allShips.forEach(ship => {
+            if (!ship.isActive) return;
+
+            const distSq = ship.position.distanceToSquared(pos);
+            if (distSq < radiusSq && distSq > 0.01) {
+                const dist = Math.sqrt(distSq);
+                _tempVec.subVectors(ship.position, pos).normalize();
+                const falloff = 1.0 - (dist / radius);
+
+                if (falloff > 0) {
+                    ship.applyImpulse(_tempVec.multiplyScalar(forceStrength * falloff));
+                }
+            }
+        });
     }
 
     onResize() {

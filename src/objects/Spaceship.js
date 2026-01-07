@@ -25,6 +25,8 @@ export class Spaceship {
             fire: false
         };
 
+        this.onExplode = null;
+
         this.initMesh(color);
         this.initWake();
 
@@ -53,7 +55,13 @@ export class Spaceship {
 
         // Trigger particles
         if (this.particleSystemReference) {
-            this.particleSystemReference.spawnExplosion(this.position, this.color, 50, this.velocity);
+            this.particleSystemReference.spawnExplosion(this.position, this.color, 150, this.velocity);
+            this.particleSystemReference.spawnBlastSphere(this.position, this.color);
+        }
+
+        // Trigger physics callback
+        if (this.onExplode) {
+            this.onExplode(this.position, 10.0); // Radius matches visual blast sphere
         }
     }
 

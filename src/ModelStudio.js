@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ShipModels, SHIP_TYPES } from './objects/ShipModels.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
+import { MainMenu } from './MainMenu.js';
 
 // Mock Velocity Field for Studio (smoke drifting)
 class MockVelocityField {
@@ -64,10 +65,18 @@ export class ModelStudio {
         this.smokeAccumulator = 0;
         this._tempSmokeInfluence = new THREE.Vector3();
 
+        this.isPaused = false;
+        this.mainMenu = new MainMenu(this);
+
         // Initial Load
         this.loadShip(this.shipType);
 
         window.addEventListener('resize', this.onResize.bind(this));
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.mainMenu.toggle();
+            }
+        });
 
         this.animate();
     }
@@ -357,6 +366,13 @@ export class ModelStudio {
 
     animate() {
         requestAnimationFrame(this.animate.bind(this));
+
+        if (this.isPaused) {
+            // Optional: Render static scene or nothing?
+            // If main menu is overlays, we might want to keep rendering static scene.
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
 
         const dt = this.clock.getDelta();
 
