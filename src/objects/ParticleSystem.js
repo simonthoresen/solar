@@ -302,7 +302,7 @@ export class ParticleSystem {
         // Jitter Position
         p.position.copy(position);
         p.position.x += (Math.random() - 0.5) * 0.5;
-        p.position.y = 0; // Enforce Y=0
+        p.position.y += (Math.random() - 0.5) * 0.2; // Allow Y variation (was: p.position.y = 0)
         p.position.z += (Math.random() - 0.5) * 0.5;
 
         p.velocity.set(0, 0, 0);
@@ -423,7 +423,7 @@ export class ParticleSystem {
             this._tempEffectiveVel.copy(p.velocity).add(p.smoothedInfluence);
 
             p.position.addScaledVector(this._tempEffectiveVel, dt);
-            p.position.y = 0;
+            // Allow Y to vary for smoke from engines at different heights (was: p.position.y = 0)
 
             p.life -= dt;
 

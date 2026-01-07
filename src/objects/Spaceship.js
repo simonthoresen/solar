@@ -103,7 +103,9 @@ export class Spaceship {
 
         this.mesh = modelData.mesh;
         this.collisionRadius = modelData.collisionRadius;
-        this.engineOffset = modelData.engineOffset;
+        this.engineOffsets = modelData.engineOffsets; // Array of Vector3
+        this.baseEngineOffsets = modelData.engineOffsets.map(v => v.clone()); // Store base offsets
+        this.animations = modelData.animations || []; // Array of animation data
 
         // Apply scale from config if needed (or keep modelScale 1.0)
         const scale = playerConfig.modelScale || 1.0;
@@ -161,40 +163,44 @@ export class Spaceship {
     }
 
     initWake() {
-        const height = 3.0; // Wake length
-        // Radius matches engine somewhat?
-        const radius = 0.5;
+        this.wakeMeshes = []; // Array to store multiple wakes
+        this.wakeLights = []; // Array to store multiple lights
 
-        const geometry = new THREE.ConeGeometry(radius, height, 8);
-        geometry.rotateX(Math.PI / 2);
+        if (!this.engineOffsets || this.engineOffsets.length === 0) {
+            // Fallback if no engine offsets defined
+            this.engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
+        }
 
-        // Offset wake to start at engine pos
-        // engineOffset is usually +Z. Wake should be behind it (+Z).
-        // Cone origin is center. height/2 moves base to 0? No.
-        // ConeGeometry: base at y=-height/2, tip at y=height/2.
-        // Rotated X 90: tip at z=-height/2 (forward), base at z=height/2 (back).
-        // We want tip at engineOffset, extending backwards.
-        // Actually wake usually starts small and gets big? 
-        // Or starts big?
-        // Let's rely on previous logic roughly, but offset by this.engineOffset.z
+        // Create a wake for each engine
+        this.engineOffsets.forEach(engineOffset => {
+            const height = 3.0; // Wake length
+            const radius = 0.5;
 
-        const zStart = this.engineOffset ? this.engineOffset.z : 0.5;
+            const geometry = new THREE.ConeGeometry(radius, height, 8);
+            geometry.rotateX(Math.PI / 2);
 
-        // Shift geometry so tip is at 0,0,0, extending to +Z
-        geometry.translate(0, 0, height / 2);
+            const zStart = engineOffset.z;
 
-        // Now mesh is at local 0. We move mesh to engineOffset.
+            // Shift geometry so tip is at 0,0,0, extending to +Z
+            geometry.translate(0, 0, height / 2);
 
-        const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 });
-        this.wakeMesh = new THREE.Mesh(geometry, material);
-        this.wakeMesh.visible = false;
-        this.wakeMesh.position.set(0, 0, zStart);
+            const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 });
+            const wakeMesh = new THREE.Mesh(geometry, material);
+            wakeMesh.visible = false;
+            wakeMesh.position.copy(engineOffset);
 
-        this.wakeLight = new THREE.PointLight(0xffff00, 2, 10);
-        this.wakeLight.position.set(0, 0, 1.0); // Local to wakeMesh
-        this.wakeMesh.add(this.wakeLight);
+            const wakeLight = new THREE.PointLight(0xffff00, 2, 10);
+            wakeLight.position.set(0, 0, 1.0); // Local to wakeMesh
+            wakeMesh.add(wakeLight);
 
-        this.mesh.add(this.wakeMesh);
+            this.mesh.add(wakeMesh);
+            this.wakeMeshes.push(wakeMesh);
+            this.wakeLights.push(wakeLight);
+        });
+
+        // Keep backward compatibility - first wake is the "main" wake
+        this.wakeMesh = this.wakeMeshes[0];
+        this.wakeLight = this.wakeLights[0];
     }
 
     // Abstract method for input/AI
@@ -232,40 +238,60 @@ export class Spaceship {
 
         if (this.controls.thrust) {
             this.velocity.add(forward.multiplyScalar(playerConfig.acceleration * dt));
-            if (this.wakeMesh) {
-                this.wakeMesh.visible = true;
-                this.wakeMesh.rotation.z += 15 * dt;
 
+            // Update all wake meshes
+            if (this.wakeMeshes && this.wakeMeshes.length > 0) {
                 const pulse = 1.0 + Math.sin(Date.now() * 0.02) * 0.2 + (Math.random() - 0.5) * 0.5;
                 const lenPulse = 1.0 + (Math.random() - 0.5) * 0.8;
-                this.wakeMesh.scale.set(pulse, pulse, lenPulse);
 
+                // Random color for all wakes
+                let col = null;
                 if (Math.random() > 0.8) {
                     const colors = [0xffff00, 0xff4400, 0xffffff, 0xffaa00, 0xff0000];
-                    const col = colors[Math.floor(Math.random() * colors.length)];
-                    this.wakeMesh.material.color.setHex(col);
-                    if (this.wakeLight) this.wakeLight.color.setHex(col);
+                    col = colors[Math.floor(Math.random() * colors.length)];
                 }
+
+                this.wakeMeshes.forEach((wakeMesh, index) => {
+                    wakeMesh.visible = true;
+                    wakeMesh.rotation.z += 15 * dt;
+                    wakeMesh.scale.set(pulse, pulse, lenPulse);
+
+                    if (col !== null) {
+                        wakeMesh.material.color.setHex(col);
+                        if (this.wakeLights[index]) {
+                            this.wakeLights[index].color.setHex(col);
+                        }
+                    }
+                });
             }
 
-            // Smoke Emission
+            // Smoke Emission from all engines
             if (particleSystem && camera && velocityField) {
                 this.smokeAccumulator += dt;
                 const emissionInterval = playerConfig.smokeEmissionInterval || 0.05;
 
                 if (this.smokeAccumulator >= emissionInterval) {
                     this.smokeAccumulator = 0;
-                    const wakePos = this.getRandomWakePosition();
 
-                    // Influence at wake pos
-                    velocityField.calculateTotalVelocity(wakePos, celestialBodies, null, this._tempSmokeInfluence);
+                    // Spawn smoke from each engine
+                    this.engineOffsets.forEach(engineOffset => {
+                        const wakePos = this.getEnginePositionFromOffset(engineOffset);
 
-                    particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, camera);
+                        // Influence at wake pos
+                        velocityField.calculateTotalVelocity(wakePos, celestialBodies, null, this._tempSmokeInfluence);
+
+                        particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, camera);
+                    });
                 }
             }
 
         } else {
-            if (this.wakeMesh) this.wakeMesh.visible = false;
+            // Hide all wakes
+            if (this.wakeMeshes && this.wakeMeshes.length > 0) {
+                this.wakeMeshes.forEach(wakeMesh => {
+                    wakeMesh.visible = false;
+                });
+            }
             this.velocity.multiplyScalar(1 - (playerConfig.deceleration * dt));
             // Reset smoke
             this.smokeAccumulator = 0.05;
@@ -330,6 +356,9 @@ export class Spaceship {
             turret.update(dt, targetPos);
         });
 
+        // Update Animations
+        this.updateAnimations(dt);
+
         // Shooting
         if (this.shootCooldown > 0) {
             this.shootCooldown -= dt;
@@ -344,6 +373,49 @@ export class Spaceship {
         this.mesh.position.copy(this.position);
     }
 
+    updateAnimations(dt) {
+        if (!this.animations || this.animations.length === 0) return;
+
+        this.animations.forEach(anim => {
+            if (anim.type === 'rotate') {
+                // Rotate the animated mesh
+                if (anim.axis === 'x') {
+                    anim.mesh.rotation.x += anim.speed * dt;
+                } else if (anim.axis === 'y') {
+                    anim.mesh.rotation.y += anim.speed * dt;
+                } else if (anim.axis === 'z') {
+                    anim.mesh.rotation.z += anim.speed * dt;
+                }
+
+                // If this animation has dynamic engines, update engine offsets
+                if (anim.dynamicEngines && anim.engineOffsets) {
+                    // Calculate current engine positions based on rotation
+                    this.engineOffsets = anim.engineOffsets.map(baseOffset => {
+                        // Apply the group's rotation to the base offset
+                        const rotatedOffset = baseOffset.clone();
+                        rotatedOffset.applyEuler(anim.mesh.rotation);
+                        // Add the group's position
+                        rotatedOffset.add(anim.mesh.position);
+                        return rotatedOffset;
+                    });
+
+                    // Update wake positions to match engine offsets
+                    this.updateWakePositions();
+                }
+            }
+        });
+    }
+
+    updateWakePositions() {
+        if (!this.wakeMeshes || !this.engineOffsets) return;
+
+        // Update each wake mesh to match its corresponding engine offset
+        this.engineOffsets.forEach((offset, index) => {
+            if (this.wakeMeshes[index]) {
+                this.wakeMeshes[index].position.copy(offset);
+            }
+        });
+    }
 
     checkBoundaries() {
         const maxRadius = dustConfig.fieldRadius;
@@ -453,13 +525,26 @@ export class Spaceship {
     }
 
     getEnginePosition() {
-        const offsetZ = this.engineOffset ? this.engineOffset.z : 1.5;
-        const offset = new THREE.Vector3(0, 0, offsetZ).applyEuler(this.rotation);
+        // Return first engine position for backward compatibility
+        if (this.engineOffsets && this.engineOffsets.length > 0) {
+            return this.getEnginePositionFromOffset(this.engineOffsets[0]);
+        }
+        // Fallback
+        const offset = new THREE.Vector3(0, 0, 1.5).applyEuler(this.rotation);
+        return this.position.clone().add(offset);
+    }
+
+    getEnginePositionFromOffset(engineOffset) {
+        const offset = engineOffset.clone().applyEuler(this.rotation);
         return this.position.clone().add(offset);
     }
 
     getRandomWakePosition() {
-        // Same as engine pos roughly
+        // Pick a random engine
+        if (this.engineOffsets && this.engineOffsets.length > 0) {
+            const randomOffset = this.engineOffsets[Math.floor(Math.random() * this.engineOffsets.length)];
+            return this.getEnginePositionFromOffset(randomOffset);
+        }
         return this.getEnginePosition();
     }
 

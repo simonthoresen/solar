@@ -367,10 +367,12 @@ export class ModelStudio {
 
         const modelData = ShipModels.createModel(type, this.shipColor);
         this.currentShip = modelData.mesh;
-        this.currentShipInfo = modelData; // Store collisionRadius, engineOffset
+        this.currentShipInfo = modelData; // Store collisionRadius, engineOffsets, animations
+        this.animations = modelData.animations || [];
+        this.baseEngineOffsets = modelData.engineOffsets.map(v => v.clone()); // Store base offsets
         this.scene.add(this.currentShip);
 
-        this.initWake(modelData.engineOffset);
+        this.initWake(modelData.engineOffsets);
         this.initStudioTurrets(modelData.turretMounts);
         this.addDebugHelpers(this.currentShip, modelData.collisionRadius);
 
@@ -415,36 +417,45 @@ export class ModelStudio {
         mesh.add(vLine);
     }
 
-    initWake(engineOffset) {
-        if (this.wakeMesh) {
-            // If already exists, just re-parent or move? 
-            // Better to recreate if logic depends on ship params.
-            // But we can check if we attached it to the ship group.
-            // Here `currentShip` is a new Group. We should add wake to it.
+    initWake(engineOffsets) {
+        this.wakeMeshes = []; // Array to store multiple wakes
+        this.wakeLights = []; // Array to store multiple lights
+
+        if (!engineOffsets || engineOffsets.length === 0) {
+            // Fallback if no engine offsets defined
+            engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
-        // Adapted from Spaceship.initWake
-        const height = 3.0; // Wake length
-        const radius = 0.5;
+        // Create a wake for each engine
+        engineOffsets.forEach(engineOffset => {
+            const height = 3.0; // Wake length
+            const radius = 0.5;
 
-        const geometry = new THREE.ConeGeometry(radius, height, 8);
-        geometry.rotateX(Math.PI / 2);
+            const geometry = new THREE.ConeGeometry(radius, height, 8);
+            geometry.rotateX(Math.PI / 2);
 
-        const zStart = engineOffset ? engineOffset.z : 0.5;
+            const zStart = engineOffset.z;
 
-        // Shift geometry so tip is at 0,0,0, extending to +Z
-        geometry.translate(0, 0, height / 2);
+            // Shift geometry so tip is at 0,0,0, extending to +Z
+            geometry.translate(0, 0, height / 2);
 
-        const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 });
-        this.wakeMesh = new THREE.Mesh(geometry, material);
-        this.wakeMesh.visible = false;
-        this.wakeMesh.position.set(0, 0, zStart);
+            const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 });
+            const wakeMesh = new THREE.Mesh(geometry, material);
+            wakeMesh.visible = false;
+            wakeMesh.position.copy(engineOffset);
 
-        this.wakeLight = new THREE.PointLight(0xffff00, 2, 10);
-        this.wakeLight.position.set(0, 0, 1.0); // Local to wakeMesh
-        this.wakeMesh.add(this.wakeLight);
+            const wakeLight = new THREE.PointLight(0xffff00, 2, 10);
+            wakeLight.position.set(0, 0, 1.0); // Local to wakeMesh
+            wakeMesh.add(wakeLight);
 
-        this.currentShip.add(this.wakeMesh);
+            this.currentShip.add(wakeMesh);
+            this.wakeMeshes.push(wakeMesh);
+            this.wakeLights.push(wakeLight);
+        });
+
+        // Keep backward compatibility - first wake is the "main" wake
+        this.wakeMesh = this.wakeMeshes[0];
+        this.wakeLight = this.wakeLights[0];
     }
 
     initStudioTurrets(mounts) {
@@ -466,10 +477,21 @@ export class ModelStudio {
     getEnginePosition() {
         if (!this.currentShip || !this.currentShipInfo) return new THREE.Vector3();
 
-        const offsetZ = this.currentShipInfo.engineOffset ? this.currentShipInfo.engineOffset.z : 1.5;
-        // In local space of ship (which is at 0,0,0 unrotated mostly unless we rotated it)
-        // If we rotate the ship mesh in animate, we need to account for it.
-        const offset = new THREE.Vector3(0, 0, offsetZ);
+        // Return first engine position for backward compatibility
+        if (this.currentShipInfo.engineOffsets && this.currentShipInfo.engineOffsets.length > 0) {
+            return this.getEnginePositionFromOffset(this.currentShipInfo.engineOffsets[0]);
+        }
+
+        // Fallback
+        const offset = new THREE.Vector3(0, 0, 1.5);
+        if (this.currentShip) {
+            offset.applyEuler(this.currentShip.rotation);
+        }
+        return offset; // World pos is same as local since ship is at 0,0,0
+    }
+
+    getEnginePositionFromOffset(engineOffset) {
+        const offset = engineOffset.clone();
         if (this.currentShip) {
             offset.applyEuler(this.currentShip.rotation);
         }
@@ -540,52 +562,111 @@ export class ModelStudio {
 
         // Update Ship Logic (Wake & Smoke)
         if (this.engineOn) {
-            if (this.wakeMesh) {
-                this.wakeMesh.visible = true;
-                this.wakeMesh.rotation.z += 15 * dt;
-
+            // Update all wake meshes
+            if (this.wakeMeshes && this.wakeMeshes.length > 0) {
                 const pulse = 1.0 + Math.sin(Date.now() * 0.02) * 0.2 + (Math.random() - 0.5) * 0.5;
                 const lenPulse = 1.0 + (Math.random() - 0.5) * 0.8;
-                this.wakeMesh.scale.set(pulse, pulse, lenPulse);
 
+                // Random color for all wakes
+                let col = null;
                 if (Math.random() > 0.8) {
                     const colors = [0xffff00, 0xff4400, 0xffffff, 0xffaa00, 0xff0000];
-                    const col = colors[Math.floor(Math.random() * colors.length)];
-                    this.wakeMesh.material.color.setHex(col);
-                    if (this.wakeLight) this.wakeLight.color.setHex(col);
+                    col = colors[Math.floor(Math.random() * colors.length)];
                 }
+
+                this.wakeMeshes.forEach((wakeMesh, index) => {
+                    wakeMesh.visible = true;
+                    wakeMesh.rotation.z += 15 * dt;
+                    wakeMesh.scale.set(pulse, pulse, lenPulse);
+
+                    if (col !== null) {
+                        wakeMesh.material.color.setHex(col);
+                        if (this.wakeLights[index]) {
+                            this.wakeLights[index].color.setHex(col);
+                        }
+                    }
+                });
             }
 
-            // Smoke Emission
+            // Smoke Emission from all engines
             this.smokeAccumulator += dt;
             const emissionInterval = 0.05;
 
             if (this.smokeAccumulator >= emissionInterval) {
                 this.smokeAccumulator = 0;
 
-                // Spawn Smoke
-                const wakePos = this.getEnginePosition();
+                // Spawn smoke from each engine
+                if (this.currentShipInfo && this.currentShipInfo.engineOffsets) {
+                    this.currentShipInfo.engineOffsets.forEach(engineOffset => {
+                        const wakePos = this.getEnginePositionFromOffset(engineOffset);
 
-                // Velocity inheritance: Ship is "moving" forward, so smoke should inherit expected velocity?
-                // Or just the wake velocity?
-                // User said "inherit the velocity according to the ship wake definition".
-                // In Spaceship.js, smoke inherits `velocityField` influence.
-                // Our MockVelocityField drives particles backwards (+Z).
-                // So we spawn at engine, and let ParticleSystem update move it.
+                        // Get influence at this point
+                        this.velocityField.calculateTotalVelocity(wakePos, [], null, this._tempSmokeInfluence);
 
-                // Get influence at this point
-                this.velocityField.calculateTotalVelocity(wakePos, [], null, this._tempSmokeInfluence);
-
-                this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, this.camera);
+                        this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, this.camera);
+                    });
+                }
             }
 
         } else {
-            if (this.wakeMesh) this.wakeMesh.visible = false;
+            // Hide all wakes
+            if (this.wakeMeshes && this.wakeMeshes.length > 0) {
+                this.wakeMeshes.forEach(wakeMesh => {
+                    wakeMesh.visible = false;
+                });
+            }
         }
+
+        // Update Animations
+        this.updateAnimations(dt);
 
         // Update Particles
         this.particleSystem.update(dt, this.velocityField, [], null, this.camera);
 
         this.renderer.render(this.scene, this.camera);
+    }
+
+    updateAnimations(dt) {
+        if (!this.animations || this.animations.length === 0) return;
+
+        this.animations.forEach(anim => {
+            if (anim.type === 'rotate') {
+                // Rotate the animated mesh
+                if (anim.axis === 'x') {
+                    anim.mesh.rotation.x += anim.speed * dt;
+                } else if (anim.axis === 'y') {
+                    anim.mesh.rotation.y += anim.speed * dt;
+                } else if (anim.axis === 'z') {
+                    anim.mesh.rotation.z += anim.speed * dt;
+                }
+
+                // If this animation has dynamic engines, update engine offsets
+                if (anim.dynamicEngines && anim.engineOffsets) {
+                    // Calculate current engine positions based on rotation
+                    this.currentShipInfo.engineOffsets = anim.engineOffsets.map(baseOffset => {
+                        // Apply the group's rotation to the base offset
+                        const rotatedOffset = baseOffset.clone();
+                        rotatedOffset.applyEuler(anim.mesh.rotation);
+                        // Add the group's position
+                        rotatedOffset.add(anim.mesh.position);
+                        return rotatedOffset;
+                    });
+
+                    // Update wake positions to match engine offsets
+                    this.updateWakePositions();
+                }
+            }
+        });
+    }
+
+    updateWakePositions() {
+        if (!this.wakeMeshes || !this.currentShipInfo.engineOffsets) return;
+
+        // Update each wake mesh to match its corresponding engine offset
+        this.currentShipInfo.engineOffsets.forEach((offset, index) => {
+            if (this.wakeMeshes[index]) {
+                this.wakeMeshes[index].position.copy(offset);
+            }
+        });
     }
 }
