@@ -16,22 +16,27 @@ export class ShipModels {
         const mesh = new THREE.Group();
         let collisionRadius = 1.0;
         let engineOffset = new THREE.Vector3(0, 0, 1.0);
+        let turretMounts = []; // Array of { position: Vector3, type: string }
 
         // Materials
-        const primaryMat = new THREE.MeshLambertMaterial({
+        // Materials - Use Phong for per-pixel lighting (better for low poly)
+        const primaryMat = new THREE.MeshPhongMaterial({
             color: color,
             emissive: color,
-            emissiveIntensity: 0.3
+            emissiveIntensity: 0.1, // Reduced from 0.3 to prevent washout
+            shininess: 30
         });
-        const darkMat = new THREE.MeshLambertMaterial({
+        const darkMat = new THREE.MeshPhongMaterial({
             color: 0x333333,
             emissive: 0x111111,
-            emissiveIntensity: 0.2
+            emissiveIntensity: 0.1,
+            shininess: 30
         });
-        const cabinMat = new THREE.MeshLambertMaterial({
+        const cabinMat = new THREE.MeshPhongMaterial({
             color: 0xffffff,
             emissive: 0xffffff,
-            emissiveIntensity: 0.3
+            emissiveIntensity: 0.1,
+            shininess: 90
         });
         const glowMat = new THREE.MeshBasicMaterial({ color: 0x00ffff }); // Engine glow
 
@@ -56,6 +61,7 @@ export class ShipModels {
 
                 collisionRadius = 1.0;
                 engineOffset.set(0, 0, 1.0);
+                turretMounts.push({ position: new THREE.Vector3(0, 0.2, -0.5), type: 'triangular' });
                 break;
 
             case 'saucer':
@@ -65,7 +71,8 @@ export class ShipModels {
                 addPart(new THREE.IcosahedronGeometry(0.4, 0), cabinMat, [0, 0.2, 0]);
 
                 collisionRadius = 1.0;
-                engineOffset.set(0, 0, 0.8); // Center bottom? or edge? Let's say back edge
+                engineOffset.set(0, 0, 0.8);
+                turretMounts.push({ position: new THREE.Vector3(0, 0.6, 0), type: 'circular' });
                 break;
 
             case 'hauler':
@@ -79,6 +86,8 @@ export class ShipModels {
 
                 collisionRadius = 1.2;
                 engineOffset.set(0, 0, 0.8);
+                turretMounts.push({ position: new THREE.Vector3(0.5, 0.45, -0.6), type: 'square' });
+                turretMounts.push({ position: new THREE.Vector3(-0.5, 0.45, -0.6), type: 'square' });
                 break;
 
             case 'interceptor':
@@ -93,6 +102,7 @@ export class ShipModels {
 
                 collisionRadius = 1.0;
                 engineOffset.set(0, 0, 0.9);
+                turretMounts.push({ position: new THREE.Vector3(0, 0.3, 0), type: 'circular' });
                 break;
 
             case 'needle':
@@ -101,8 +111,9 @@ export class ShipModels {
                 // Rear ring
                 addPart(new THREE.TorusGeometry(0.4, 0.1, 4, 8), darkMat, [0, 0, 0.8]);
 
-                collisionRadius = 0.5; // Narrow!
+                collisionRadius = 0.5;
                 engineOffset.set(0, 0, 1.1);
+                turretMounts.push({ position: new THREE.Vector3(0, 0.2, 0), type: 'triangular' });
                 break;
 
             case 'twinhull':
@@ -116,7 +127,9 @@ export class ShipModels {
                 addPart(new THREE.SphereGeometry(0.3, 8, 8), cabinMat, [0, 0.1, -0.2]);
 
                 collisionRadius = 1.1;
-                engineOffset.set(0, 0, 1.0); // Between hulls? Or needs 2 wakes? Base system only supports 1 wake currently. Center is fine.
+                engineOffset.set(0, 0, 1.0);
+                turretMounts.push({ position: new THREE.Vector3(-0.6, 0.25, -0.5), type: 'triangular' });
+                turretMounts.push({ position: new THREE.Vector3(0.6, 0.25, -0.5), type: 'triangular' });
                 break;
 
             case 'hammerhead':
@@ -127,6 +140,8 @@ export class ShipModels {
 
                 collisionRadius = 1.0;
                 engineOffset.set(0, 0, 1.1);
+                turretMounts.push({ position: new THREE.Vector3(-0.6, 0.2, -0.8), type: 'square' });
+                turretMounts.push({ position: new THREE.Vector3(0.6, 0.2, -0.8), type: 'square' });
                 break;
 
             case 'speeder':
@@ -139,6 +154,7 @@ export class ShipModels {
 
                 collisionRadius = 0.9;
                 engineOffset.set(0, 0, 0.8);
+                turretMounts.push({ position: new THREE.Vector3(0, 0.1, 0.5), type: 'circular' });
                 break;
 
             case 'orbiter':
@@ -151,6 +167,7 @@ export class ShipModels {
 
                 collisionRadius = 1.0;
                 engineOffset.set(0, 0, 0.7);
+                turretMounts.push({ position: new THREE.Vector3(0, 0.6, 0), type: 'circular' });
                 break;
 
             case 'standard':
@@ -165,12 +182,13 @@ export class ShipModels {
 
                 collisionRadius = 1.0;
                 engineOffset.set(0, 0, 0.5);
+                turretMounts.push({ position: new THREE.Vector3(0, 0.4, 0), type: 'triangular' });
                 break;
         }
 
         // Common Axis Helper (optional, handled by Spaceship debug)
 
-        return { mesh, collisionRadius, engineOffset };
+        return { mesh, collisionRadius, engineOffset, turretMounts };
     }
 
     static getRandomType() {

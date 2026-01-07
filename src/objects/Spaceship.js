@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { playerConfig, dustConfig } from '../config.js';
 import { ShipModels } from './ShipModels.js';
+import { Turret } from './Turret.js';
 
 // Scratch vectors for wake calculation
 const _tempWakeDiff = new THREE.Vector3();
@@ -25,6 +26,7 @@ export class Spaceship {
             fire: false
         };
 
+        this.turrets = [];
         this.onExplode = null;
 
         this.initMesh(color);
@@ -42,7 +44,9 @@ export class Spaceship {
         this.health = this.maxHealth;
         this.maxShield = 100;
         this.shield = this.maxShield;
+        this.shield = this.maxShield;
         this.laserDamage = 25;
+
     }
 
     explode() {
@@ -129,6 +133,7 @@ export class Spaceship {
         this.mesh.add(this.boundaryLine);
 
         this.initVortexDebug();
+        this.initTurrets(modelData.turretMounts);
     }
 
     initVortexDebug() {
@@ -144,6 +149,15 @@ export class Spaceship {
         this.vortexLine.rotation.x = -Math.PI / 2;
         this.vortexLine.visible = false;
         this.mesh.add(this.vortexLine);
+    }
+
+    initTurrets(mounts) {
+        if (!mounts) return;
+
+        mounts.forEach(mount => {
+            const turret = new Turret(this.mesh, mount.position, mount.type);
+            this.turrets.push(turret);
+        });
     }
 
     initWake() {
@@ -274,6 +288,48 @@ export class Spaceship {
         this.checkBoundaries();
         this.handlePlanetCollisions(celestialBodies);
 
+        // Determine Target for Turrets
+        let targetPos = null;
+
+        // Note: Spaceship doesn't inherently know if it's player or NPC logic-wise here easily unless we pass extra info.
+        // But we passed 'camera' to update().
+        // If this is the Player, we aim at where the camera looks.
+        // If NPC, we aim at 'ships' (target)? 
+        // We need a better way to define target. 
+        // Let's assume subclasses set `this.aimTarget` or we derive it.
+
+        // Quick hack: check if this is player by checking if controls.turn is driven by input? 
+        // Or better: Spaceship doesn't aim. Player/NPC subclasses aim.
+        // BUT: Turret update needs to happen HERE or be called.
+
+        // Actually, let's allow `update` simply to accept an aim position?
+        // Or we calculate it here.
+
+        // For Player: Aim at point far ahead of Camera.
+        // For NPC: Aim at current target (if any).
+
+        if (this.constructor.name === 'Player') {
+            // We need camera forward. We have camera.
+            if (camera) {
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                // Point far away
+                targetPos = camera.position.clone().add(forward.multiplyScalar(100));
+            }
+        } else if (this.constructor.name === 'NPC') {
+            if (this.target) {
+                targetPos = this.target.position ? this.target.position : null;
+            } else {
+                // Forward
+                const forward = new THREE.Vector3(0, 0, -1).applyEuler(this.rotation);
+                targetPos = this.position.clone().add(forward.multiplyScalar(20));
+            }
+        }
+
+        // Update Turrets
+        this.turrets.forEach(turret => {
+            turret.update(dt, targetPos);
+        });
+
         // Shooting
         if (this.shootCooldown > 0) {
             this.shootCooldown -= dt;
@@ -287,6 +343,7 @@ export class Spaceship {
         // Removed updateLasers call, now handled by ProjectileSystem
         this.mesh.position.copy(this.position);
     }
+
 
     checkBoundaries() {
         const maxRadius = dustConfig.fieldRadius;
@@ -344,23 +401,50 @@ export class Spaceship {
 
         const laserColor = this.hasAttacked ? 0xff0000 : (playerConfig.laserColor !== undefined ? playerConfig.laserColor : 0x00ff00);
 
-        const scale = playerConfig.modelScale || 1.0;
-        const sideOffset = 1.0 * scale;
-        const verticalOffset = -0.2 * scale;
-        const forwardOffset = -1.0 * scale;
+        if (this.turrets.length > 0) {
+            // Fire from turrets
+            this.turrets.forEach(turret => {
+                const { position, direction } = turret.getFirePositionAndDirection();
+                // We need quaternion for spawnLaser. LookAt the direction?
+                // spawnLaser takes (position, quaternion, color, owner)
+                // We can construct quaternion from direction.
 
-        const offsets = [-sideOffset, sideOffset];
+                const dummy = new THREE.Object3D();
+                dummy.lookAt(direction); // Valid for direction vector? lookAt expects target position.
+                // dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), direction); // Assumes Z forward
 
-        offsets.forEach(offset => {
-            const initialPos = new THREE.Vector3(offset, verticalOffset, forwardOffset).applyEuler(this.rotation).add(this.position);
+                // Let's use lookAt target: pos + direction
+                const target = position.clone().add(direction);
+                dummy.position.copy(position);
+                dummy.lookAt(target);
 
-            this.projectileSystemReference.spawnLaser(
-                initialPos,
-                this.mesh.quaternion,
-                laserColor,
-                this
-            );
-        });
+                this.projectileSystemReference.spawnLaser(
+                    position,
+                    dummy.quaternion,
+                    laserColor,
+                    this
+                );
+            });
+        } else {
+            // Fallback: Fire from center/sides (Legacy behavior if no turrets)
+            const scale = playerConfig.modelScale || 1.0;
+            const sideOffset = 1.0 * scale;
+            const verticalOffset = -0.2 * scale;
+            const forwardOffset = -1.0 * scale;
+
+            const offsets = [-sideOffset, sideOffset];
+
+            offsets.forEach(offset => {
+                const initialPos = new THREE.Vector3(offset, verticalOffset, forwardOffset).applyEuler(this.rotation).add(this.position);
+
+                this.projectileSystemReference.spawnLaser(
+                    initialPos,
+                    this.mesh.quaternion,
+                    laserColor,
+                    this
+                );
+            });
+        }
     }
 
     // API

@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ShipModels, SHIP_TYPES } from './objects/ShipModels.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
 import { MainMenu } from './MainMenu.js';
+import { Turret } from './objects/Turret.js';
 
 // Mock Velocity Field for Studio (smoke drifting)
 class MockVelocityField {
@@ -56,6 +57,7 @@ export class ModelStudio {
 
         // State
         this.currentShip = null;
+        this.turrets = [];
         this.shipType = 'standard';
         this.shipColor = 0x00ff00;
         this.engineOn = true;
@@ -70,6 +72,22 @@ export class ModelStudio {
 
         // Initial Load
         this.loadShip(this.shipType);
+
+        // Orbiting Target
+        this.targetCube = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(0.5, 0), // Low poly (detail 0)
+            new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true })
+        );
+        this.targetCube.castShadow = false; // Don't block light
+        this.targetCube.receiveShadow = false;
+        this.scene.add(this.targetCube);
+
+        // Add light to target
+        // Distance 0 = infinite range
+        const targetLight = new THREE.PointLight(0xffff00, 10, 0); // Increased intensity from 2 to 10
+        this.targetCube.add(targetLight);
+
+        this.targetAngle = 0;
 
         window.addEventListener('resize', this.onResize.bind(this));
         window.addEventListener('keydown', (e) => {
@@ -259,6 +277,64 @@ export class ModelStudio {
         uiContainer.appendChild(colorContainer);
 
         document.body.appendChild(uiContainer);
+        this.turretUIContainer = document.createElement('div');
+        this.turretUIContainer.style.marginTop = '10px';
+        this.turretUIContainer.style.borderTop = '1px solid #444';
+        this.turretUIContainer.style.paddingTop = '10px';
+        uiContainer.appendChild(this.turretUIContainer);
+    }
+
+    updateTurretUI() {
+        this.turretUIContainer.innerHTML = '';
+        const label = document.createElement('h3');
+        label.innerText = 'Turret Configuration';
+        label.style.fontSize = '14px';
+        label.style.marginTop = '0';
+        this.turretUIContainer.appendChild(label);
+
+        if (!this.currentShipInfo || !this.currentShipInfo.turretMounts) return;
+
+        this.currentShipInfo.turretMounts.forEach((mount, index) => {
+            const row = document.createElement('div');
+            row.style.marginBottom = '5px';
+            row.style.fontSize = '12px';
+
+            const lbl = document.createElement('span');
+            lbl.innerText = `Mount ${index + 1}: `;
+            row.appendChild(lbl);
+
+            const select = document.createElement('select');
+            const types = ['triangular', 'circular', 'square'];
+            types.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.innerText = t;
+                if (mount.type === t) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            select.addEventListener('change', (e) => {
+                const newType = e.target.value;
+                // Update mount info
+                mount.type = newType;
+                // Recreate this turret
+                this.recreateTurret(index, mount);
+            });
+
+            row.appendChild(select);
+            this.turretUIContainer.appendChild(row);
+        });
+    }
+
+    recreateTurret(index, mount) {
+        // Remove old
+        if (this.turrets[index]) {
+            this.currentShip.remove(this.turrets[index].mesh);
+        }
+
+        // Create new
+        const turret = new Turret(this.currentShip, mount.position, mount.type);
+        this.turrets[index] = turret;
     }
 
     loadShip(type) {
@@ -272,7 +348,10 @@ export class ModelStudio {
         this.scene.add(this.currentShip);
 
         this.initWake(modelData.engineOffset);
+        this.initStudioTurrets(modelData.turretMounts);
         this.addDebugHelpers(this.currentShip, modelData.collisionRadius);
+
+        this.updateTurretUI();
 
         // Add a grid helper for floor reference
         if (!this.grid) {
@@ -345,6 +424,16 @@ export class ModelStudio {
         this.currentShip.add(this.wakeMesh);
     }
 
+    initStudioTurrets(mounts) {
+        this.turrets = []; // Clear
+        if (!mounts) return;
+
+        mounts.forEach(mount => {
+            const turret = new Turret(this.currentShip, mount.position, mount.type);
+            this.turrets.push(turret);
+        });
+    }
+
     onResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
@@ -383,6 +472,20 @@ export class ModelStudio {
         }
 
         this.engineOn = this.engineTimer < 15.0; // On for first 15s, Off for next 15s
+
+        // Orbit Logic
+        this.targetAngle += dt * 0.5; // Slow rotation
+        const radius = 7.5; // Increased by 50% (was 5)
+        this.targetCube.position.set(
+            Math.cos(this.targetAngle) * radius,
+            0, // Y=0 Plane as requested
+            Math.sin(this.targetAngle) * radius
+        );
+
+        // Update Turrets
+        this.turrets.forEach(turret => {
+            turret.update(dt, this.targetCube.position);
+        });
 
         // Update Camera
         this.controls.update();
