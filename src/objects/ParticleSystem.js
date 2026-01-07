@@ -12,7 +12,7 @@ export class ParticleSystem {
         this._tempEffectiveVel = new THREE.Vector3();
 
         // --- Dust System (Instanced) ---
-        this.dustCount = config.count || 1024;
+        this.dustCount = config.count !== undefined ? config.count : 1024;
         this.dustGeometry = new THREE.CircleGeometry(1, 12);
         const dustColor = this.config.dustColor !== undefined ? this.config.dustColor : 0xffffff;
         this.dustMaterial = new THREE.MeshBasicMaterial({
