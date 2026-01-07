@@ -2,12 +2,16 @@ import * as THREE from 'three';
 import { playerConfig } from '../config.js';
 import { Spaceship } from './Spaceship.js';
 
+import { ShipModels } from './ShipModels.js';
+
 export class Player extends Spaceship {
     constructor(scene) {
         const startPos = new THREE.Vector3(0, 0, 15);
         const color = playerConfig.hullColor !== undefined ? playerConfig.hullColor : 0x4488ff;
 
-        super(scene, color, startPos);
+        const type = ShipModels.getRandomType();
+
+        super(scene, color, startPos, type);
 
         // Input state
         this.keys = {

@@ -73,9 +73,20 @@ export class DetailPanel {
     }
 
     hide() {
-        this.isVisible = false;
-        this.container.style.display = 'none';
-        this.selectedObject = null;
+        if (!this.isVisible) return;
+
+        // Add closing class to trigger animation
+        this.container.classList.add('closing');
+
+        const onAnimationEnd = () => {
+            this.container.classList.remove('closing');
+            this.container.style.display = 'none';
+            this.isVisible = false;
+            this.selectedObject = null;
+            this.container.removeEventListener('animationend', onAnimationEnd);
+        };
+
+        this.container.addEventListener('animationend', onAnimationEnd);
     }
 
     updateContent(object) {
@@ -89,7 +100,11 @@ export class DetailPanel {
         if (object.constructor.name === 'CelestialBody') {
             title = object.configId ? object.configId.toUpperCase() : 'PLANET';
 
-            attributes.push({ label: 'Type', value: object.parent ? 'Planet/Moon' : 'Star' });
+            let type = 'Star';
+            if (object.parent) {
+                type = object.parent.configId === 'sun' ? 'Planet' : 'Moon';
+            }
+            attributes.push({ label: 'Type', value: type });
             attributes.push({ label: 'Radius', value: object.sizeRadius.toFixed(2) });
             if (object.parent) {
                 attributes.push({ label: 'Orbit Distance', value: object.orbitDistance.toFixed(0) });
@@ -101,9 +116,21 @@ export class DetailPanel {
             const isPlayer = object.isPlayer;
             const isNPC = !isPlayer;
 
-            title = isPlayer ? 'PLAYER SHIP' : `NPC SHIP (${object.type.toUpperCase()})`;
+            if (isPlayer) {
+                title = 'PLAYER SHIP';
+            } else {
+                title = 'NPC SHIP';
+            }
 
             attributes.push({ label: 'Type', value: 'Spacecraft' });
+
+            if (isNPC && object.role) {
+                attributes.push({ label: 'Class', value: object.role.charAt(0).toUpperCase() + object.role.slice(1) });
+            }
+
+            if (object.type) {
+                attributes.push({ label: 'Model', value: object.type.charAt(0).toUpperCase() + object.type.slice(1) });
+            }
 
             if (isNPC) {
                 const dist = object.position.distanceTo(this.game.player.position);
@@ -112,10 +139,10 @@ export class DetailPanel {
                 // Aggression
                 let status = 'Neutral';
                 let color = '#ccc';
-                if (object.hasAttacked || object.type === 'kamikaze') {
+                if (object.hasAttacked || object.role === 'kamikaze') {
                     status = 'HOSTILE';
                     color = '#ff4444';
-                } else if (object.type === 'hopper') {
+                } else if (object.role === 'hopper') {
                     status = 'Peaceful';
                     color = '#44ff44';
                 }

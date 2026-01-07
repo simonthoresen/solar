@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { playerConfig, dustConfig } from '../config.js';
+import { ShipModels } from './ShipModels.js';
 
 // Scratch vectors for wake calculation
 const _tempWakeDiff = new THREE.Vector3();
@@ -7,9 +8,10 @@ const _tempWakeLocal = new THREE.Vector3();
 const _tempSmokeInfluence = new THREE.Vector3();
 
 export class Spaceship {
-    constructor(scene, color, position) {
+    constructor(scene, color, position, type = 'standard') {
         this.scene = scene;
         this.color = color;
+        this.type = type;
         this.position = position.clone();
         this.velocity = new THREE.Vector3(0, 0, 0);
         this.smoothedVelocityInfluence = new THREE.Vector3(0, 0, 0); // For smoothing
@@ -84,74 +86,20 @@ export class Spaceship {
     }
 
     initMesh(color) {
-        // Player is a Group containing two tetrahedrons
-        this.mesh = new THREE.Group();
+        // Use Factory
+        const modelData = ShipModels.createModel(this.type, color);
 
+        this.mesh = modelData.mesh;
+        this.collisionRadius = modelData.collisionRadius;
+        this.engineOffset = modelData.engineOffset;
+
+        // Apply scale from config if needed (or keep modelScale 1.0)
         const scale = playerConfig.modelScale || 1.0;
+        this.mesh.scale.setScalar(scale);
 
-        // Custom BufferGeometry helper
-        function createTetrahedron(radius, height, isTop, colorVal) {
-            const geom = new THREE.BufferGeometry();
-
-            const len = radius * 1.5;
-            const wid = radius * 0.8;
-            const h = height;
-
-            // Base Triangle on Y=0
-            const vFront = [0, 0, -len];
-            const vBackL = [-wid, 0, len * 0.5];
-            const vBackR = [wid, 0, len * 0.5];
-            const y = isTop ? h : -h; // Apex Y
-            const zApex = 0;
-            const vApex = [0, y, zApex];
-
-            let verticesArray;
-
-            if (isTop) {
-                verticesArray = [
-                    // Top (Cabin) 
-                    ...vFront, ...vBackL, ...vApex,
-                    ...vFront, ...vApex, ...vBackR,
-                    ...vBackL, ...vBackR, ...vApex,
-                    ...vFront, ...vBackR, ...vBackL
-                ];
-            } else {
-                verticesArray = [
-                    // Bottom (Hull) 
-                    ...vFront, ...vApex, ...vBackL,
-                    ...vFront, ...vBackR, ...vApex,
-                    ...vBackL, ...vApex, ...vBackR,
-                    ...vFront, ...vBackL, ...vBackR
-                ];
-            }
-
-            const vertices = new Float32Array(verticesArray);
-
-            geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-            geom.computeVertexNormals();
-
-            const mat = new THREE.MeshLambertMaterial({
-                color: colorVal,
-                emissive: colorVal,
-                emissiveIntensity: 0.3
-            });
-            const mesh = new THREE.Mesh(geom, mat);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            return mesh;
-        }
-
-        const hullHeight = 0.5 * scale;
-        const hullSize = 1.0 * scale;
-        this.hullMesh = createTetrahedron(hullSize, hullHeight, false, color);
-        this.mesh.add(this.hullMesh);
-
-        // 2. Cabin (Top, smaller, always white)
-        const cabinHeight = 0.4 * scale;
-        const cabinSize = 0.6 * scale;
-        this.cabinMesh = createTetrahedron(cabinSize, cabinHeight, true, 0xffffff);
-        this.cabinMesh.position.z = 0.2 * scale;
-        this.mesh.add(this.cabinMesh);
+        // Update collision radius with scale
+        this.collisionRadius *= scale;
+        this.sizeRadius = this.collisionRadius; // Update HUD size
 
         this.mesh.position.copy(this.position);
         this.scene.add(this.mesh);
@@ -163,7 +111,7 @@ export class Spaceship {
         this.mesh.add(this.axisHelper);
 
         // Debug Collision Boundary 
-        const curve = new THREE.EllipseCurve(0, 0, 0.5, 0.5, 0, 2 * Math.PI, false, 0);
+        const curve = new THREE.EllipseCurve(0, 0, this.collisionRadius, this.collisionRadius, 0, 2 * Math.PI, false, 0);
         const points = curve.getPoints(32);
         const boundaryGeom = new THREE.BufferGeometry().setFromPoints(points);
         const boundaryMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
@@ -191,27 +139,40 @@ export class Spaceship {
     }
 
     initWake() {
-        const height = 3.0;
-        const radius = 0.75;
+        const height = 3.0; // Wake length
+        // Radius matches engine somewhat?
+        const radius = 0.5;
 
         const geometry = new THREE.ConeGeometry(radius, height, 8);
         geometry.rotateX(Math.PI / 2);
 
-        const wakeOffset = playerConfig.wakeOffsetZ !== undefined ? playerConfig.wakeOffsetZ : 0.5;
-        geometry.translate(0, 0, height / 2 + wakeOffset);
+        // Offset wake to start at engine pos
+        // engineOffset is usually +Z. Wake should be behind it (+Z).
+        // Cone origin is center. height/2 moves base to 0? No.
+        // ConeGeometry: base at y=-height/2, tip at y=height/2.
+        // Rotated X 90: tip at z=-height/2 (forward), base at z=height/2 (back).
+        // We want tip at engineOffset, extending backwards.
+        // Actually wake usually starts small and gets big? 
+        // Or starts big?
+        // Let's rely on previous logic roughly, but offset by this.engineOffset.z
+
+        const zStart = this.engineOffset ? this.engineOffset.z : 0.5;
+
+        // Shift geometry so tip is at 0,0,0, extending to +Z
+        geometry.translate(0, 0, height / 2);
+
+        // Now mesh is at local 0. We move mesh to engineOffset.
 
         const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 });
         this.wakeMesh = new THREE.Mesh(geometry, material);
         this.wakeMesh.visible = false;
+        this.wakeMesh.position.set(0, 0, zStart);
 
         this.wakeLight = new THREE.PointLight(0xffff00, 2, 10);
-        this.wakeLight.position.set(0, 0, height / 2 + wakeOffset);
+        this.wakeLight.position.set(0, 0, 1.0); // Local to wakeMesh
         this.wakeMesh.add(this.wakeLight);
 
         this.mesh.add(this.wakeMesh);
-
-        this.wakeHeight = height;
-        this.wakeRadius = radius;
     }
 
     // Abstract method for input/AI
@@ -342,7 +303,7 @@ export class Spaceship {
             const dz = this.position.z - body.position.z;
             const distSq = dx * dx + dz * dz;
 
-            const collisionDist = body.sizeRadius + 0.5;
+            const collisionDist = body.sizeRadius + this.collisionRadius;
 
             if (distSq < collisionDist * collisionDist) {
                 const dist = Math.sqrt(distSq);
@@ -400,7 +361,7 @@ export class Spaceship {
     }
 
     getEnginePosition() {
-        const offsetZ = playerConfig.vortexOffsetZ || 1.5;
+        const offsetZ = this.engineOffset ? this.engineOffset.z : 1.5;
         const offset = new THREE.Vector3(0, 0, offsetZ).applyEuler(this.rotation);
         return this.position.clone().add(offset);
     }

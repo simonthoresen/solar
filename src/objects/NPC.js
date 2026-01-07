@@ -1,6 +1,8 @@
 import { Spaceship } from './Spaceship.js';
 import * as THREE from 'three';
 
+import { ShipModels } from './ShipModels.js';
+
 export class NPC extends Spaceship {
     constructor(scene, type, position, celestialBodies, player) {
         // Different colors per type
@@ -12,8 +14,9 @@ export class NPC extends Spaceship {
             case 'shooter': color = 0xff00ff; break; // Magenta
         }
 
-        super(scene, color, position);
-        this.type = type;
+        const modelType = ShipModels.getRandomType();
+        super(scene, color, position, modelType);
+        this.role = type;
         this.celestialBodies = celestialBodies;
         this.player = player;
 
@@ -31,7 +34,7 @@ export class NPC extends Spaceship {
     updateControls(dt) {
         this.decisionTimer -= dt;
 
-        switch (this.type) {
+        switch (this.role) {
             case 'hopper': this.updateHopper(dt); break;
             case 'speedster': this.updateSpeedster(dt); break;
             case 'kamikaze': this.updateKamikaze(dt); break;
@@ -217,7 +220,7 @@ export class NPC extends Spaceship {
         // Update Color
         let isAggressive = false;
         if (this.hasAttacked) isAggressive = true;
-        if (this.type === 'kamikaze' || this.type === 'shooter') isAggressive = true;
+        if (this.role === 'kamikaze' || this.role === 'shooter') isAggressive = true;
 
         const color = isAggressive ? 0xff0000 : 0x00ff00;
         if (this.playerLine.material.color.getHex() !== color) {
