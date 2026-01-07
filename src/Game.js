@@ -775,11 +775,17 @@ export class Game {
         });
 
         if (nearest) {
+            const target = nearest.object;
+
+            // If already selected, do nothing
+            if (this.hud.selectedBody === target) {
+                return;
+            }
+
             // Deselect current
             this.deselectAll();
 
             // Select nearest
-            const target = nearest.object;
             this.hud.setSelected(target);
             if (target.setSelected) {
                 target.setSelected(true);
@@ -810,6 +816,11 @@ export class Game {
             const hit = intersects[0];
             const target = hit.object.userData.target;
             if (target) {
+                // If already selected, do nothing
+                if (this.hud.selectedBody === target) {
+                    return;
+                }
+
                 // Update 3D Object Selection (Exclusive)
                 // 1. Reset all
                 this.deselectAll();
