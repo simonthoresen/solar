@@ -638,12 +638,13 @@ export class Game {
                 const playerRotation = this.player.mesh.rotation.y;
                 idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotation);
 
-                this.respawnTargetCameraPos.copy(currentPlayerPos).add(idealOffset);
+                const newPlayerPos = this.player.getPosition();
+                this.respawnTargetCameraPos.copy(newPlayerPos).add(idealOffset);
 
                 // Calculate target camera orientation (looking at player)
                 const tempCam = new THREE.Object3D();
                 tempCam.position.copy(this.respawnTargetCameraPos);
-                tempCam.lookAt(currentPlayerPos);
+                tempCam.lookAt(newPlayerPos);
                 this.respawnTargetCameraQuat.copy(tempCam.quaternion);
 
                 this.playerRespawnTimer = 3.0;
