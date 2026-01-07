@@ -513,13 +513,6 @@ export class HUD {
         }
         if (!this.compassContainer) return;
 
-        // Ensure visible matches game mode
-        const isGame = this.game.gameMode === 'game';
-        this.compassContainer.style.display = isGame ? 'block' : 'none';
-        this.compassIndicators.style.display = isGame ? 'block' : 'none';
-
-        if (!isGame) return;
-
         // 1. Camera Heading
         // Three.js: -Z is forward.
         // World North = -Z?
