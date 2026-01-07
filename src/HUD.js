@@ -221,11 +221,6 @@ export class HUD {
     }
 
     update() {
-        if (this.game.gameMode !== 'game') {
-            this.scene.visible = false;
-            return;
-        }
-
         // Update Dynamic Status Colors every frame? 
         // Or only on selection change?
         // User said: "if a spacecraft has attacked a player they are considered enemy and have a red box"
