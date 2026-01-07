@@ -65,6 +65,11 @@ export class DetailPanel {
     show(object) {
         if (!object) return;
 
+        // If already showing this exact object, don't update
+        if (this.isVisible && this.selectedObject === object) {
+            return;
+        }
+
         // Cancel any pending hide animation
         this.container.classList.remove('closing');
         if (this._currentAnimationEndHandler) {
