@@ -43,7 +43,7 @@ export class ModelStudio {
         // State - Initialize before setupUI so dropdown can reference these values
         this.currentShip = null;
         this.turrets = [];
-        this.shipType = 'standard';
+        this.shipType = 'viper';
         this.shipColor = 0x00ff00;
         this.engineOn = true;
         this.engineTimer = 0;

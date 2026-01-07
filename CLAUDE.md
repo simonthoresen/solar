@@ -105,7 +105,7 @@ All game entities follow a common pattern:
 ### Ship Visual System
 
 - **ShipModels.js**: Factory for creating ship geometry
-  - 10 distinct ship types: standard, dart, saucer, hauler, interceptor, needle, twinhull, hammerhead, speeder, orbiter
+  - 10 distinct ship types: viper, dart, saucer, hauler, interceptor, needle, twinhull, hammerhead, speeder, orbiter
   - Returns `{ mesh, collisionRadius, engineOffset, turretMounts }`
   - Each ship type has unique turret mount configurations
 

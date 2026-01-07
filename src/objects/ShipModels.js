@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export const SHIP_TYPES = [
-    'standard', 'dart', 'saucer', 'hauler', 'interceptor',
+    'viper', 'dart', 'saucer', 'hauler', 'interceptor',
     'needle', 'twinhull', 'hammerhead', 'speeder', 'orbiter'
 ];
 
@@ -170,7 +170,7 @@ export class ShipModels {
                 turretMounts.push({ position: new THREE.Vector3(0, 0.6, 0), type: 'circular' });
                 break;
 
-            case 'standard':
+            case 'viper':
             default:
                 // Re-creating the original tetrahedrons roughly
                 // Hull

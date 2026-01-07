@@ -18,12 +18,12 @@ export class Nebula {
         // Assuming standard naming convention:
         // right, left, top, bottom, front, back
         const texture = loader.load([
-            'nebula_right.png',
-            'nebula_left.png',
-            'nebula_top.png',
-            'nebula_bottom.png',
-            'nebula_front.png',
-            'nebula_back.png'
+            'assets/nebula_right.png',
+            'assets/nebula_left.png',
+            'assets/nebula_top.png',
+            'assets/nebula_bottom.png',
+            'assets/nebula_front.png',
+            'assets/nebula_back.png'
         ]);
 
         this.scene.background = texture;

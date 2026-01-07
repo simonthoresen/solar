@@ -9,7 +9,7 @@ const _tempWakeLocal = new THREE.Vector3();
 const _tempSmokeInfluence = new THREE.Vector3();
 
 export class Spaceship {
-    constructor(scene, color, position, type = 'standard') {
+    constructor(scene, color, position, type = 'viper') {
         this.scene = scene;
         this.color = color;
         this.type = type;
