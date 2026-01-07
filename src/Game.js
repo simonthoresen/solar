@@ -618,7 +618,7 @@ export class Game {
 
     handleShipExplosion(pos, radius) {
         const allShips = [this.player, ...this.npcs];
-        const forceStrength = 200.0; // Strong impulse to be clearly visible
+        const forceStrength = 500.0; // Strong impulse to be clearly visible
         const radiusSq = radius * radius;
         const _tempVec = new THREE.Vector3();
 

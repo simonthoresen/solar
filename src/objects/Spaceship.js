@@ -65,7 +65,7 @@ export class Spaceship {
 
         // Trigger physics callback
         if (this.onExplode) {
-            this.onExplode(this.position, 10.0); // Radius matches visual blast sphere
+            this.onExplode(this.position, 20.0); // Radius matches visual blast sphere
         }
     }
 

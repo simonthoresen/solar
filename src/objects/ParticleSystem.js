@@ -173,7 +173,7 @@ export class ParticleSystem {
         p.life = 0.6;
         p.maxLife = p.life;
         p.color.set(color);
-        p.maxRadius = 10.0; // Enforce new max radius
+        p.maxRadius = 20.0; // Enforce new max radius
 
         this.blastMesh.setColorAt(idx, p.color);
         this.blastWireMesh.setColorAt(idx, new THREE.Color(0xffffff)); // White wireframe
@@ -192,8 +192,8 @@ export class ParticleSystem {
         this.blastWireMesh.instanceMatrix.needsUpdate = true;
 
         // Apply Shockwave to particles
-        // Radius matches visual (10.0), Strength increased significantly
-        this.applyBlastImpulse(position, 10.0, 100.0);
+        // Radius matches visual (20.0), Strength increased significantly
+        this.applyBlastImpulse(position, 20.0, 500.0);
     }
 
     applyBlastImpulse(center, radius, strength) {
