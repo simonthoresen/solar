@@ -460,7 +460,7 @@ export class ParticleSystem {
             const p = this.explosionData[i];
             if (!p.active) continue;
 
-            p.velocity.multiplyScalar(1 - 2.0 * dt); // Drag
+            // Maintain constant velocity (no drag)
             p.position.addScaledVector(p.velocity, dt);
 
             p.rotation += p.rotSpeed * dt;
