@@ -757,13 +757,7 @@ export class Game {
             }
         });
 
-        // Add player
-        if (this.player.isActive) {
-            selectableItems.push({
-                object: this.player,
-                position: this.player.position
-            });
-        }
+        // Don't add player - Tab should only select external targets
 
         if (selectableItems.length === 0) return;
 
