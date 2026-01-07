@@ -768,6 +768,9 @@ export class Game {
                     this.detailPanel.show(target);
                 }
             }
+        } else {
+            // Clicked on nothing - deselect current selection
+            this.deselectAll();
         }
     }
 
