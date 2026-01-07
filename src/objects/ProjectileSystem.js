@@ -22,7 +22,7 @@ export class ProjectileSystem {
         this.scene.add(mesh);
 
         // Velocity: Local -Z direction rotated by quaternion
-        const velocity = new THREE.Vector3(0, 0, -1).applyQuaternion(quaternion).multiplyScalar(150);
+        const velocity = new THREE.Vector3(0, 0, 1).applyQuaternion(quaternion).multiplyScalar(150);
 
         this.lasers.push({
             mesh: mesh,
