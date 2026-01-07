@@ -628,22 +628,14 @@ export class Game {
                 this.respawnStartCameraPos.copy(this.camera.position);
                 this.respawnStartCameraQuat.copy(this.camera.quaternion);
 
-                // Calculate optimal target camera position and orientation
-                // Position: maintain current distance but move behind player
-                const currentDistance = this.camera.position.distanceTo(this.controls.target);
-                const idealOffset = new THREE.Vector3(0, 10, 20); // Behind and above
-                idealOffset.normalize().multiplyScalar(currentDistance);
-
-                // Rotate offset based on player's facing direction
-                const playerRotation = this.player.mesh.rotation.y;
-                idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotation);
-
+                // Calculate optimal target camera orientation
+                // Position: Keep camera where it is to minimize movement
                 const newPlayerPos = this.player.getPosition();
-                this.respawnTargetCameraPos.copy(newPlayerPos).add(idealOffset);
+                this.respawnTargetCameraPos.copy(this.camera.position); // Stay in same position
 
-                // Calculate target camera orientation (looking at player)
+                // Calculate target camera orientation (just turn to look at player)
                 const tempCam = new THREE.Object3D();
-                tempCam.position.copy(this.respawnTargetCameraPos);
+                tempCam.position.copy(this.camera.position); // Use current camera position
                 tempCam.lookAt(newPlayerPos);
                 this.respawnTargetCameraQuat.copy(tempCam.quaternion);
 
