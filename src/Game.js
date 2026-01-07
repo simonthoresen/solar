@@ -161,6 +161,14 @@ export class Game {
         this.smokeAccumulator = 0;
         this.playerRespawnTimer = 3.0;
 
+        // Track arrow key state for camera rotation
+        this.arrowKeys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'h') {
                 if (this.debugUIContainer) {
@@ -180,6 +188,18 @@ export class Game {
                     this.player.takeDamage(Infinity);
                 }
             }
+            // Track arrow keys for camera rotation
+            if (e.key === 'ArrowUp') this.arrowKeys.up = true;
+            if (e.key === 'ArrowDown') this.arrowKeys.down = true;
+            if (e.key === 'ArrowLeft') this.arrowKeys.left = true;
+            if (e.key === 'ArrowRight') this.arrowKeys.right = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowUp') this.arrowKeys.up = false;
+            if (e.key === 'ArrowDown') this.arrowKeys.down = false;
+            if (e.key === 'ArrowLeft') this.arrowKeys.left = false;
+            if (e.key === 'ArrowRight') this.arrowKeys.right = false;
         });
     }
 
@@ -512,6 +532,32 @@ export class Game {
         // Update target and camera position to maintain relative offset
         this.controls.target.copy(currentPlayerPos);
         this.camera.position.add(deltaPos);
+
+        // Arrow key camera rotation
+        if (this.arrowKeys.up || this.arrowKeys.down || this.arrowKeys.left || this.arrowKeys.right) {
+            const rotateSpeed = 2.0; // Speed of rotation with arrow keys
+            const offset = new THREE.Vector3();
+            const spherical = new THREE.Spherical();
+
+            offset.copy(this.camera.position).sub(this.controls.target);
+            spherical.setFromVector3(offset);
+
+            // Apply rotations based on arrow keys
+            if (this.arrowKeys.left) spherical.theta += rotateSpeed * delta;
+            if (this.arrowKeys.right) spherical.theta -= rotateSpeed * delta;
+            if (this.arrowKeys.up) spherical.phi -= rotateSpeed * delta;
+            if (this.arrowKeys.down) spherical.phi += rotateSpeed * delta;
+
+            // Clamp phi to prevent flipping
+            const minPolarAngle = this.controls.minPolarAngle || 0;
+            const maxPolarAngle = this.controls.maxPolarAngle || Math.PI;
+            spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
+            spherical.makeSafe();
+
+            offset.setFromSpherical(spherical);
+            this.camera.position.copy(this.controls.target).add(offset);
+            this.camera.lookAt(this.controls.target);
+        }
 
         this.controls.update();
 

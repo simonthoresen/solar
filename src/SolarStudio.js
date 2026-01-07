@@ -64,6 +64,15 @@ export class SolarStudio {
         // Event Listeners
         window.addEventListener('resize', this.onResize.bind(this));
         this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
+
+        // Track arrow key state
+        this.arrowKeys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (this.selectedBody) {
@@ -72,6 +81,18 @@ export class SolarStudio {
                     this.mainMenu.toggle();
                 }
             }
+            // Track arrow keys
+            if (e.key === 'ArrowUp') this.arrowKeys.up = true;
+            if (e.key === 'ArrowDown') this.arrowKeys.down = true;
+            if (e.key === 'ArrowLeft') this.arrowKeys.left = true;
+            if (e.key === 'ArrowRight') this.arrowKeys.right = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowUp') this.arrowKeys.up = false;
+            if (e.key === 'ArrowDown') this.arrowKeys.down = false;
+            if (e.key === 'ArrowLeft') this.arrowKeys.left = false;
+            if (e.key === 'ArrowRight') this.arrowKeys.right = false;
         });
 
         // Start animation loop
@@ -486,6 +507,30 @@ export class SolarStudio {
         // Follow selected body
         if (this.selectedBody) {
             this.controls.target.copy(this.selectedBody.position);
+        }
+
+        // Arrow key camera rotation
+        if (this.arrowKeys.up || this.arrowKeys.down || this.arrowKeys.left || this.arrowKeys.right) {
+            const rotateSpeed = 2.0; // Speed of rotation with arrow keys
+            const offset = new THREE.Vector3();
+            const spherical = new THREE.Spherical();
+
+            offset.copy(this.camera.position).sub(this.controls.target);
+            spherical.setFromVector3(offset);
+
+            // Apply rotations based on arrow keys
+            if (this.arrowKeys.left) spherical.theta += rotateSpeed * delta;
+            if (this.arrowKeys.right) spherical.theta -= rotateSpeed * delta;
+            if (this.arrowKeys.up) spherical.phi -= rotateSpeed * delta;
+            if (this.arrowKeys.down) spherical.phi += rotateSpeed * delta;
+
+            // Clamp phi to prevent flipping
+            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+            spherical.makeSafe();
+
+            offset.setFromSpherical(spherical);
+            this.camera.position.copy(this.controls.target).add(offset);
+            this.camera.lookAt(this.controls.target);
         }
 
         this.controls.update();

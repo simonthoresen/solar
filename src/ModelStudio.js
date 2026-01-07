@@ -89,11 +89,31 @@ export class ModelStudio {
 
         this.targetAngle = 0;
 
+        // Track arrow key state for camera rotation
+        this.arrowKeys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+
         window.addEventListener('resize', this.onResize.bind(this));
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.mainMenu.toggle();
             }
+            // Track arrow keys for camera rotation
+            if (e.key === 'ArrowUp') this.arrowKeys.up = true;
+            if (e.key === 'ArrowDown') this.arrowKeys.down = true;
+            if (e.key === 'ArrowLeft') this.arrowKeys.left = true;
+            if (e.key === 'ArrowRight') this.arrowKeys.right = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowUp') this.arrowKeys.up = false;
+            if (e.key === 'ArrowDown') this.arrowKeys.down = false;
+            if (e.key === 'ArrowLeft') this.arrowKeys.left = false;
+            if (e.key === 'ArrowRight') this.arrowKeys.right = false;
         });
 
         this.animate();
@@ -486,6 +506,30 @@ export class ModelStudio {
         this.turrets.forEach(turret => {
             turret.update(dt, this.targetCube.position);
         });
+
+        // Arrow key camera rotation
+        if (this.arrowKeys.up || this.arrowKeys.down || this.arrowKeys.left || this.arrowKeys.right) {
+            const rotateSpeed = 2.0; // Speed of rotation with arrow keys
+            const offset = new THREE.Vector3();
+            const spherical = new THREE.Spherical();
+
+            offset.copy(this.camera.position).sub(this.controls.target);
+            spherical.setFromVector3(offset);
+
+            // Apply rotations based on arrow keys
+            if (this.arrowKeys.left) spherical.theta += rotateSpeed * dt;
+            if (this.arrowKeys.right) spherical.theta -= rotateSpeed * dt;
+            if (this.arrowKeys.up) spherical.phi -= rotateSpeed * dt;
+            if (this.arrowKeys.down) spherical.phi += rotateSpeed * dt;
+
+            // Clamp phi to prevent flipping
+            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+            spherical.makeSafe();
+
+            offset.setFromSpherical(spherical);
+            this.camera.position.copy(this.controls.target).add(offset);
+            this.camera.lookAt(this.controls.target);
+        }
 
         // Update Camera
         this.controls.update();
