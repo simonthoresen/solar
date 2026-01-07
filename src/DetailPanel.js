@@ -41,9 +41,10 @@ export class DetailPanel {
         // Create separate scene for preview
         this.previewScene = new THREE.Scene();
 
-        // Camera
+        // Camera - elevated for better view
         this.previewCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-        this.previewCamera.position.z = 4;
+        this.previewCamera.position.set(0, 1.5, 4);
+        this.previewCamera.lookAt(0, 0, 0);
 
         // Renderer
         this.previewRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
