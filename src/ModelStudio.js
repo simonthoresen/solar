@@ -40,6 +40,18 @@ export class ModelStudio {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
 
+        // State - Initialize before setupUI so dropdown can reference these values
+        this.currentShip = null;
+        this.turrets = [];
+        this.shipType = 'standard';
+        this.shipColor = 0x00ff00;
+        this.engineOn = true;
+        this.engineTimer = 0;
+        this.wakeMesh = null;
+        this.wakeLight = null;
+        this.smokeAccumulator = 0;
+        this._tempSmokeInfluence = new THREE.Vector3();
+
         this.setupLights();
         this.setupInteraction(); // Custom controls
         this.setupUI();
@@ -54,18 +66,6 @@ export class ModelStudio {
             minLife: 2.0,
             maxLife: 4.0 // Short life for studio
         });
-
-        // State
-        this.currentShip = null;
-        this.turrets = [];
-        this.shipType = 'standard';
-        this.shipColor = 0x00ff00;
-        this.engineOn = true;
-        this.engineTimer = 0;
-        this.wakeMesh = null;
-        this.wakeLight = null;
-        this.smokeAccumulator = 0;
-        this._tempSmokeInfluence = new THREE.Vector3();
 
         this.isPaused = false;
         this.mainMenu = new MainMenu(this);
@@ -267,6 +267,9 @@ export class ModelStudio {
             option.innerText = type.charAt(0).toUpperCase() + type.slice(1);
             typeSelect.appendChild(option);
         });
+
+        // Set initial dropdown value to match the loaded ship
+        typeSelect.value = this.shipType;
 
         typeSelect.addEventListener('change', (e) => {
             this.shipType = e.target.value;
