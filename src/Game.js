@@ -630,15 +630,14 @@ export class Game {
                 // Use the distance from camera to current target (where player was)
                 const desiredDistance = this.camera.position.distanceTo(this.controls.target);
 
-                // Calculate ideal offset direction (behind and above player)
-                const idealOffset = new THREE.Vector3(0, 10, 20);
-                idealOffset.normalize().multiplyScalar(desiredDistance);
+                // Find the closest point on a sphere of desiredDistance around the new player
+                // Direction: from new player position to current camera position
+                const directionToCamera = new THREE.Vector3();
+                directionToCamera.subVectors(this.camera.position, newPlayerPos);
+                directionToCamera.normalize();
 
-                // Rotate offset based on player's facing direction
-                const playerRotation = this.player.mesh.rotation.y;
-                idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotation);
-
-                this.respawnTargetCameraPos.copy(newPlayerPos).add(idealOffset);
+                // Target position: new player position + direction * desired distance
+                this.respawnTargetCameraPos.copy(newPlayerPos).addScaledVector(directionToCamera, desiredDistance);
 
                 // Calculate target camera orientation (looking at player)
                 const tempCam = new THREE.Object3D();
