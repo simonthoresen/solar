@@ -64,6 +64,13 @@ export class DetailPanel {
     show(object) {
         if (!object) return;
 
+        // Cancel any pending hide animation
+        this.container.classList.remove('closing');
+        if (this._currentAnimationEndHandler) {
+            this.container.removeEventListener('animationend', this._currentAnimationEndHandler);
+            this._currentAnimationEndHandler = null;
+        }
+
         this.selectedObject = object;
         this.isVisible = true;
         this.container.style.display = 'flex';
@@ -75,6 +82,9 @@ export class DetailPanel {
     hide() {
         if (!this.isVisible) return;
 
+        // If already closing, don't start again
+        if (this.container.classList.contains('closing')) return;
+
         // Add closing class to trigger animation
         this.container.classList.add('closing');
 
@@ -84,8 +94,10 @@ export class DetailPanel {
             this.isVisible = false;
             this.selectedObject = null;
             this.container.removeEventListener('animationend', onAnimationEnd);
+            this._currentAnimationEndHandler = null;
         };
 
+        this._currentAnimationEndHandler = onAnimationEnd;
         this.container.addEventListener('animationend', onAnimationEnd);
     }
 
