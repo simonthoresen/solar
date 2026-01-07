@@ -160,6 +160,9 @@ export class Game {
         this._tempSmokeInfluence = new THREE.Vector3();
         this.smokeAccumulator = 0;
         this.playerRespawnTimer = 3.0;
+        this.isPlayerRespawning = false;
+        this.respawnTransitionTimer = 0;
+        this.respawnTransitionDuration = 1.5; // Smooth transition over 1.5 seconds
 
         // Track arrow key state for camera rotation
         this.arrowKeys = {
@@ -524,11 +527,43 @@ export class Game {
 
         // Camera follow update
         const currentPlayerPos = this.player.getPosition();
-        const deltaPos = currentPlayerPos.clone().sub(this.lastPlayerPos);
 
-        // Update target and camera position to maintain relative offset
-        this.controls.target.copy(currentPlayerPos);
-        this.camera.position.add(deltaPos);
+        // Handle respawn transition smoothly
+        if (this.isPlayerRespawning) {
+            this.respawnTransitionTimer += delta;
+            const t = Math.min(this.respawnTransitionTimer / this.respawnTransitionDuration, 1.0);
+
+            // Smooth easing function (ease-out cubic)
+            const eased = 1 - Math.pow(1 - t, 3);
+
+            // Lerp the last player position towards current
+            this.lastPlayerPos.lerp(currentPlayerPos, eased * 0.1); // Gradual catch-up
+
+            // Smoothly transition camera target
+            this.controls.target.lerp(currentPlayerPos, eased * 0.1);
+
+            // Calculate desired camera offset from target
+            const offset = this.camera.position.clone().sub(this.controls.target);
+            const desiredCameraPos = currentPlayerPos.clone().add(offset);
+
+            // Smoothly move camera towards desired position
+            this.camera.position.lerp(desiredCameraPos, eased * 0.1);
+
+            // End transition
+            if (t >= 1.0) {
+                this.isPlayerRespawning = false;
+                this.lastPlayerPos.copy(currentPlayerPos);
+            }
+        } else {
+            // Normal camera follow
+            const deltaPos = currentPlayerPos.clone().sub(this.lastPlayerPos);
+
+            // Update target and camera position to maintain relative offset
+            this.controls.target.copy(currentPlayerPos);
+            this.camera.position.add(deltaPos);
+
+            this.lastPlayerPos.copy(currentPlayerPos);
+        }
 
         // Arrow key camera rotation
         if (this.arrowKeys.up || this.arrowKeys.down || this.arrowKeys.left || this.arrowKeys.right) {
@@ -557,8 +592,6 @@ export class Game {
         }
 
         this.controls.update();
-
-        this.lastPlayerPos.copy(currentPlayerPos);
     }
 
     checkRespawns(dt) {
@@ -579,10 +612,11 @@ export class Game {
                 this.player.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
                 this.player.mesh.position.copy(this.player.position);
 
-                // Reset Camera to player?
-                this.controls.target.copy(this.player.position);
-                // Keep camera offset?
-                this.camera.position.set(this.player.position.x, this.player.position.y + 10, this.player.position.z + 20);
+                // Start smooth camera transition instead of snapping
+                this.isPlayerRespawning = true;
+                this.respawnTransitionTimer = 0;
+                // Don't update camera/target immediately - let the transition handle it
+
                 this.playerRespawnTimer = 3.0;
             }
         } else {
