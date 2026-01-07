@@ -75,7 +75,7 @@ export class ParticleSystem {
 
     initExplosions() {
         // --- Explosion System (Instanced) ---
-        this.explosionMaxCount = 2000;
+        this.explosionMaxCount = 4000;
         this.explosionGeometry = new THREE.PlaneGeometry(1, 1);
         this.explosionMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff,
@@ -130,19 +130,6 @@ export class ParticleSystem {
         this.blastMesh.frustumCulled = false;
         this.scene.add(this.blastMesh);
 
-        // --- Blast Wireframe ---
-        this.blastWireMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: 1.0,
-            wireframe: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending
-        });
-        this.blastWireMesh = new THREE.InstancedMesh(this.blastGeometry, this.blastWireMaterial, this.blastMaxCount);
-        this.blastWireMesh.frustumCulled = false;
-        this.scene.add(this.blastWireMesh);
-
         this.blastData = new Array(this.blastMaxCount).fill(null);
         this.blastCursor = 0;
 
@@ -159,7 +146,6 @@ export class ParticleSystem {
             this.dummy.scale.set(0, 0, 0);
             this.dummy.updateMatrix();
             this.blastMesh.setMatrixAt(i, this.dummy.matrix);
-            this.blastWireMesh.setMatrixAt(i, this.dummy.matrix);
         }
     }
 
@@ -176,7 +162,6 @@ export class ParticleSystem {
         p.maxRadius = 20.0; // Enforce new max radius
 
         this.blastMesh.setColorAt(idx, p.color);
-        this.blastWireMesh.setColorAt(idx, new THREE.Color(0xffffff)); // White wireframe
 
         // Reset rotation (No rotation allowed)
         this.dummy.position.copy(position);
@@ -184,12 +169,9 @@ export class ParticleSystem {
         this.dummy.rotation.set(0, 0, 0);
         this.dummy.updateMatrix();
         this.blastMesh.setMatrixAt(idx, this.dummy.matrix);
-        this.blastWireMesh.setMatrixAt(idx, this.dummy.matrix);
 
         this.blastMesh.instanceColor.needsUpdate = true;
-        if (this.blastWireMesh.instanceColor) this.blastWireMesh.instanceColor.needsUpdate = true;
         this.blastMesh.instanceMatrix.needsUpdate = true;
-        this.blastWireMesh.instanceMatrix.needsUpdate = true;
 
         // Apply Shockwave to particles
         // Radius matches visual (20.0), Strength increased significantly
@@ -234,7 +216,7 @@ export class ParticleSystem {
         }
     }
 
-    spawnExplosion(position, color, count = 50, initialVelocity = new THREE.Vector3()) {
+    spawnExplosion(position, color, count = 100, initialVelocity = new THREE.Vector3()) {
         const baseColor = new THREE.Color(color);
         const fireColors = [
             new THREE.Color(0xffaa00), // Orange
@@ -263,7 +245,7 @@ export class ParticleSystem {
                 r * Math.sin(angle) * speed
             ).add(initialVelocity);
 
-            p.life = 0.5 + Math.random() * 1.0;
+            p.life = 1.0 + Math.random() * 2.0;
             p.maxLife = p.life;
             p.scale = 0.5 + Math.random() * 2.5;
             p.rotation = Math.random() * Math.PI;
@@ -519,7 +501,6 @@ export class ParticleSystem {
             if (p.life <= 0) {
                 p.active = false;
                 this.updateInstance(this.blastMesh, i, p.position, 0);
-                this.updateInstance(this.blastWireMesh, i, p.position, 0);
             } else {
                 const lifeRatio = p.life / p.maxLife; // 1.0 -> 0.0
                 const progress = 1.0 - lifeRatio; // 0.0 -> 1.0
@@ -545,23 +526,15 @@ export class ParticleSystem {
                 this.dummy.rotation.set(0, 0, 0); // NO ROTATION
                 this.dummy.updateMatrix();
                 this.blastMesh.setMatrixAt(i, this.dummy.matrix);
-                this.blastWireMesh.setMatrixAt(i, this.dummy.matrix);
 
                 // Fade to black as life -> 0 (Additive Blending makes it fade out)
 
                 const displayColor = p.color.clone().multiplyScalar(lifeRatio); // Fade to black as life -> 0
                 this.blastMesh.setColorAt(i, displayColor);
-
-                // Wireframe always white but fades
-                const wireColor = new THREE.Color(0xffffff).multiplyScalar(lifeRatio);
-                this.blastWireMesh.setColorAt(i, wireColor);
             }
         }
         this.blastMesh.instanceMatrix.needsUpdate = true;
         if (this.blastMesh.instanceColor) this.blastMesh.instanceColor.needsUpdate = true;
-
-        this.blastWireMesh.instanceMatrix.needsUpdate = true;
-        if (this.blastWireMesh.instanceColor) this.blastWireMesh.instanceColor.needsUpdate = true;
 
         return itemsForViz;
     }
