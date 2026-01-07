@@ -536,23 +536,32 @@ export class Game {
             // Smooth easing function (ease-out cubic)
             const eased = 1 - Math.pow(1 - t, 3);
 
-            // Lerp the last player position towards current
-            this.lastPlayerPos.lerp(currentPlayerPos, eased * 0.1); // Gradual catch-up
+            // Fast rotation: Aggressively lerp the camera target to point at player quickly
+            // This makes the camera turn towards the player first, shortening the movement path
+            const targetLerpSpeed = Math.min(0.3, eased * 0.5); // Faster target transition
+            this.controls.target.lerp(currentPlayerPos, targetLerpSpeed);
 
-            // Smoothly transition camera target
-            this.controls.target.lerp(currentPlayerPos, eased * 0.1);
+            // Calculate the ideal camera position (behind and above player)
+            const idealOffset = new THREE.Vector3(0, 10, 20);
+            const playerRotation = this.player.mesh.rotation.y;
+            idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotation);
+            const idealCameraPos = currentPlayerPos.clone().add(idealOffset);
 
-            // Calculate desired camera offset from target
-            const offset = this.camera.position.clone().sub(this.controls.target);
-            const desiredCameraPos = currentPlayerPos.clone().add(offset);
+            // Slower position: Move camera more gradually
+            const posLerpSpeed = Math.min(0.15, eased * 0.2); // Slower camera position movement
+            this.camera.position.lerp(idealCameraPos, posLerpSpeed);
 
-            // Smoothly move camera towards desired position
-            this.camera.position.lerp(desiredCameraPos, eased * 0.1);
+            // Update lookAt to ensure camera faces the target
+            this.camera.lookAt(this.controls.target);
+
+            // Gradually update lastPlayerPos
+            this.lastPlayerPos.lerp(currentPlayerPos, targetLerpSpeed);
 
             // End transition
             if (t >= 1.0) {
                 this.isPlayerRespawning = false;
                 this.lastPlayerPos.copy(currentPlayerPos);
+                this.controls.target.copy(currentPlayerPos);
             }
         } else {
             // Normal camera follow
