@@ -540,8 +540,8 @@ export class Game {
             // Smooth easing function (ease-in-out cubic for smooth start and end)
             const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-            // Keep camera position fixed (no translation)
-            this.camera.position.copy(this.respawnStartCameraPos);
+            // Smoothly interpolate position to maintain distance
+            this.camera.position.lerpVectors(this.respawnStartCameraPos, this.respawnTargetCameraPos, eased);
 
             // Smoothly interpolate rotation using quaternion slerp
             this.camera.quaternion.slerpQuaternions(this.respawnStartCameraQuat, this.respawnTargetCameraQuat, eased);
@@ -624,14 +624,25 @@ export class Game {
                 this.respawnStartCameraPos.copy(this.camera.position);
                 this.respawnStartCameraQuat.copy(this.camera.quaternion);
 
-                // Calculate optimal target camera orientation
-                // Position: Keep camera where it is to minimize movement
                 const newPlayerPos = this.player.getPosition();
-                this.respawnTargetCameraPos.copy(this.camera.position); // Stay in same position
 
-                // Calculate target camera orientation (just turn to look at player)
+                // Calculate target camera position to maintain same distance
+                // Use the distance from camera to current target (where player was)
+                const desiredDistance = this.camera.position.distanceTo(this.controls.target);
+
+                // Calculate ideal offset direction (behind and above player)
+                const idealOffset = new THREE.Vector3(0, 10, 20);
+                idealOffset.normalize().multiplyScalar(desiredDistance);
+
+                // Rotate offset based on player's facing direction
+                const playerRotation = this.player.mesh.rotation.y;
+                idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotation);
+
+                this.respawnTargetCameraPos.copy(newPlayerPos).add(idealOffset);
+
+                // Calculate target camera orientation (looking at player)
                 const tempCam = new THREE.Object3D();
-                tempCam.position.copy(this.camera.position); // Use current camera position
+                tempCam.position.copy(this.respawnTargetCameraPos);
                 tempCam.lookAt(newPlayerPos);
                 this.respawnTargetCameraQuat.copy(tempCam.quaternion);
 
