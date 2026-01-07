@@ -480,12 +480,9 @@ export class Game {
         this.renderer.render(this.scene, this.camera);
 
         // HUD Pass
-        if (this.gameMode === 'game') {
-            this.hud.update();
-            this.renderer.clearDepth(); // Ensure HUD draws on top
-            this.renderer.clearDepth(); // Ensure HUD draws on top
-            this.renderer.render(this.hud.scene, this.hud.camera);
-        }
+        this.hud.update();
+        this.renderer.clearDepth(); // Ensure HUD draws on top
+        this.renderer.render(this.hud.scene, this.hud.camera);
 
         // Detail Panel 3D Preview Update
         if (this.detailPanel) {
