@@ -540,18 +540,14 @@ export class Game {
             // Smooth easing function (ease-in-out cubic for smooth start and end)
             const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-            // Smoothly interpolate position
-            this.camera.position.lerpVectors(this.respawnStartCameraPos, this.respawnTargetCameraPos, eased);
+            // Keep camera position fixed (no translation)
+            this.camera.position.copy(this.respawnStartCameraPos);
 
             // Smoothly interpolate rotation using quaternion slerp
             this.camera.quaternion.slerpQuaternions(this.respawnStartCameraQuat, this.respawnTargetCameraQuat, eased);
 
-            // Update controls target to match where camera is looking
-            const lookTarget = new THREE.Vector3(0, 0, -1);
-            lookTarget.applyQuaternion(this.camera.quaternion);
-            lookTarget.multiplyScalar(this.camera.position.distanceTo(currentPlayerPos));
-            lookTarget.add(this.camera.position);
-            this.controls.target.copy(lookTarget);
+            // Smoothly lerp the controls target to player position
+            this.controls.target.lerp(currentPlayerPos, eased);
 
             // Update lastPlayerPos
             this.lastPlayerPos.lerp(currentPlayerPos, eased);
