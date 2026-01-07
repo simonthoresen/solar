@@ -251,15 +251,9 @@ export class DetailPanel {
     update(dt) {
         if (!this.isVisible) return;
 
-        // Rotate preview mesh
+        // Rotate preview mesh at constant speed for stable view
         if (this.previewMesh) {
-            // Match object rotation?
-            if (this.selectedObject && this.selectedObject.mesh) {
-                this.previewMesh.rotation.copy(this.selectedObject.mesh.rotation);
-            } else {
-                // Fallback spin
-                this.previewMesh.rotation.y += dt * 0.5;
-            }
+            this.previewMesh.rotation.y += dt * 0.5;
         }
 
         this.previewRenderer.render(this.previewScene, this.previewCamera);

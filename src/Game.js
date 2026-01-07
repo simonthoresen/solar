@@ -761,13 +761,13 @@ export class Game {
 
         if (selectableItems.length === 0) return;
 
-        // Find nearest item to camera position
-        const cameraPos = this.camera.position;
+        // Find nearest item to player position
+        const playerPos = this.player.getPosition();
         let nearest = null;
         let minDistance = Infinity;
 
         selectableItems.forEach(item => {
-            const distance = cameraPos.distanceTo(item.position);
+            const distance = playerPos.distanceTo(item.position);
             if (distance < minDistance) {
                 minDistance = distance;
                 nearest = item;
