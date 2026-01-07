@@ -1,6 +1,4 @@
 import './style.css'
-import { Game } from './Game.js'
+import { SolarStudio } from './SolarStudio.js'
 
-const game = new Game();
-game.start();
-game.setMode('studio');
+const studio = new SolarStudio();

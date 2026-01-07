@@ -8,7 +8,6 @@ import { Player } from './objects/Player.js';
 import { NPC } from './objects/NPC.js';
 import { CelestialBody } from './objects/CelestialBody.js';
 import { Nebula } from './objects/Nebula.js';
-import { StudioUI } from './StudioUI.js';
 import { MainMenu } from './MainMenu.js';
 import { solarSystemConfig, dustConfig, playerConfig } from './config.js';
 import { HUD } from './HUD.js';
@@ -120,9 +119,6 @@ export class Game {
         this.npcs.forEach(npc => npc.onExplode = this.handleShipExplosion.bind(this));
         // Hook new NPCs in spawnRandomNPC too
 
-        this.gameMode = 'game';
-        this.isOrbitPaused = false;
-        this.studioUI = new StudioUI(this);
         this.mainMenu = new MainMenu(this);
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
@@ -172,7 +168,7 @@ export class Game {
                 }
             }
             if (e.key === 'Escape') {
-                const hasSelection = (this.hud && this.hud.selectedBody) || (this.studioUI && this.studioUI.selectedBody);
+                const hasSelection = (this.hud && this.hud.selectedBody);
                 if (hasSelection) {
                     this.deselectAll();
                 } else {
@@ -280,17 +276,10 @@ export class Game {
 
     setupCamera() {
         this.camera.up.set(0, 1, 0); // Enforce Y-up to prevent roll
-        if (this.gameMode === 'game') {
-            // Initial camera position relative to player
-            const pPos = this.player.getPosition();
-            this.camera.position.set(pPos.x, pPos.y + 10, pPos.z + 20); // Behind and above
-            this.camera.lookAt(pPos);
-        } else {
-            // Studio Mode: Top down, far away
-            // Offset Z slightly to avoid LookAt(0,0,0) singularity with Up(0,1,0)
-            this.camera.position.set(0, 1000, 1);
-            this.camera.lookAt(0, 0, 0);
-        }
+        // Initial camera position relative to player
+        const pPos = this.player.getPosition();
+        this.camera.position.set(pPos.x, pPos.y + 10, pPos.z + 20); // Behind and above
+        this.camera.lookAt(pPos);
     }
 
     setupControls() {
@@ -368,15 +357,9 @@ export class Game {
             });
         }
 
-        if (this.gameMode === 'game') {
-            // Target the player
-            this.controls.target.copy(this.player.getPosition());
-            this.controls.maxDistance = 500;
-        } else {
-            // Target center initially
-            this.controls.target.set(0, 0, 0);
-            this.controls.maxDistance = 50000;
-        }
+        // Target the player
+        this.controls.target.copy(this.player.getPosition());
+        this.controls.maxDistance = 500;
 
         this.controls.update();
 
@@ -445,34 +428,16 @@ export class Game {
 
         const time = this.clock.getElapsedTime();
 
-        // 1. Orbital updates (Run in both modes to see effects)
-        // Use 0 delta if paused in studio
-        let orbitDelta = delta;
-        if (this.gameMode === 'studio' && this.isOrbitPaused) {
-            orbitDelta = 0;
-        }
-
+        // Orbital updates
         this.celestialBodies.forEach(body => {
-            body.update(orbitDelta, this.player);
+            body.update(delta, this.player);
         });
 
-        if (this.gameMode === 'game') {
-            this.updateGameLogic(delta);
-        } else {
-            // Studio Mode Logic
-            // Follow selected body if any
-            if (this.studioUI && this.studioUI.selectedBody) {
-                this.controls.target.copy(this.studioUI.selectedBody.position);
-            }
-            this.controls.update();
-        }
+        this.updateGameLogic(delta);
 
-        // Particle System & Velocity Visuals Update (Run in both modes)
-        // Use 0 delta if logic should be static but visuals (billboards) should update
-        const particleDelta = (this.gameMode === 'studio' && this.isOrbitPaused) ? 0 : delta;
-
+        // Particle System & Velocity Visuals Update
         const particleVizItems = this.particleSystem.update(
-            particleDelta,
+            delta,
             this.velocityField,
             this.celestialBodies,
             this.player,
@@ -482,11 +447,9 @@ export class Game {
 
         // Update Velocity Visualization
         let allVizItems = [...particleVizItems];
-        if (this.gameMode === 'game') {
-            const playerInfluence = this.velocityField.calculateTotalVelocity(this.player.getPosition(), this.celestialBodies, null);
-            if (playerInfluence.lengthSq() > 0.01) {
-                allVizItems.push({ position: this.player.getPosition().clone(), force: playerInfluence });
-            }
+        const playerInfluence = this.velocityField.calculateTotalVelocity(this.player.getPosition(), this.celestialBodies, null);
+        if (playerInfluence.lengthSq() > 0.01) {
+            allVizItems.push({ position: this.player.getPosition().clone(), force: playerInfluence });
         }
         this.velocityField.updateVisuals(allVizItems);
 
@@ -658,16 +621,6 @@ export class Game {
             this.hud.setSelected(null);
         }
 
-        // Reset Studio selection
-        if (this.studioUI && this.studioUI.selectedBody) {
-            this.studioUI.selectedBody.setSelected(false);
-            // studioUI.selectedBody is just a reference, calling setSelected(false) on it is good.
-            // But we should also clear the studioUI reference?
-            // Actually studioUI might interpret explicit deselection.
-        }
-        if (this.studioUI) {
-            this.studioUI.hide();
-        }
         if (this.detailPanel) {
             this.detailPanel.hide();
         }
@@ -678,163 +631,39 @@ export class Game {
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-        if (this.gameMode === 'game') {
-            // Check HUD interaction first
-            // For Screen Space HUD, we raycast using HUD camera or just 2D check
-            this.raycaster.setFromCamera(this.mouse, this.hud.camera);
+        // Check HUD interaction
+        this.raycaster.setFromCamera(this.mouse, this.hud.camera);
 
-            // HUD Scene check
-            // We need to traverse HUD scene to find hitMeshes.
+        // Collect all hit meshes from overlays
+        const hitTargets = [];
+        this.hud.overlays.forEach(o => {
+            if (o.hitMesh) hitTargets.push(o.hitMesh);
+        });
 
-            // Collect all hit meshes from overlays
-            const hitTargets = [];
-            this.hud.overlays.forEach(o => {
-                if (o.hitMesh) hitTargets.push(o.hitMesh);
-            });
-
-            const intersects = this.raycaster.intersectObjects(hitTargets, false);
-
-            if (intersects.length > 0) {
-                const hit = intersects[0];
-                const target = hit.object.userData.target;
-                if (target) {
-                    // Update 3D Object Selection (Exclusive)
-                    // 1. Reset all
-                    this.deselectAll();
-
-                    // Update HUD selection AFTER reset
-                    this.hud.setSelected(target);
-
-                    // 2. Set new 3D selection
-                    if (target.setSelected) {
-                        target.setSelected(true);
-                    }
-
-                    // 3. Studio UI sync (optional, if we want studio UI in game mode? Probably not)
-                    if (this.gameMode === 'studio') {
-                        this.studioUI.show(target);
-                    }
-
-                    // Show Detail Panel (Game Mode)
-                    if (this.detailPanel) {
-                        this.detailPanel.show(target);
-                    }
-                }
-            }
-            return;
-        }
-
-        if (this.gameMode !== 'studio') return;
-
-        this.raycaster.setFromCamera(this.mouse, this.camera);
-
-        // Intersect with celestial bodies
-        // accessing mesh property of CelestialBody
-        const meshes = this.celestialBodies.map(cb => cb.mesh);
-        const intersects = this.raycaster.intersectObjects(meshes, true);
+        const intersects = this.raycaster.intersectObjects(hitTargets, false);
 
         if (intersects.length > 0) {
-            // Find the CelestialBody corresponding to the mesh
-            // We need to traverse up to find the root mesh if we hit a child (like a ring or detail)
-            // But CelestialBody stores the mesh. 
-            // Better: find which CelestialBody holds this mesh.
-
-            const hitObject = intersects[0].object;
-            const selectedBody = this.celestialBodies.find(cb => {
-                // Check if hitObject is the mesh or a child of the mesh
-                let current = hitObject;
-                while (current) {
-                    if (current === cb.mesh) return true;
-                    current = current.parent;
-                }
-                return false;
-            });
-
-            if (selectedBody) {
-                console.log("Selected Planet:", selectedBody);
-
-                // Deselect previous
+            const hit = intersects[0];
+            const target = hit.object.userData.target;
+            if (target) {
+                // Update 3D Object Selection (Exclusive)
+                // 1. Reset all
                 this.deselectAll();
 
-                selectedBody.setSelected(true);
-                this.studioUI.show(selectedBody);
+                // Update HUD selection AFTER reset
+                this.hud.setSelected(target);
 
-                // HUD update handled via onMouseClick logic in HUD pass?
-                // Wait, HUD click is separate. Studio Click is 3D raycast.
-                // If we are in STUDIO mode, we use this logic.
-                // If we are in GAME mode, we use HUD raycast logic below (which was at top of function).
-                // User wants "select the player ship by clicking on it" -> In GAME Mode?
-                // Previously, GAME mode logic was:
-                // if (gameMode === 'game') ... check HUD ... return.
+                // 2. Set new 3D selection
+                if (target.setSelected) {
+                    target.setSelected(true);
+                }
 
-                // If user clicks on Player Ship in GAME mode (3D mesh click):
-                // The existing code checked HUD overlays.
-                // Player has a HUD overlay.
-                // So clicking HUD box overlay should select it.
-                // The HUD overlay for player was added in Game.js line 109.
-                // HUD.js line 81 sets userData.target = celestialBody.
-                // HUD.js line 43: addPlayer calls createOverlay(player).
-                // So player overlay has userData.target = player.
-
-                // So if I click player's HUD box, `hud.setSelected(target)` is called.
-                // I need to ensure that `hud.setSelected(player)` ALSO calls `player.setSelected(true)`.
-                // HUD.js is purely visual (2D lines). It calls `setSelected` on itself.
-                // It does NOT call back to game or object.
-
-                // I should move selection logic management to Game.js/central controller to ensure sync.
-                // OR update HUD logic in Game.js to handle the side effects.
+                // Show Detail Panel
+                if (this.detailPanel) {
+                    this.detailPanel.show(target);
+                }
             }
-        } else {
-            // Clicked empty space
-            this.deselectAll();
         }
     }
 
-    // Helpers for StudioUI to get config
-    getConfigForBody(celestialBody) {
-        return solarSystemConfig.find(c => c.id === celestialBody.configId) ||
-            // Fallback if we didn't store ID on body. 
-            // We should probably store the ID on the body during creation.
-            // Let's check CelestialBody.js to see if it has 'id' or we can match by reference?
-            // Creating a map might be better, or just adding the ID to the body.
-            // For now, let's assume we can match by reference from our initial map or I'll add the ID to CelestialBody.
-            null;
-    }
-
-    getAllBodyConfigs() {
-        return solarSystemConfig;
-    }
-
-    setMode(mode) {
-        this.gameMode = mode;
-        this.setupCamera();
-        this.setupControls();
-
-        if (mode === 'studio') {
-            this.studioUI.container.style.display = 'block'; // Make sure UI is back if we return
-            this.studioUI.toggleTopControls(true);
-            this.player.mesh.visible = false; // Hide player in studio?
-        } else {
-            this.studioUI.hide();
-            this.studioUI.toggleTopControls(false);
-            this.player.mesh.visible = true;
-            // Reset player position if needed? Or just continue?
-            // Maybe reset camera to player logic
-        }
-
-        if (this.mainMenu.isVisible) {
-            this.mainMenu.hide();
-        }
-    }
-
-    toggleOrbitPause() {
-        this.isOrbitPaused = !this.isOrbitPaused;
-        return this.isOrbitPaused;
-    }
-
-    resetOrbits() {
-        this.celestialBodies.forEach(body => {
-            body.resetOrbit();
-        });
-    }
 }

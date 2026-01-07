@@ -222,8 +222,8 @@ export class CelestialBody {
         this.scene.add(this.velocityLine);
     }
 
-    update(dt, player) { // Now accepts full player object
-        const playerPosition = player.getPosition();
+    update(dt, player) { // Now accepts full player object (optional)
+        const playerPosition = player ? player.getPosition() : null;
         // Orbital Logic
         if (this.parent) {
             // Clockwise orbit: increase angle (visual clockwise in default top-down view)
