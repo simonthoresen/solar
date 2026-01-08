@@ -319,7 +319,8 @@ export class Game {
         if (this.mainMenu && this.mainMenu.isVisible) {
             // Update billboards even during pause if camera orbits
             if (this.particleSystem) {
-                this.particleSystem.update(0, this.velocityField, this.celestialBodies, this.player, this.camera, false);
+                const allShips = [this.player, ...this.npcs];
+                this.particleSystem.update(0, this.velocityField, this.celestialBodies, allShips, this.camera, false);
             }
 
             // Static render
@@ -339,11 +340,13 @@ export class Game {
         this.updateGameLogic(delta);
 
         // Particle System & Velocity Visuals Update
+        // Pass all ships (player + NPCs) so exhaust fields from all ships affect particles
+        const allShips = [this.player, ...this.npcs];
         const particleVizItems = this.particleSystem.update(
             delta,
             this.velocityField,
             this.celestialBodies,
-            this.player,
+            allShips,
             this.camera,
             DebugState.get('dustVelocity')
         );
