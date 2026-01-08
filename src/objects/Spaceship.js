@@ -398,21 +398,22 @@ export class Spaceship {
         // Update arrow directions to show velocity applied by vortex
         // Vortex now applies velocity based on each engine's exhaust direction
         if (this.vortexArrows && this.velocity.length() > 0.01) {
-            const vortexDirections = this.getVortexDirections();
             const multiplier = 5.0; // Same multiplier as in VelocityField
 
             this.engineOffsets.forEach((engineOffset, index) => {
-                if (this.vortexArrows[index] && vortexDirections[index]) {
-                    // Update arrow position to follow the vortex ring
+                if (this.vortexArrows[index]) {
+                    // Update arrow position to follow the vortex ring (local coordinates)
                     const arrowPos = new THREE.Vector3(engineOffset.x, 0, engineOffset.z + radius);
                     this.vortexArrows[index].position.copy(arrowPos);
 
-                    // Use the engine's exhaust direction
-                    const direction = vortexDirections[index].clone().normalize();
+                    // Arrows are children of the ship mesh, so use LOCAL exhaust direction
+                    // Engine exhaust always points backward (+Z) in local space
+                    // The ship's rotation is inherited automatically
+                    const localExhaustDir = new THREE.Vector3(0, 0, 1);
                     const length = Math.min(this.velocity.length() * multiplier * 0.3, 3.0); // Scale length
 
                     // Update arrow direction and length
-                    this.vortexArrows[index].setDirection(direction);
+                    this.vortexArrows[index].setDirection(localExhaustDir);
                     this.vortexArrows[index].setLength(length, length * 0.2, length * 0.1);
                 }
             });

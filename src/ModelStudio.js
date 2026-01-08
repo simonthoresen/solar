@@ -560,25 +560,18 @@ export class ModelStudio {
 
         // Update vortex direction arrows
         if (this.vortexArrows && this.currentShipInfo?.engineOffsets) {
-            const engineDirections = this.engineDirections || [];
-
             this.currentShipInfo.engineOffsets.forEach((engineOffset, index) => {
                 if (this.vortexArrows[index]) {
-                    // Update arrow position to vortex center
+                    // Update arrow position to vortex center (local coordinates)
                     const vortexPos = new THREE.Vector3(engineOffset.x, 0, engineOffset.z + vortexRadius);
                     this.vortexArrows[index].position.copy(vortexPos);
 
-                    // Update arrow direction
-                    let direction;
-                    if (engineDirections[index]) {
-                        // Use calculated direction for animated engines
-                        direction = engineDirections[index].clone().normalize();
-                    } else {
-                        // Default: engines point backward (+Z)
-                        direction = new THREE.Vector3(0, 0, 1);
-                    }
+                    // Arrows are children of the ship mesh, so use LOCAL exhaust direction
+                    // Engine exhaust always points backward (+Z) in local space
+                    // For animated engines, the rotation of the animation group is inherited automatically
+                    const localExhaustDir = new THREE.Vector3(0, 0, 1);
 
-                    this.vortexArrows[index].setDirection(direction);
+                    this.vortexArrows[index].setDirection(localExhaustDir);
                 }
             });
         }
