@@ -272,6 +272,13 @@ export class Game {
             this.player.setDebugVisibility(this.debugState);
         }
 
+        // Apply debug state to all NPCs
+        this.npcs.forEach(npc => {
+            if (npc.setDebugVisibility) {
+                npc.setDebugVisibility(this.debugState);
+            }
+        });
+
         // Force Grid Arrows (Now Velocity Field Arrows)
         this.velocityField.setVisible(this.debugState.dustVelocity);
 
@@ -517,6 +524,11 @@ export class Game {
                 tempCam.lookAt(newPlayerPos);
                 this.respawnTargetCameraQuat.copy(tempCam.quaternion);
 
+                // Apply current debug state to respawned player
+                if (this.player.setDebugVisibility) {
+                    this.player.setDebugVisibility(this.debugState);
+                }
+
                 this.playerRespawnTimer = 3.0;
             }
         } else {
@@ -551,6 +563,11 @@ export class Game {
         const npc = new NPC(this.scene, type, pos, this.celestialBodies, this.player);
         // Re-bind onExplode (referencing local function from constructor is hard here. easier to make it a method)
         npc.onExplode = this.handleShipExplosion.bind(this);
+
+        // Apply current debug state to new NPC
+        if (npc.setDebugVisibility) {
+            npc.setDebugVisibility(this.debugState);
+        }
 
         this.npcs.push(npc);
         if (this.hud) this.hud.addSpaceship(npc);
