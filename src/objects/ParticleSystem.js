@@ -364,16 +364,14 @@ export class ParticleSystem {
             // Enforce Y=0 on influence
             this._tempInfluence.y = 0;
 
-            const smoothFactor = Math.min(1.0, 3.0 * dt);
-            p.smoothedInfluence.lerp(this._tempInfluence, smoothFactor);
+            // Apply influence directly to velocity (exhaust forces need immediate effect)
+            p.velocity.addScaledVector(this._tempInfluence, dt);
 
             // Velocity Decay (Drag)
             p.velocity.multiplyScalar(1 - 3.0 * dt);
 
-            this._tempEffectiveVel.copy(p.velocity).add(p.smoothedInfluence);
-
             // Move
-            p.position.addScaledVector(this._tempEffectiveVel, dt);
+            p.position.addScaledVector(p.velocity, dt);
             p.position.y = 0; // Enforce Y=0
 
             p.life -= dt;
@@ -425,15 +423,14 @@ export class ParticleSystem {
             velocityField.calculateTotalVelocity(p.position, celestialBodies, player, this._tempInfluence);
             this._tempInfluence.y = 0;
 
-            const smoothFactor = Math.min(1.0, 3.0 * dt);
-            p.smoothedInfluence.lerp(this._tempInfluence, smoothFactor);
+            // Apply influence directly to velocity (exhaust forces need immediate effect)
+            p.velocity.addScaledVector(this._tempInfluence, dt);
 
             // Velocity Decay (Drag)
             p.velocity.multiplyScalar(1 - 3.0 * dt);
 
-            this._tempEffectiveVel.copy(p.velocity).add(p.smoothedInfluence);
-
-            p.position.addScaledVector(this._tempEffectiveVel, dt);
+            // Move
+            p.position.addScaledVector(p.velocity, dt);
             // Allow Y to vary for smoke from engines at different heights (was: p.position.y = 0)
 
             p.life -= dt;
