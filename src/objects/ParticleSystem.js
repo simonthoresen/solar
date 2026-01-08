@@ -464,7 +464,7 @@ export class ParticleSystem {
 
             p.life -= dt;
 
-            // 2. Visuals (Growing and Fading)
+            // 2. Visuals (Growing only, no fade)
             if (p.life <= 0) {
                 p.active = false;
                 // Scale to 0 to hide
@@ -472,21 +472,10 @@ export class ParticleSystem {
             } else {
                 const lifeRatio = p.life / p.maxLife;
 
-                // Smoke grows over lifetime
+                // Smoke grows over lifetime and stays at full size
                 // Growth phase: scale from 1.0 to 4.0 over full lifetime
                 const growthProgress = 1.0 - lifeRatio; // 0 at spawn, 1 at death
                 const scaleMod = 1.0 + growthProgress * 3.0; // Grows to 4x size
-
-                // Darken color to simulate fade-out in last 30% of life
-                // This approximates transparency by blending toward black
-                if (lifeRatio < 0.3) {
-                    const fadeRatio = lifeRatio / 0.3; // 0 at death, 1 at 30% life
-                    // Get current color and darken it
-                    const currentColor = new THREE.Color();
-                    this.smokeMesh.getColorAt(i, currentColor);
-                    currentColor.multiplyScalar(fadeRatio);
-                    this.smokeMesh.setColorAt(i, currentColor);
-                }
 
                 const currentScale = p.initialScale * scaleMod;
 
