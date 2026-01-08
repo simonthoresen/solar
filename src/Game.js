@@ -216,9 +216,9 @@ export class Game {
             planetToParent: 'Planet to Parent',
             planetToPlayer: 'Planet to Player',
             planetVelocity: 'Planet Velocity',
-            playerAxis: 'Player Axis',
-            playerRing: 'Player Ring',
-            playerVortex: 'Player Vortex'
+            playerAxis: 'Ship Axis',
+            playerRing: 'Ship Ring',
+            playerVortex: 'Ship Vortex'
         };
 
         Object.keys(DebugState.getAll()).forEach(key => {
