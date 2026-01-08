@@ -11,10 +11,24 @@ export class EngineEffects {
         camera,
         celestialBodies,
         tempInfluenceVector,
-        emissionInterval = 0.05,
-        thrusterConfigs = []
+        baseEmissionInterval = 0.05,
+        thrusterConfigs = [],
+        shipVelocity = null
     ) {
         if (!particleSystem || !camera || !velocityField) return smokeAccumulator;
+
+        // Calculate dynamic emission interval based on ship velocity
+        // Faster ships emit more frequently to maintain continuous exhaust trail
+        let emissionInterval = baseEmissionInterval;
+        if (shipVelocity) {
+            const speed = shipVelocity.length();
+            // Scale emission rate with speed: interval decreases as speed increases
+            // At speed 0: interval = baseInterval
+            // At speed 50: interval = baseInterval / 3
+            // At speed 100: interval = baseInterval / 5
+            const speedFactor = 1.0 + (speed * 0.04);
+            emissionInterval = baseEmissionInterval / speedFactor;
+        }
 
         smokeAccumulator += dt;
 

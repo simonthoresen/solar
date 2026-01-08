@@ -539,7 +539,8 @@ export class ModelStudio {
                     [],
                     this._tempSmokeInfluence,
                     0.05,
-                    this.currentShipInfo.thrusterConfigs
+                    this.currentShipInfo.thrusterConfigs,
+                    null // Model studio ship is stationary, no velocity-based scaling needed
                 );
             }
 

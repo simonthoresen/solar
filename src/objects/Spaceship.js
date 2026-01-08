@@ -271,7 +271,8 @@ export class Spaceship {
                 celestialBodies,
                 _tempSmokeInfluence,
                 playerConfig.smokeEmissionInterval || 0.05,
-                this.thrusterConfigs
+                this.thrusterConfigs,
+                this.velocity
             );
 
         } else {
