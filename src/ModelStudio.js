@@ -17,9 +17,12 @@ class MockVelocityField {
         targetVec.set(0, 0, 1);
 
         // Apply exhaust field from ship thrusters (only when thrusters are on)
-        // Use per-thruster exhaust field dimensions
-        if (this.studio.engineOn && this.studio.currentShipInfo && this.studio.currentShipInfo.thrusterOffsets) {
+        if (this.studio.engineOn && this.studio.currentShip && this.studio.currentShipInfo && this.studio.currentShipInfo.thrusterOffsets) {
             const multiplier = 5.0;
+            const ship = this.studio.currentShip;
+
+            // Transform particle position from world space to local ship space
+            const localParticlePos = ship.worldToLocal(position.clone());
 
             // Get thruster directions (for animated thrusters)
             const thrusterDirections = this.studio.thrusterDirections || [];
@@ -36,45 +39,44 @@ class MockVelocityField {
                 const exhaustLength = config.exhaustLength;
                 const halfWidth = exhaustWidth / 2.0;
                 const halfLength = exhaustLength / 2.0;
-                const exhaustCenter = exhaustLength / 2.0;
 
-                // Calculate exhaust center position
+                // Get exhaust direction in local space
+                let exhaustDir;
+                if (thrusterDirections[index]) {
+                    exhaustDir = thrusterDirections[index].clone().normalize();
+                } else {
+                    // Default: thrusters point backward (+Z in local space)
+                    exhaustDir = new THREE.Vector3(0, 0, 1);
+                }
+
+                // Calculate exhaust center position in local space
+                const exhaustCenter = exhaustLength / 2.0;
                 const exhaustPos = new THREE.Vector3(
                     thrusterOffset.x,
                     0,
                     thrusterOffset.z + exhaustCenter
                 );
 
-                // Get vector from exhaust center to particle
-                const toParticle = position.clone().sub(exhaustPos);
+                // Vector from exhaust center to particle (in local space)
+                const toParticle = localParticlePos.clone().sub(exhaustPos);
 
-                // Use thruster-specific direction if available
-                if (thrusterDirections[index]) {
-                    const exhaustDir = thrusterDirections[index].clone().normalize();
+                // Get perpendicular direction (cross with up vector)
+                const perpDir = new THREE.Vector3().crossVectors(exhaustDir, new THREE.Vector3(0, 1, 0)).normalize();
 
-                    // Get perpendicular direction (cross with up vector)
-                    const perpDir = new THREE.Vector3().crossVectors(exhaustDir, new THREE.Vector3(0, 1, 0)).normalize();
+                // Project onto exhaust direction (along exhaust)
+                const alongExhaust = toParticle.dot(exhaustDir);
 
-                    // Project onto exhaust direction (Z in local space)
-                    const alongExhaust = toParticle.dot(exhaustDir);
+                // Project onto perpendicular direction (across exhaust)
+                const acrossExhaust = toParticle.dot(perpDir);
 
-                    // Project onto perpendicular direction (X in local space)
-                    const acrossExhaust = toParticle.dot(perpDir);
-
-                    // Check if within rectangular bounds
-                    if (Math.abs(alongExhaust) <= halfLength && Math.abs(acrossExhaust) <= halfWidth) {
-                        // Particle is within exhaust field - apply force
-                        targetVec.x += exhaustDir.x * multiplier;
-                        targetVec.y += exhaustDir.y * multiplier;
-                        targetVec.z += exhaustDir.z * multiplier;
-                    }
-                } else {
-                    // Fallback: thrusters point backward (+Z in local space = backward)
-                    // Use simple distance check for non-animated ships
-                    const distSq = toParticle.lengthSq();
-                    if (distSq < halfLength * halfLength) {
-                        targetVec.z += 1.0 * multiplier;
-                    }
+                // Check if within rectangular exhaust field bounds
+                if (Math.abs(alongExhaust) <= halfLength && Math.abs(acrossExhaust) <= halfWidth) {
+                    // Particle is within exhaust field - apply force in world space
+                    // Transform exhaust direction from local to world space
+                    const worldExhaustDir = exhaustDir.clone().applyEuler(ship.rotation).normalize();
+                    targetVec.x += worldExhaustDir.x * multiplier;
+                    targetVec.y += worldExhaustDir.y * multiplier;
+                    targetVec.z += worldExhaustDir.z * multiplier;
                 }
             });
         }
