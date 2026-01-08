@@ -669,6 +669,9 @@ export class Game {
     }
 
     selectNearestItem() {
+        // Can't select if player is dead
+        if (!this.player || !this.player.isActive) return;
+
         // Collect all selectable items
         const selectableItems = [];
 
@@ -728,6 +731,9 @@ export class Game {
     }
 
     onMouseClick(event) {
+        // Can't select if player is dead
+        if (!this.player || !this.player.isActive) return;
+
         // Calculate mouse position in normalized device coordinates
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
