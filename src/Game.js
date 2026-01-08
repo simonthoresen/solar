@@ -458,6 +458,11 @@ export class Game {
     checkRespawns(dt) {
         // Player Logic
         if (!this.player.isActive) {
+            // Hide detail panel when player dies
+            if (this.detailPanel && this.detailPanel.isVisible) {
+                this.detailPanel.hide();
+            }
+
             this.playerRespawnTimer -= dt;
             if (this.playerRespawnTimer <= 0) {
                 // Respawn
