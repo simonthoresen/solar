@@ -161,7 +161,7 @@ export const dustConfig = {
     "dustColor": 0xffffff,
     "minLife": 2,
     "maxLife": 5,
-    "poolSize": 3000
+    "poolSize": 5000
 };
 
 export const playerConfig = {
