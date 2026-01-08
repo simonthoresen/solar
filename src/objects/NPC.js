@@ -12,6 +12,7 @@ export class NPC extends Spaceship {
             case 'speedster': color = 0xffaa00; break; // Orange
             case 'kamikaze': color = 0xff0000; break; // Red
             case 'shooter': color = 0xff00ff; break; // Magenta
+            case 'follower': color = 0x00ffff; break; // Cyan
         }
 
         const modelType = ShipModels.getRandomType();
@@ -39,6 +40,7 @@ export class NPC extends Spaceship {
             case 'speedster': this.updateSpeedster(dt); break;
             case 'kamikaze': this.updateKamikaze(dt); break;
             case 'shooter': this.updateShooter(dt); break;
+            case 'follower': this.updateFollower(dt); break;
         }
     }
 
@@ -50,12 +52,22 @@ export class NPC extends Spaceship {
         }
 
         if (this.targetBody) {
+            // Select the target planet
+            if (this.selectedItem !== this.targetBody) {
+                this.setSelectedItem(this.targetBody);
+            }
+
             // Fly towards target
             this.flyTowards(this.targetBody.position);
 
             // If close, pick new
             if (this.position.distanceTo(this.targetBody.position) < this.targetBody.sizeRadius + 15) {
                 this.pickRandomPlanet();
+            }
+        } else {
+            // Clear selection if no target
+            if (this.selectedItem) {
+                this.clearSelection();
             }
         }
 
@@ -152,6 +164,43 @@ export class NPC extends Spaceship {
             if (this.selectedItem) {
                 this.clearSelection();
             }
+        }
+    }
+
+    updateFollower(dt) {
+        if (this.player && this.player.isActive) {
+            // Always select the player
+            if (this.selectedItem !== this.player) {
+                this.setSelectedItem(this.player);
+            }
+
+            const dist = this.position.distanceTo(this.player.position);
+            const targetDistance = 30; // Desired distance from player
+            const minDistance = 15; // Don't get closer than this
+            const maxDistance = 50; // Start accelerating if farther than this
+
+            this.flyTowards(this.player.position);
+
+            // Always keep thruster on, but adjust behavior based on distance
+            this.controls.thrust = true;
+
+            // If too close, try to maintain distance by slowing down and backing off
+            if (dist < minDistance) {
+                // Too close - back off by stopping thrust temporarily
+                this.controls.thrust = false;
+            } else if (dist < targetDistance) {
+                // Within acceptable range - thrust at normal speed
+                this.controls.thrust = true;
+            } else {
+                // Too far - full thrust to catch up
+                this.controls.thrust = true;
+            }
+        } else {
+            // Clear selection if player is not active
+            if (this.selectedItem) {
+                this.clearSelection();
+            }
+            this.controls.thrust = false;
         }
     }
 

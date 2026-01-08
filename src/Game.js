@@ -98,7 +98,7 @@ export class Game {
 
         // Initialize NPCs - create one of each type
         this.npcs = [];
-        const npcTypes = ['hopper', 'speedster', 'kamikaze', 'shooter'];
+        const npcTypes = ['hopper', 'speedster', 'kamikaze', 'shooter', 'follower'];
         npcTypes.forEach(type => {
             // Random position away from center but within reasonable bounds
             // Solar systems can be large, Player starts at 0,0,15.
@@ -541,7 +541,7 @@ export class Game {
     }
 
     spawnRandomNPC() {
-        const npcTypes = ['hopper', 'speedster', 'kamikaze', 'shooter'];
+        const npcTypes = ['hopper', 'speedster', 'kamikaze', 'shooter', 'follower'];
         const type = npcTypes[Math.floor(Math.random() * npcTypes.length)];
         const angle = Math.random() * Math.PI * 2;
         const dist = 50 + Math.random() * 50;
