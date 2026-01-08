@@ -604,6 +604,36 @@ export class Game {
                     // Set cooldown to prevent continuous damage (0.5 seconds)
                     shipA.collisionCooldown = 0.5;
                     shipB.collisionCooldown = 0.5;
+
+                    // Apply physics separation - push ships apart
+                    const overlap = collisionDistance - distance;
+
+                    // Calculate normal from A to B
+                    const normal = new THREE.Vector3();
+                    normal.subVectors(shipB.position, shipA.position);
+
+                    if (distance > 0.001) {
+                        normal.divideScalar(distance); // Normalize
+                    } else {
+                        // Ships are exactly on top of each other, push in random direction
+                        normal.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+                    }
+
+                    // Push ships apart by half the overlap each
+                    shipA.position.addScaledVector(normal, -overlap * 0.5);
+                    shipB.position.addScaledVector(normal, overlap * 0.5);
+
+                    // Apply velocity impulse - bounce apart
+                    const bounceStrength = 20.0; // Adjust for desired bounce intensity
+                    const relativeVelocity = new THREE.Vector3().subVectors(shipB.velocity, shipA.velocity);
+                    const velocityAlongNormal = relativeVelocity.dot(normal);
+
+                    // Only apply impulse if ships are moving toward each other
+                    if (velocityAlongNormal < 0) {
+                        const impulse = normal.clone().multiplyScalar(bounceStrength);
+                        shipA.velocity.sub(impulse);
+                        shipB.velocity.add(impulse);
+                    }
                 }
             }
         }
