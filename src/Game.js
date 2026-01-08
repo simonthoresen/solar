@@ -483,18 +483,25 @@ export class Game {
 
                 const newPlayerPos = this.player.getPosition();
 
-                // Calculate target camera position to maintain same distance
-                // Use the distance from camera to current target (where player was)
-                const desiredDistance = this.camera.position.distanceTo(this.controls.target);
+                // Calculate target camera position to maintain same distance in XZ plane
+                // Preserve Y coordinate from starting position
+                const currentCameraPos2D = new THREE.Vector2(this.camera.position.x, this.camera.position.z);
+                const currentTarget2D = new THREE.Vector2(this.controls.target.x, this.controls.target.z);
+                const desiredDistance = currentCameraPos2D.distanceTo(currentTarget2D);
 
-                // Find the closest point on a sphere of desiredDistance around the new player
-                // Direction: from new player position to current camera position
-                const directionToCamera = new THREE.Vector3();
-                directionToCamera.subVectors(this.camera.position, newPlayerPos);
-                directionToCamera.normalize();
+                // Direction in XZ plane only: from new player position to current camera position
+                const directionToCamera2D = new THREE.Vector2(
+                    this.camera.position.x - newPlayerPos.x,
+                    this.camera.position.z - newPlayerPos.z
+                );
+                directionToCamera2D.normalize();
 
-                // Target position: new player position + direction * desired distance
-                this.respawnTargetCameraPos.copy(newPlayerPos).addScaledVector(directionToCamera, desiredDistance);
+                // Target position: new player position + direction * desired distance (XZ only)
+                this.respawnTargetCameraPos.set(
+                    newPlayerPos.x + directionToCamera2D.x * desiredDistance,
+                    this.respawnStartCameraPos.y, // Preserve Y coordinate
+                    newPlayerPos.z + directionToCamera2D.y * desiredDistance
+                );
 
                 // Calculate target camera orientation (looking at player)
                 const tempCam = new THREE.Object3D();
