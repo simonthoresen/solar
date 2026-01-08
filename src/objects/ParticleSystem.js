@@ -338,8 +338,18 @@ export class ParticleSystem {
             p.smoothedInfluence.set(0, 0, 0);
         }
 
-        // Set per-instance color and store original
+        // Set per-instance color with slight variation
         const tempColor = new THREE.Color(color);
+        // Add ±15% variation to each RGB component
+        const variation = 0.15;
+        tempColor.r += (Math.random() - 0.5) * variation;
+        tempColor.g += (Math.random() - 0.5) * variation;
+        tempColor.b += (Math.random() - 0.5) * variation;
+        // Clamp to valid range [0, 1]
+        tempColor.r = Math.max(0, Math.min(1, tempColor.r));
+        tempColor.g = Math.max(0, Math.min(1, tempColor.g));
+        tempColor.b = Math.max(0, Math.min(1, tempColor.b));
+
         p.originalColor.copy(tempColor);
         this.smokeMesh.setColorAt(idx, tempColor);
         this.smokeMesh.instanceColor.needsUpdate = true;
