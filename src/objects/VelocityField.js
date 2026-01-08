@@ -35,7 +35,8 @@ export class VelocityField {
 
         // 3. Player Engine Exhaust (check all engine exhausts)
         // Use per-thruster exhaust field dimensions and forces
-        if (player && player.getExhaustPositions) {
+        // Only apply exhaust forces when thrusters are active
+        if (player && player.getExhaustPositions && player.controls && player.controls.thrust) {
             const exhaustPositions = player.getExhaustPositions();
             const exhaustDirections = player.getExhaustDirections ? player.getExhaustDirections() : [];
             const exhaustDimensions = player.getExhaustDimensions ? player.getExhaustDimensions() : [];
