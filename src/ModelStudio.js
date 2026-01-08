@@ -353,6 +353,7 @@ export class ModelStudio {
         // 3. Vortex Field (Magenta) - one ring per engine
         const vortexRadius = 2.0;
         this.vortexLines = [];
+        this.vortexArrows = [];
 
         if (!engineOffsets || engineOffsets.length === 0) {
             engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
@@ -370,6 +371,18 @@ export class ModelStudio {
             vLine.rotation.x = -Math.PI / 2;
             mesh.add(vLine);
             this.vortexLines.push(vLine);
+
+            // Add cyan arrow showing velocity direction from vortex center
+            const arrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, 1), // Initial direction (will be updated)
+                new THREE.Vector3(engineOffset.x, 0, engineOffset.z + vortexRadius), // Position at vortex center
+                2.0, // Length
+                0x00ffff, // Cyan color
+                0.4, // Head length
+                0.2 // Head width
+            );
+            mesh.add(arrow);
+            this.vortexArrows.push(arrow);
         });
     }
 
@@ -544,5 +557,30 @@ export class ModelStudio {
     updateVortexPositions() {
         const vortexRadius = 2.0;
         EngineEffects.updateVortexPositions(this.vortexLines, this.currentShipInfo?.engineOffsets, vortexRadius);
+
+        // Update vortex direction arrows
+        if (this.vortexArrows && this.currentShipInfo?.engineOffsets) {
+            const engineDirections = this.engineDirections || [];
+
+            this.currentShipInfo.engineOffsets.forEach((engineOffset, index) => {
+                if (this.vortexArrows[index]) {
+                    // Update arrow position to vortex center
+                    const vortexPos = new THREE.Vector3(engineOffset.x, 0, engineOffset.z + vortexRadius);
+                    this.vortexArrows[index].position.copy(vortexPos);
+
+                    // Update arrow direction
+                    let direction;
+                    if (engineDirections[index]) {
+                        // Use calculated direction for animated engines
+                        direction = engineDirections[index].clone().normalize();
+                    } else {
+                        // Default: engines point backward (+Z)
+                        direction = new THREE.Vector3(0, 0, 1);
+                    }
+
+                    this.vortexArrows[index].setDirection(direction);
+                }
+            });
+        }
     }
 }
