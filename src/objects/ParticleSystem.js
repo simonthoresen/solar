@@ -299,8 +299,12 @@ export class ParticleSystem {
             };
 
             this.updateInstance(this.dustMesh, i, this.dustData[i].position, 0, null, null);
+
+            // Initialize color to white
+            this.dustMesh.instanceColor.setXYZ(i, 1, 1, 1);
         }
         this.dustMesh.instanceMatrix.needsUpdate = true;
+        this.dustMesh.instanceColor.needsUpdate = true;
     }
 
     spawnSmoke(position, initialInfluence = null, camera = null, size = 0.3, color = 0xaaaaaa, lifetime = 3.0) {
@@ -400,6 +404,9 @@ export class ParticleSystem {
                 const maxLife = this.config.maxLife || 60;
                 p.life = minLife + Math.random() * (maxLife - minLife);
                 p.maxLife = p.life;
+
+                // Reset color to white on respawn
+                this.dustMesh.instanceColor.setXYZ(i, 1, 1, 1);
             }
 
             // 3. Update Visuals
