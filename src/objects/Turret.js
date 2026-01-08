@@ -86,8 +86,9 @@ export class Turret {
      */
     update(dt, targetWorldPos) {
         if (!targetWorldPos) {
-            // No target - reset to forward (0 rotation)
-            this.mesh.rotation.y = 0;
+            // No target - reset to forward
+            // Ships face -Z, turret barrels are built facing +Z, so rotate 180 degrees
+            this.mesh.rotation.y = Math.PI;
             this.pivot.rotation.x = 0;
             return;
         }
