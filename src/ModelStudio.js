@@ -7,12 +7,38 @@ import { Turret } from './objects/Turret.js';
 
 // Mock Velocity Field for Studio (smoke drifting)
 class MockVelocityField {
+    constructor(studio) {
+        this.studio = studio;
+    }
+
     calculateTotalVelocity(position, bodies, player, targetVec) {
-        // Simulate backward drift (as if ship moving forward)
-        // Ship faces -Z? Or +Z?
-        // In Spaceship.js: forward = (0,0,-1).
-        // So wake should drift +Z (backwards).
-        targetVec.set(0, 0, 10); // Drift speed 10 units/s backwards
+        targetVec.set(0, 0, 1);
+
+        // Apply vortex field from ship engines (only when engines are on)
+        if (this.studio.engineOn && this.studio.currentShipInfo && this.studio.currentShipInfo.engineOffsets) {
+            const vortexRadius = 2.0;
+            const radiusSq = vortexRadius * vortexRadius;
+            const multiplier = 5.0;
+            const simulatedVelocity = new THREE.Vector3(0, 0, -10); // Simulate ship moving forward
+
+            this.studio.currentShipInfo.engineOffsets.forEach(engineOffset => {
+                // Calculate vortex position (radius units behind engine, y=0)
+                const vortexPos = new THREE.Vector3(
+                    engineOffset.x,
+                    0,
+                    engineOffset.z + vortexRadius
+                );
+
+                const distSq = position.distanceToSquared(vortexPos);
+                if (distSq < radiusSq) {
+                    // Apply inverted velocity (backwards push)
+                    targetVec.x -= simulatedVelocity.x * multiplier;
+                    targetVec.y -= simulatedVelocity.y * multiplier;
+                    targetVec.z -= simulatedVelocity.z * multiplier;
+                }
+            });
+        }
+
         return targetVec;
     }
 }
@@ -58,13 +84,14 @@ export class ModelStudio {
 
         // Systems
         this.clock = new THREE.Clock();
-        this.velocityField = new MockVelocityField();
+        this.velocityField = new MockVelocityField(this);
         this.particleSystem = new ParticleSystem(this.scene, {
-            fieldRadius: 100, // Small field for studio
-            count: 0, // No dust
-            poolSize: 500, // Enough for smoke
+            fieldRadius: 15,
+            count: 100,
+            dustScale: 0.2,
+            poolSize: 500,
             minLife: 2.0,
-            maxLife: 4.0 // Short life for studio
+            maxLife: 4.0
         });
 
         this.isPaused = false;
@@ -605,6 +632,10 @@ export class ModelStudio {
                 if (this.currentShipInfo && this.currentShipInfo.engineOffsets) {
                     this.currentShipInfo.engineOffsets.forEach(engineOffset => {
                         const wakePos = this.getEnginePositionFromOffset(engineOffset);
+
+                        // Move spawn position backwards by max smoke radius (1 unit)
+                        const smokeMaxRadius = 1.0;
+                        wakePos.z += smokeMaxRadius;
 
                         // Get influence at this point
                         this.velocityField.calculateTotalVelocity(wakePos, [], null, this._tempSmokeInfluence);

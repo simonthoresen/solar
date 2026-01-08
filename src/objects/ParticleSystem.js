@@ -5,6 +5,7 @@ export class ParticleSystem {
         this.scene = scene;
         this.size = config.fieldRadius || 72;
         this.config = config;
+        this.dustScale = config.dustScale !== undefined ? config.dustScale : 1.0;
 
         // Scratch objects (Initialize first!)
         this.dummy = new THREE.Object3D();
@@ -394,7 +395,7 @@ export class ParticleSystem {
             if (lifeRatio > 0.9) scaleMod = (1.0 - lifeRatio) / 0.1;
             else if (lifeRatio < 0.5) scaleMod = lifeRatio / 0.5;
 
-            this.updateInstance(this.dustMesh, i, p.position, p.initialScale * scaleMod, target, cameraQuaternion);
+            this.updateInstance(this.dustMesh, i, p.position, p.initialScale * scaleMod * this.dustScale, target, cameraQuaternion);
 
             // Viz Output (Sampled for performance distribution)
             // Show every 20th particle to get a spread across the field
