@@ -10,6 +10,7 @@ export class ParticleSystem {
         // Scratch objects (Initialize first!)
         this.dummy = new THREE.Object3D();
         this._tempInfluence = new THREE.Vector3();
+        this._tempExhaustForce = new THREE.Vector3();
         this._tempEffectiveVel = new THREE.Vector3();
 
         // --- Dust System (Instanced) ---
@@ -26,6 +27,11 @@ export class ParticleSystem {
 
         this.dustMesh = new THREE.InstancedMesh(this.dustGeometry, this.dustMaterial, this.dustCount);
         this.dustMesh.frustumCulled = false; // Prevent culling when looking away from center
+        // Enable per-instance colors for debug
+        this.dustMesh.instanceColor = new THREE.InstancedBufferAttribute(
+            new Float32Array(this.dustCount * 3),
+            3
+        );
         this.scene.add(this.dustMesh);
 
         // Dust Data
@@ -359,19 +365,23 @@ export class ParticleSystem {
             const p = this.dustData[i];
 
             // 1. Physics & Influence
+            // 1a. Orbital forces (planets, ship wake) - smoothed for stable orbits
             velocityField.calculateTotalVelocity(p.position, celestialBodies, player, this._tempInfluence);
-
-            // Enforce Y=0 on influence
             this._tempInfluence.y = 0;
+            const smoothFactor = Math.min(1.0, 3.0 * dt);
+            p.smoothedInfluence.lerp(this._tempInfluence, smoothFactor);
 
-            // Apply influence directly to velocity (exhaust forces need immediate effect)
-            p.velocity.addScaledVector(this._tempInfluence, dt);
+            // 1b. Exhaust forces - applied directly to velocity for immediate effect
+            velocityField.calculateExhaustForce(p.position, celestialBodies, player, this._tempExhaustForce);
+            this._tempExhaustForce.y = 0;
+            p.velocity.addScaledVector(this._tempExhaustForce, dt);
 
             // Velocity Decay (Drag)
             p.velocity.multiplyScalar(1 - 3.0 * dt);
 
-            // Move
-            p.position.addScaledVector(p.velocity, dt);
+            // Move: combine velocity with smoothed influence
+            this._tempEffectiveVel.copy(p.velocity).add(p.smoothedInfluence);
+            p.position.addScaledVector(this._tempEffectiveVel, dt);
             p.position.y = 0; // Enforce Y=0
 
             p.life -= dt;
@@ -405,6 +415,13 @@ export class ParticleSystem {
 
             this.updateInstance(this.dustMesh, i, p.position, p.initialScale * scaleMod * this.dustScale, target, cameraQuaternion);
 
+            // Debug: Color particles magenta if in exhaust field (don't reset if not)
+            const inExhaust = velocityField.isInExhaustField(p.position, celestialBodies, player);
+            if (inExhaust) {
+                const color = new THREE.Color(0xff00ff);
+                this.dustMesh.instanceColor.setXYZ(i, color.r, color.g, color.b);
+            }
+
             // Viz Output (Sampled for performance distribution)
             // Show every 20th particle to get a spread across the field
             if (i % 20 === 0 && p.smoothedInfluence.lengthSq() > 0.01) {
@@ -412,6 +429,7 @@ export class ParticleSystem {
             }
         }
         this.dustMesh.instanceMatrix.needsUpdate = true;
+        this.dustMesh.instanceColor.needsUpdate = true;
 
 
         // --- Update Smoke ---
@@ -420,17 +438,23 @@ export class ParticleSystem {
             if (!p.active) continue;
 
             // 1. Physics
+            // 1a. Orbital forces (planets, ship wake) - smoothed for stable orbits
             velocityField.calculateTotalVelocity(p.position, celestialBodies, player, this._tempInfluence);
             this._tempInfluence.y = 0;
+            const smoothFactor = Math.min(1.0, 3.0 * dt);
+            p.smoothedInfluence.lerp(this._tempInfluence, smoothFactor);
 
-            // Apply influence directly to velocity (exhaust forces need immediate effect)
-            p.velocity.addScaledVector(this._tempInfluence, dt);
+            // 1b. Exhaust forces - applied directly to velocity for immediate effect
+            velocityField.calculateExhaustForce(p.position, celestialBodies, player, this._tempExhaustForce);
+            this._tempExhaustForce.y = 0;
+            p.velocity.addScaledVector(this._tempExhaustForce, dt);
 
             // Velocity Decay (Drag)
             p.velocity.multiplyScalar(1 - 3.0 * dt);
 
-            // Move
-            p.position.addScaledVector(p.velocity, dt);
+            // Move: combine velocity with smoothed influence
+            this._tempEffectiveVel.copy(p.velocity).add(p.smoothedInfluence);
+            p.position.addScaledVector(this._tempEffectiveVel, dt);
             // Allow Y to vary for smoke from engines at different heights (was: p.position.y = 0)
 
             p.life -= dt;
@@ -454,6 +478,13 @@ export class ParticleSystem {
                 }
                 this.updateInstance(this.smokeMesh, i, p.position, currentScale, target, cameraQuaternion);
 
+                // Debug: Color particles magenta if in exhaust field (don't reset if not)
+                const inExhaust = velocityField.isInExhaustField(p.position, celestialBodies, player);
+                if (inExhaust) {
+                    const color = new THREE.Color(0xff00ff);
+                    this.smokeMesh.instanceColor.setXYZ(i, color.r, color.g, color.b);
+                }
+
                 // Show every 5th active smoke particle
                 if (i % 5 === 0 && p.smoothedInfluence.lengthSq() > 0.01) {
                     itemsForViz.push({ position: p.position.clone(), force: p.smoothedInfluence.clone() });
@@ -461,6 +492,7 @@ export class ParticleSystem {
             }
         }
         this.smokeMesh.instanceMatrix.needsUpdate = true;
+        this.smokeMesh.instanceColor.needsUpdate = true;
 
 
         // --- Update Explosions ---

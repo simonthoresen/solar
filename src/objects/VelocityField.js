@@ -30,19 +30,32 @@ export class VelocityField {
         // Convert ships to array for uniform handling
         const shipsArray = ships ? (Array.isArray(ships) ? ships : [ships]) : [];
 
-        // 2. Ships' Wake and Exhaust Fields
+        // 2. Ships' Wake (rotation field when very close)
         for (const ship of shipsArray) {
             if (!ship) continue;
 
-            // 2a. Ship Wake (rotation field when very close)
             if (ship.getVelocityAt) {
                 const pVel = ship.getVelocityAt(position);
                 target.add(pVel);
             }
+        }
 
-            // 2b. Ship Engine Exhaust (check all engine exhausts)
-            // Use per-thruster exhaust field dimensions and forces
-            // Only apply exhaust forces when thrusters are active
+        return target;
+    }
+
+    // Calculate exhaust forces separately (not smoothed, applied directly)
+    calculateExhaustForce(position, celestialBodies, ships, target = new THREE.Vector3()) {
+        target.set(0, 0, 0);
+
+        // Convert ships to array for uniform handling
+        const shipsArray = ships ? (Array.isArray(ships) ? ships : [ships]) : [];
+
+        // Ship Engine Exhaust (check all engine exhausts)
+        // Use per-thruster exhaust field dimensions and forces
+        // Only apply exhaust forces when thrusters are active
+        for (const ship of shipsArray) {
+            if (!ship) continue;
+
             if (ship.getExhaustPositions && ship.controls && ship.controls.thrust) {
                 const exhaustPositions = ship.getExhaustPositions();
                 const exhaustDirections = ship.getExhaustDirections ? ship.getExhaustDirections() : [];
@@ -142,6 +155,49 @@ export class VelocityField {
 
     setVisible(visible) {
         this.arrowHelperGroup.visible = visible;
+    }
+
+    // Check if a position is inside any firing exhaust field (for debugging)
+    isInExhaustField(position, celestialBodies, ships) {
+        // Convert ships to array for uniform handling
+        const shipsArray = ships ? (Array.isArray(ships) ? ships : [ships]) : [];
+
+        // Check Ships' Exhaust Fields
+        for (const ship of shipsArray) {
+            if (!ship) continue;
+
+            // Only check if thrusters are active
+            if (ship.getExhaustPositions && ship.controls && ship.controls.thrust) {
+                const exhaustPositions = ship.getExhaustPositions();
+                const exhaustDirections = ship.getExhaustDirections ? ship.getExhaustDirections() : [];
+                const exhaustDimensions = ship.getExhaustDimensions ? ship.getExhaustDimensions() : [];
+
+                for (let index = 0; index < exhaustPositions.length; index++) {
+                    const exhaustPos = exhaustPositions[index];
+                    const dimensions = exhaustDimensions[index] || { width: 3.0, length: 6.0 };
+                    const halfWidth = dimensions.width / 2.0;
+                    const exhaustLength = dimensions.length;
+
+                    const toParticle = position.clone().sub(exhaustPos);
+
+                    if (exhaustDirections[index]) {
+                        const exhaustDir = exhaustDirections[index].clone().normalize();
+                        const perpDir = new THREE.Vector3().crossVectors(exhaustDir, new THREE.Vector3(0, 1, 0)).normalize();
+
+                        const alongExhaust = toParticle.dot(exhaustDir);
+                        const acrossExhaust = toParticle.dot(perpDir);
+
+                        // Check if within rectangular bounds (directional - only behind thruster)
+                        if (alongExhaust >= -exhaustLength/2 && alongExhaust <= exhaustLength/2 &&
+                            Math.abs(acrossExhaust) <= halfWidth) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     // Legacy support to prevent crash if old calls exist (optional, but good for safety)
