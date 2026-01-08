@@ -16,33 +16,33 @@ class MockVelocityField {
     calculateTotalVelocity(position, bodies, player, targetVec) {
         targetVec.set(0, 0, 1);
 
-        // Apply vortex field from ship engines (only when engines are on)
-        if (this.studio.engineOn && this.studio.currentShipInfo && this.studio.currentShipInfo.engineOffsets) {
-            const vortexRadius = 2.0;
-            const radiusSq = vortexRadius * vortexRadius;
+        // Apply exhaust field from ship thrusters (only when thrusters are on)
+        if (this.studio.engineOn && this.studio.currentShipInfo && this.studio.currentShipInfo.thrusterOffsets) {
+            const exhaustRadius = 2.0;
+            const radiusSq = exhaustRadius * exhaustRadius;
             const multiplier = 5.0;
 
-            // Get engine directions (for animated engines)
-            const engineDirections = this.studio.engineDirections || [];
+            // Get thruster directions (for animated thrusters)
+            const thrusterDirections = this.studio.thrusterDirections || [];
 
-            this.studio.currentShipInfo.engineOffsets.forEach((engineOffset, index) => {
-                // Calculate vortex position (radius units behind engine, y=0)
-                const vortexPos = new THREE.Vector3(
-                    engineOffset.x,
+            this.studio.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
+                // Calculate exhaust position (radius units behind thruster, y=0)
+                const exhaustPos = new THREE.Vector3(
+                    thrusterOffset.x,
                     0,
-                    engineOffset.z + vortexRadius
+                    thrusterOffset.z + exhaustRadius
                 );
 
-                const distSq = position.distanceToSquared(vortexPos);
+                const distSq = position.distanceToSquared(exhaustPos);
                 if (distSq < radiusSq) {
-                    // Use engine-specific direction if available
-                    if (engineDirections[index]) {
-                        const exhaustDir = engineDirections[index];
+                    // Use thruster-specific direction if available
+                    if (thrusterDirections[index]) {
+                        const exhaustDir = thrusterDirections[index];
                         targetVec.x += exhaustDir.x * multiplier;
                         targetVec.y += exhaustDir.y * multiplier;
                         targetVec.z += exhaustDir.z * multiplier;
                     } else {
-                        // Fallback: engines point backward (+Z in local space = backward)
+                        // Fallback: thrusters point backward (+Z in local space = backward)
                         // For non-animated ships, just push in +Z direction
                         targetVec.z += 1.0 * multiplier;
                     }
@@ -84,7 +84,7 @@ export class ModelStudio {
         this.shipColor = 0x00ff00;
         this.engineOn = true;
         this.engineTimer = 0;
-        this.wakeMesh = null;
+        this.flameMesh = null;
         this.smokeAccumulator = 0;
         this._tempSmokeInfluence = new THREE.Vector3();
 
@@ -317,14 +317,14 @@ export class ModelStudio {
 
         const modelData = ShipModels.createModel(type, this.shipColor);
         this.currentShip = modelData.mesh;
-        this.currentShipInfo = modelData; // Store collisionRadius, engineOffsets, animations
+        this.currentShipInfo = modelData; // Store collisionRadius, thrusterOffsets, animations
         this.animations = modelData.animations || [];
-        this.baseEngineOffsets = modelData.engineOffsets.map(v => v.clone()); // Store base offsets
+        this.baseThrusterOffsets = modelData.thrusterOffsets.map(v => v.clone()); // Store base offsets
         this.scene.add(this.currentShip);
 
-        this.initWake(modelData.engineOffsets);
+        this.initFlames(modelData.thrusterOffsets);
         this.initStudioTurrets(modelData.turretMounts);
-        this.addDebugHelpers(this.currentShip, modelData.collisionRadius, modelData.engineOffsets);
+        this.addDebugHelpers(this.currentShip, modelData.collisionRadius, modelData.thrusterOffsets);
 
         this.updateTurretUI();
 
@@ -335,7 +335,7 @@ export class ModelStudio {
         }
     }
 
-    addDebugHelpers(mesh, radius, engineOffsets) {
+    addDebugHelpers(mesh, radius, thrusterOffsets) {
         // 1. Axis Helper
         const axisHelper = new THREE.AxesHelper(2);
         axisHelper.scale.set(1, 1, -1);
@@ -350,52 +350,52 @@ export class ModelStudio {
         boundaryLine.rotation.x = -Math.PI / 2;
         mesh.add(boundaryLine);
 
-        // 3. Vortex Field (Magenta) - one ring per engine
-        const vortexRadius = 2.0;
-        this.vortexLines = [];
-        this.vortexArrows = [];
+        // 3. Exhaust Field (Magenta) - one ring per thruster
+        const exhaustRadius = 2.0;
+        this.exhaustRings = [];
+        this.exhaustArrows = [];
 
-        if (!engineOffsets || engineOffsets.length === 0) {
-            engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
+        if (!thrusterOffsets || thrusterOffsets.length === 0) {
+            thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
-        engineOffsets.forEach(engineOffset => {
-            const vCurve = new THREE.EllipseCurve(0, 0, vortexRadius, vortexRadius, 0, 2 * Math.PI, false, 0);
+        thrusterOffsets.forEach(thrusterOffset => {
+            const vCurve = new THREE.EllipseCurve(0, 0, exhaustRadius, exhaustRadius, 0, 2 * Math.PI, false, 0);
             const vPoints = vCurve.getPoints(32);
             const vGeom = new THREE.BufferGeometry().setFromPoints(vPoints);
             const vMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
             const vLine = new THREE.Line(vGeom, vMat);
 
-            // Position vortex 'radius' units behind the engine, with y=0
-            vLine.position.set(engineOffset.x, 0, engineOffset.z + vortexRadius);
+            // Position exhaust 'radius' units behind the thruster, with y=0
+            vLine.position.set(thrusterOffset.x, 0, thrusterOffset.z + exhaustRadius);
             vLine.rotation.x = -Math.PI / 2;
             mesh.add(vLine);
-            this.vortexLines.push(vLine);
+            this.exhaustRings.push(vLine);
 
-            // Add cyan arrow showing velocity direction from vortex center
+            // Add cyan arrow showing velocity direction from exhaust center
             const arrow = new THREE.ArrowHelper(
                 new THREE.Vector3(0, 0, 1), // Initial direction (will be updated)
-                new THREE.Vector3(engineOffset.x, 0, engineOffset.z + vortexRadius), // Position at vortex center
+                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustRadius), // Position at exhaust center
                 2.0, // Length
                 0x00ffff, // Cyan color
                 0.4, // Head length
                 0.2 // Head width
             );
             mesh.add(arrow);
-            this.vortexArrows.push(arrow);
+            this.exhaustArrows.push(arrow);
         });
     }
 
-    initWake(engineOffsets) {
-        if (!engineOffsets || engineOffsets.length === 0) {
-            // Fallback if no engine offsets defined
-            engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
+    initFlames(thrusterOffsets) {
+        if (!thrusterOffsets || thrusterOffsets.length === 0) {
+            // Fallback if no thruster offsets defined
+            thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
-        this.wakeMeshes = EngineEffects.initWakes(engineOffsets, this.currentShip);
+        this.flameMeshes = EngineEffects.initFlames(thrusterOffsets, this.currentShip);
 
-        // Keep backward compatibility - first wake is the "main" wake
-        this.wakeMesh = this.wakeMeshes[0];
+        // Keep backward compatibility - first flame is the "main" flame
+        this.flameMesh = this.flameMeshes[0];
     }
 
     initStudioTurrets(mounts) {
@@ -414,17 +414,17 @@ export class ModelStudio {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    getEnginePosition() {
+    getThrusterPosition() {
         if (!this.currentShip || !this.currentShipInfo) return new THREE.Vector3();
 
-        const engineOffsets = this.currentShipInfo.engineOffsets;
+        const thrusterOffsets = this.currentShipInfo.thrusterOffsets;
         const rotation = this.currentShip ? this.currentShip.rotation : new THREE.Euler();
-        return EngineEffects.getEnginePosition(engineOffsets, rotation, null);
+        return EngineEffects.getThrusterPosition(thrusterOffsets, rotation, null);
     }
 
-    getEnginePositionFromOffset(engineOffset) {
+    getThrusterPositionFromOffset(thrusterOffset) {
         const rotation = this.currentShip ? this.currentShip.rotation : new THREE.Euler();
-        return EngineEffects.getEnginePositionFromOffset(engineOffset, rotation, null);
+        return EngineEffects.getThrusterPositionFromOffset(thrusterOffset, rotation, null);
     }
 
     animate() {
@@ -470,18 +470,18 @@ export class ModelStudio {
         this.controls.update();
 
 
-        // Update Ship Logic (Wake & Smoke)
+        // Update Ship Logic (Flame & Smoke)
         if (this.engineOn) {
-            // Update all wake meshes
-            if (this.wakeMeshes && this.wakeMeshes.length > 0) {
-                EngineEffects.updateWakeVisuals(this.wakeMeshes, dt);
+            // Update all flame meshes
+            if (this.flameMeshes && this.flameMeshes.length > 0) {
+                EngineEffects.updateFlameVisuals(this.flameMeshes, dt);
             }
 
-            // Smoke Emission from all engines
-            if (this.currentShipInfo && this.currentShipInfo.engineOffsets) {
+            // Smoke Emission from all thrusters
+            if (this.currentShipInfo && this.currentShipInfo.thrusterOffsets) {
                 this.smokeAccumulator = EngineEffects.emitSmoke(
-                    this.currentShipInfo.engineOffsets,
-                    (offset) => this.getEnginePositionFromOffset(offset),
+                    this.currentShipInfo.thrusterOffsets,
+                    (offset) => this.getThrusterPositionFromOffset(offset),
                     this.smokeAccumulator,
                     dt,
                     this.particleSystem,
@@ -494,8 +494,8 @@ export class ModelStudio {
             }
 
         } else {
-            // Hide all wakes
-            EngineEffects.hideWakes(this.wakeMeshes);
+            // Hide all flames
+            EngineEffects.hideFlames(this.flameMeshes);
         }
 
         // Update Animations
@@ -521,57 +521,57 @@ export class ModelStudio {
                     anim.mesh.rotation.z += anim.speed * dt;
                 }
 
-                // If this animation has dynamic engines, update engine offsets AND directions
-                if (anim.dynamicEngines && anim.engineOffsets) {
+                // If this animation has dynamic thrusters, update thruster offsets AND directions
+                if (anim.dynamicEngines && anim.thrusterOffsets) {
                     const newOffsets = [];
                     const newDirections = [];
 
-                    anim.engineOffsets.forEach(baseOffset => {
-                        // Calculate engine position
+                    anim.thrusterOffsets.forEach(baseOffset => {
+                        // Calculate thruster position
                         const rotatedOffset = baseOffset.clone();
                         rotatedOffset.applyEuler(anim.mesh.rotation);
                         rotatedOffset.add(anim.mesh.position);
                         newOffsets.push(rotatedOffset);
 
-                        // Calculate engine exhaust direction
-                        // Engine points in +Z direction in its local space
+                        // Calculate thruster exhaust direction
+                        // Thruster points in +Z direction in its local space
                         const localExhaustDir = new THREE.Vector3(0, 0, 1);
-                        // Apply engine group rotation (no ship rotation in model studio)
+                        // Apply thruster group rotation (no ship rotation in model studio)
                         const worldExhaustDir = localExhaustDir.clone().applyEuler(anim.mesh.rotation);
                         newDirections.push(worldExhaustDir);
                     });
 
-                    this.currentShipInfo.engineOffsets = newOffsets;
-                    this.engineDirections = newDirections;
-                    this.updateWakePositions();
-                    this.updateVortexPositions();
+                    this.currentShipInfo.thrusterOffsets = newOffsets;
+                    this.thrusterDirections = newDirections;
+                    this.updateFlamePositions();
+                    this.updateExhaustPositions();
                 }
             }
         });
     }
 
-    updateWakePositions() {
-        EngineEffects.updateWakePositions(this.wakeMeshes, this.currentShipInfo?.engineOffsets);
+    updateFlamePositions() {
+        EngineEffects.updateFlamePositions(this.flameMeshes, this.currentShipInfo?.thrusterOffsets);
     }
 
-    updateVortexPositions() {
-        const vortexRadius = 2.0;
-        EngineEffects.updateVortexPositions(this.vortexLines, this.currentShipInfo?.engineOffsets, vortexRadius);
+    updateExhaustPositions() {
+        const exhaustRadius = 2.0;
+        EngineEffects.updateExhaustPositions(this.exhaustRings, this.currentShipInfo?.thrusterOffsets, exhaustRadius);
 
-        // Update vortex direction arrows
-        if (this.vortexArrows && this.currentShipInfo?.engineOffsets) {
-            this.currentShipInfo.engineOffsets.forEach((engineOffset, index) => {
-                if (this.vortexArrows[index]) {
-                    // Update arrow position to vortex center (local coordinates)
-                    const vortexPos = new THREE.Vector3(engineOffset.x, 0, engineOffset.z + vortexRadius);
-                    this.vortexArrows[index].position.copy(vortexPos);
+        // Update exhaust direction arrows
+        if (this.exhaustArrows && this.currentShipInfo?.thrusterOffsets) {
+            this.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
+                if (this.exhaustArrows[index]) {
+                    // Update arrow position to exhaust center (local coordinates)
+                    const exhaustPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustRadius);
+                    this.exhaustArrows[index].position.copy(exhaustPos);
 
                     // Arrows are children of the ship mesh, so use LOCAL exhaust direction
-                    // Engine exhaust always points backward (+Z) in local space
-                    // For animated engines, the rotation of the animation group is inherited automatically
+                    // Thruster exhaust always points backward (+Z) in local space
+                    // For animated thrusters, the rotation of the animation group is inherited automatically
                     const localExhaustDir = new THREE.Vector3(0, 0, 1);
 
-                    this.vortexArrows[index].setDirection(localExhaustDir);
+                    this.exhaustArrows[index].setDirection(localExhaustDir);
                 }
             });
         }

@@ -170,7 +170,7 @@ export const playerConfig = {
     "turnSpeed": 3,
     "deceleration": 3,
     "smokeEmissionInterval": 0.01,
-    "vortexRadius": 2,
+    "exhaustRadius": 2,
     "hullColor": 0x4488ff,
     "modelScale": 1,
     "laserColor": 0x00ff00

@@ -216,9 +216,9 @@ export class DetailPanel {
             original.children.forEach(child => {
                 // Only clone Meshes (Hull, Cabin), ignore Lines (Helpers)
                 if (child.isMesh) {
-                    // Check if it's a wake mesh ? 
-                    // Users might want to see the wake? 
-                    // Spaceship.js: wakeMesh is a child. 
+                    // Check if it's a flame mesh ?
+                    // Users might want to see the flame?
+                    // Spaceship.js: flameMesh is a child.
                     // Let's clone it.
                     const clone = child.clone();
                     previewObject.add(clone);

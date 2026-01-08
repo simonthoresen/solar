@@ -218,7 +218,7 @@ export class Game {
             planetVelocity: 'Planet Velocity',
             playerAxis: 'Ship Axis',
             playerRing: 'Ship Ring',
-            playerVortex: 'Ship Vortex'
+            shipExhaust: 'Ship Exhaust'
         };
 
         // Sort keys alphabetically by their label

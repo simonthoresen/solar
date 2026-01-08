@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export class EngineEffects {
     static emitSmoke(
-        engineOffsets,
+        thrusterOffsets,
         getPositionCallback,
         smokeAccumulator,
         dt,
@@ -21,22 +21,22 @@ export class EngineEffects {
             smokeAccumulator = 0;
             const smokeMaxRadius = 1.0;
 
-            engineOffsets.forEach(engineOffset => {
+            thrusterOffsets.forEach(thrusterOffset => {
                 // Apply smoke offset in local space before rotation
-                const offsetWithSmoke = engineOffset.clone();
+                const offsetWithSmoke = thrusterOffset.clone();
                 offsetWithSmoke.z += smokeMaxRadius;
 
-                const wakePos = getPositionCallback(offsetWithSmoke);
-                velocityField.calculateTotalVelocity(wakePos, celestialBodies || [], null, tempInfluenceVector);
-                particleSystem.spawnSmoke(wakePos, tempInfluenceVector, camera);
+                const flamePos = getPositionCallback(offsetWithSmoke);
+                velocityField.calculateTotalVelocity(flamePos, celestialBodies || [], null, tempInfluenceVector);
+                particleSystem.spawnSmoke(flamePos, tempInfluenceVector, camera);
             });
         }
 
         return smokeAccumulator;
     }
 
-    static updateWakeVisuals(wakeMeshes, dt) {
-        if (!wakeMeshes || wakeMeshes.length === 0) return;
+    static updateFlameVisuals(flameMeshes, dt) {
+        if (!flameMeshes || flameMeshes.length === 0) return;
 
         const pulse = 1.0 + Math.sin(Date.now() * 0.02) * 0.2 + (Math.random() - 0.5) * 0.5;
         const lenPulse = 1.0 + (Math.random() - 0.5) * 0.8;
@@ -47,65 +47,65 @@ export class EngineEffects {
             col = colors[Math.floor(Math.random() * colors.length)];
         }
 
-        wakeMeshes.forEach((wakeMesh) => {
-            wakeMesh.visible = true;
-            wakeMesh.rotation.z += 15 * dt;
-            wakeMesh.scale.set(pulse, pulse, lenPulse);
+        flameMeshes.forEach((flameMesh) => {
+            flameMesh.visible = true;
+            flameMesh.rotation.z += 15 * dt;
+            flameMesh.scale.set(pulse, pulse, lenPulse);
 
             if (col !== null) {
-                wakeMesh.material.color.setHex(col);
+                flameMesh.material.color.setHex(col);
             }
         });
     }
 
-    static hideWakes(wakeMeshes) {
-        if (!wakeMeshes || wakeMeshes.length === 0) return;
+    static hideFlames(flameMeshes) {
+        if (!flameMeshes || flameMeshes.length === 0) return;
 
-        wakeMeshes.forEach(wakeMesh => {
-            wakeMesh.visible = false;
+        flameMeshes.forEach(flameMesh => {
+            flameMesh.visible = false;
         });
     }
 
-    static updateWakePositions(wakeMeshes, engineOffsets) {
-        if (!wakeMeshes || !engineOffsets) return;
+    static updateFlamePositions(flameMeshes, thrusterOffsets) {
+        if (!flameMeshes || !thrusterOffsets) return;
 
-        engineOffsets.forEach((offset, index) => {
-            if (wakeMeshes[index]) {
-                wakeMeshes[index].position.copy(offset);
+        thrusterOffsets.forEach((offset, index) => {
+            if (flameMeshes[index]) {
+                flameMeshes[index].position.copy(offset);
             }
         });
     }
 
-    static updateVortexPositions(vortexLines, engineOffsets, vortexRadius = 2.0) {
-        if (!vortexLines || !engineOffsets) return;
+    static updateExhaustPositions(exhaustRings, thrusterOffsets, exhaustRadius = 2.0) {
+        if (!exhaustRings || !thrusterOffsets) return;
 
-        engineOffsets.forEach((offset, index) => {
-            if (vortexLines[index]) {
-                vortexLines[index].position.set(offset.x, 0, offset.z + vortexRadius);
+        thrusterOffsets.forEach((offset, index) => {
+            if (exhaustRings[index]) {
+                exhaustRings[index].position.set(offset.x, 0, offset.z + exhaustRadius);
             }
         });
     }
 
-    static getEnginePosition(engineOffsets, rotation, position = null) {
-        if (engineOffsets && engineOffsets.length > 0) {
-            return this.getEnginePositionFromOffset(engineOffsets[0], rotation, position);
+    static getThrusterPosition(thrusterOffsets, rotation, position = null) {
+        if (thrusterOffsets && thrusterOffsets.length > 0) {
+            return this.getThrusterPositionFromOffset(thrusterOffsets[0], rotation, position);
         }
 
         const offset = new THREE.Vector3(0, 0, 1.5).applyEuler(rotation);
         return position ? position.clone().add(offset) : offset;
     }
 
-    static getEnginePositionFromOffset(engineOffset, rotation, position = null) {
-        const offset = engineOffset.clone().applyEuler(rotation);
+    static getThrusterPositionFromOffset(thrusterOffset, rotation, position = null) {
+        const offset = thrusterOffset.clone().applyEuler(rotation);
         return position ? position.clone().add(offset) : offset;
     }
 
     static updateAnimations(
         animations,
         dt,
-        setEngineOffsetsCallback,
-        wakeUpdateCallback,
-        vortexUpdateCallback
+        setThrusterOffsetsCallback,
+        flameUpdateCallback,
+        exhaustUpdateCallback
     ) {
         if (!animations || animations.length === 0) return;
 
@@ -119,33 +119,33 @@ export class EngineEffects {
                     anim.mesh.rotation.z += anim.speed * dt;
                 }
 
-                if (anim.dynamicEngines && anim.engineOffsets) {
-                    const newOffsets = anim.engineOffsets.map(baseOffset => {
+                if (anim.dynamicEngines && anim.thrusterOffsets) {
+                    const newOffsets = anim.thrusterOffsets.map(baseOffset => {
                         const rotatedOffset = baseOffset.clone();
                         rotatedOffset.applyEuler(anim.mesh.rotation);
                         rotatedOffset.add(anim.mesh.position);
                         return rotatedOffset;
                     });
 
-                    if (setEngineOffsetsCallback) {
-                        setEngineOffsetsCallback(newOffsets);
+                    if (setThrusterOffsetsCallback) {
+                        setThrusterOffsetsCallback(newOffsets);
                     }
 
-                    if (wakeUpdateCallback) wakeUpdateCallback();
-                    if (vortexUpdateCallback) vortexUpdateCallback();
+                    if (flameUpdateCallback) flameUpdateCallback();
+                    if (exhaustUpdateCallback) exhaustUpdateCallback();
                 }
             }
         });
     }
 
-    static initWakes(engineOffsets, parentMesh) {
-        const wakeMeshes = [];
+    static initFlames(thrusterOffsets, parentMesh) {
+        const flameMeshes = [];
 
-        if (!engineOffsets || engineOffsets.length === 0) {
-            engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
+        if (!thrusterOffsets || thrusterOffsets.length === 0) {
+            thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
-        engineOffsets.forEach(engineOffset => {
+        thrusterOffsets.forEach(thrusterOffset => {
             const height = 3.0;
             const radius = 0.5;
 
@@ -156,14 +156,14 @@ export class EngineEffects {
             const material = new THREE.MeshBasicMaterial({
                 color: 0xffff00
             });
-            const wakeMesh = new THREE.Mesh(geometry, material);
-            wakeMesh.visible = false;
-            wakeMesh.position.copy(engineOffset);
+            const flameMesh = new THREE.Mesh(geometry, material);
+            flameMesh.visible = false;
+            flameMesh.position.copy(thrusterOffset);
 
-            parentMesh.add(wakeMesh);
-            wakeMeshes.push(wakeMesh);
+            parentMesh.add(flameMesh);
+            flameMeshes.push(flameMesh);
         });
 
-        return wakeMeshes;
+        return flameMeshes;
     }
 }

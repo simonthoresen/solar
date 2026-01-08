@@ -12,14 +12,14 @@ export class ShipModels {
      * Creates a ship model group based on type.
      * @param {string} type
      * @param {number} color
-     * @returns {object} { mesh: THREE.Group, collisionRadius: number, engineOffsets: THREE.Vector3[], turretMounts: Array, animations: Array }
+     * @returns {object} { mesh: THREE.Group, collisionRadius: number, thrusterOffsets: THREE.Vector3[], turretMounts: Array, animations: Array }
      */
     static createModel(type, color) {
         const mesh = new THREE.Group();
         let collisionRadius = 1.0;
-        let engineOffsets = [new THREE.Vector3(0, 0, 1.0)]; // Array to support multiple engines
+        let thrusterOffsets = [new THREE.Vector3(0, 0, 1.0)]; // Array to support multiple engines
         let turretMounts = []; // Array of { position: Vector3, type: string }
-        let animations = []; // Array of { mesh: THREE.Mesh, type: string, axis: string, speed: number, engineOffsets?: Vector3[] }
+        let animations = []; // Array of { mesh: THREE.Mesh, type: string, axis: string, speed: number, thrusterOffsets?: Vector3[] }
 
         // Materials
         // Materials - Use Phong for per-pixel lighting (better for low poly)
@@ -63,7 +63,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(1.6, 0.1, 0.8), primaryMat, [0, 0, 0.5]);
 
                 collisionRadius = 1.0;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.0)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 1.0)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.2, -0.5), type: 'triangular' });
                 break;
 
@@ -74,7 +74,7 @@ export class ShipModels {
                 addPart(new THREE.IcosahedronGeometry(0.4, 0), cabinMat, [0, 0.2, 0]);
 
                 collisionRadius = 1.0;
-                engineOffsets = [new THREE.Vector3(0, 0, 0.8)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 0.8)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.6, 0), type: 'circular' });
                 break;
 
@@ -88,7 +88,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(0.4, 0.4, 1.2), darkMat, [0.7, 0, 0]);
 
                 collisionRadius = 1.2;
-                engineOffsets = [new THREE.Vector3(0, 0, 0.8)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 0.8)];
                 turretMounts.push({ position: new THREE.Vector3(0.5, 0.45, -0.6), type: 'square' });
                 turretMounts.push({ position: new THREE.Vector3(-0.5, 0.45, -0.6), type: 'square' });
                 break;
@@ -104,7 +104,7 @@ export class ShipModels {
                 addPart(wingGeom, primaryMat, [-0.8, -0.5, 0.5], [0, 0, -Math.PI / 6]); // Bot-Left
 
                 collisionRadius = 1.0;
-                engineOffsets = [new THREE.Vector3(0, 0, 0.9)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 0.9)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.3, 0), type: 'circular' });
                 break;
 
@@ -115,7 +115,7 @@ export class ShipModels {
                 addPart(new THREE.TorusGeometry(0.4, 0.1, 4, 8), darkMat, [0, 0, 0.8]);
 
                 collisionRadius = 0.5;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.1)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 1.1)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.2, 0), type: 'triangular' });
                 break;
 
@@ -130,7 +130,7 @@ export class ShipModels {
                 addPart(new THREE.SphereGeometry(0.3, 8, 8), cabinMat, [0, 0.1, -0.2]);
 
                 collisionRadius = 1.1;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.0)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 1.0)];
                 turretMounts.push({ position: new THREE.Vector3(-0.6, 0.25, -0.5), type: 'triangular' });
                 turretMounts.push({ position: new THREE.Vector3(0.6, 0.25, -0.5), type: 'triangular' });
                 break;
@@ -142,7 +142,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(1.6, 0.3, 0.4), primaryMat, [0, 0, -0.8]);
 
                 collisionRadius = 1.0;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.1)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 1.1)];
                 turretMounts.push({ position: new THREE.Vector3(-0.6, 0.2, -0.8), type: 'square' });
                 turretMounts.push({ position: new THREE.Vector3(0.6, 0.2, -0.8), type: 'square' });
                 break;
@@ -156,7 +156,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(0.4, 0.2, 0.6), cabinMat, [0, -0.1, 0.5]);
 
                 collisionRadius = 0.9;
-                engineOffsets = [new THREE.Vector3(0, 0, 0.8)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 0.8)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.1, 0.5), type: 'circular' });
                 break;
 
@@ -173,7 +173,7 @@ export class ShipModels {
                 animations.push({ mesh: ring2, type: 'rotate', axis: 'x', speed: -0.8 });
 
                 collisionRadius = 1.0;
-                engineOffsets = [new THREE.Vector3(0, 0, 0.7)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 0.7)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.6, 0), type: 'circular' });
                 break;
 
@@ -189,7 +189,7 @@ export class ShipModels {
                 addPart(new THREE.CylinderGeometry(0.25, 0.3, 0.6, 8), darkMat, [0, 0, 0.9], [Math.PI / 2, 0, 0]);
 
                 collisionRadius = 1.2;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.2)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 1.2)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.3, -0.2), type: 'triangular' });
                 break;
 
@@ -206,7 +206,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(0.8, 0.6, 0.5), darkMat, [0, 0, 0.9]);
 
                 collisionRadius = 1.3;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.2)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 1.2)];
                 turretMounts.push({ position: new THREE.Vector3(-0.5, 0.5, -0.4), type: 'square' });
                 turretMounts.push({ position: new THREE.Vector3(0.5, 0.5, -0.4), type: 'square' });
                 break;
@@ -224,7 +224,7 @@ export class ShipModels {
                 addPart(new THREE.CylinderGeometry(0.6, 0.7, 0.8, 12), darkMat, [0, 0, 1.4], [Math.PI / 2, 0, 0]);
 
                 collisionRadius = 1.5;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.8)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 1.8)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.8, -0.4), type: 'circular' });
                 turretMounts.push({ position: new THREE.Vector3(-0.8, 0.3, 0), type: 'square' });
                 turretMounts.push({ position: new THREE.Vector3(0.8, 0.3, 0), type: 'square' });
@@ -237,7 +237,7 @@ export class ShipModels {
                 addPart(new THREE.CylinderGeometry(0.3, 0.4, 2.0, 10), darkMat, [0, 0, 1], [Math.PI / 2, 0, 0]);
 
                 collisionRadius = 1.1;
-                engineOffsets = [new THREE.Vector3(0, 0, 2)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 2)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0, 0), type: 'circular' });
                 break;
 
@@ -256,7 +256,7 @@ export class ShipModels {
                 addPart(new THREE.CylinderGeometry(0.3, 0.35, 0.6, 10), darkMat, [0, 0, 1.0], [Math.PI / 2, 0, 0]);
 
                 collisionRadius = 1.0;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.3)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 1.3)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.2, 0.4), type: 'circular' });
                 break;
 
@@ -276,7 +276,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(1.2, 0.08, 0.3), primaryMat, [0, 0, 0.5]);
 
                 collisionRadius = 1.2;
-                engineOffsets = [new THREE.Vector3(-0.7, 0, 1.0), new THREE.Vector3(0.7, 0, 1.0)];
+                thrusterOffsets = [new THREE.Vector3(-0.7, 0, 1.0), new THREE.Vector3(0.7, 0, 1.0)];
                 turretMounts.push({ position: new THREE.Vector3(-0.7, 0.3, -0.2), type: 'triangular' });
                 turretMounts.push({ position: new THREE.Vector3(0.7, 0.3, -0.2), type: 'triangular' });
                 break;
@@ -297,7 +297,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(0.6, 0.4, 0.08), primaryMat, [0, 0.3, 0.9], [0, Math.PI / 4, 0]);
 
                 collisionRadius = 1.3;
-                engineOffsets = [new THREE.Vector3(-1.1, 0, 0.9), new THREE.Vector3(1.1, 0, 0.9)];
+                thrusterOffsets = [new THREE.Vector3(-1.1, 0, 0.9), new THREE.Vector3(1.1, 0, 0.9)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.2, -0.3), type: 'circular' });
                 break;
 
@@ -319,7 +319,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(0.15, 0.15, 0.6), darkMat, [0.6, -0.4, 0.3]);
 
                 collisionRadius = 1.2;
-                engineOffsets = [new THREE.Vector3(-0.6, -0.1, 1.0), new THREE.Vector3(0.6, -0.1, 1.0)];
+                thrusterOffsets = [new THREE.Vector3(-0.6, -0.1, 1.0), new THREE.Vector3(0.6, -0.1, 1.0)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.45, -0.4), type: 'square' });
                 turretMounts.push({ position: new THREE.Vector3(-0.6, -0.2, -0.3), type: 'triangular' });
                 turretMounts.push({ position: new THREE.Vector3(0.6, -0.2, -0.3), type: 'triangular' });
@@ -342,7 +342,7 @@ export class ShipModels {
                 addPart(new THREE.BoxGeometry(0.05, 0.3, 0.4), primaryMat, [0, 0.15, 1.0]);
 
                 collisionRadius = 0.9;
-                engineOffsets = [new THREE.Vector3(-0.5, 0, 1.1), new THREE.Vector3(0.5, 0, 1.1)];
+                thrusterOffsets = [new THREE.Vector3(-0.5, 0, 1.1), new THREE.Vector3(0.5, 0, 1.1)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.25, 0), type: 'circular' });
                 break;
 
@@ -390,12 +390,12 @@ export class ShipModels {
                     type: 'rotate',
                     axis: 'z',
                     speed: 2.0,
-                    engineOffsets: baseEngineOffsets,
+                    thrusterOffsets: baseEngineOffsets,
                     dynamicEngines: true
                 });
 
                 collisionRadius = 1.4;
-                engineOffsets = baseEngineOffsets; // Initial offsets
+                thrusterOffsets = baseEngineOffsets; // Initial offsets
                 turretMounts.push({ position: new THREE.Vector3(-0.9, -0.05, 0.1), type: 'circular' });
                 turretMounts.push({ position: new THREE.Vector3(0.9, -0.05, 0.1), type: 'circular' });
                 break;
@@ -411,14 +411,14 @@ export class ShipModels {
                 addPart(new THREE.ConeGeometry(0.5, 0.6, 3), cabinMat, [0, 0.25, 0.2], [Math.PI / 2, 0, Math.PI]);
 
                 collisionRadius = 1.0;
-                engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
+                thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
                 turretMounts.push({ position: new THREE.Vector3(0, 0.4, 0), type: 'triangular' });
                 break;
         }
 
         // Common Axis Helper (optional, handled by Spaceship debug)
 
-        return { mesh, collisionRadius, engineOffsets, turretMounts, animations };
+        return { mesh, collisionRadius, thrusterOffsets, turretMounts, animations };
     }
 
     static getRandomType() {

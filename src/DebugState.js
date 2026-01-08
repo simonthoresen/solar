@@ -16,7 +16,7 @@ class DebugStateManager {
             planetToPlayer: false,
             planetVelocity: false,
             dustVelocity: false,
-            playerVortex: false
+            shipExhaust: false
         };
 
         // Global selected entity reference

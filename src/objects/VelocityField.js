@@ -33,20 +33,20 @@ export class VelocityField {
             target.add(pVel);
         }
 
-        // 3. Player Engine Vortex (check all engine vortices)
-        if (player && player.getVortexPositions) {
-            const vortexPositions = player.getVortexPositions();
-            const vortexDirections = player.getVortexDirections ? player.getVortexDirections() : [];
-            const vortexRadius = playerConfig.vortexRadius || 2.0;
-            const radiusSq = vortexRadius * vortexRadius;
+        // 3. Player Engine Exhaust (check all engine exhausts)
+        if (player && player.getExhaustPositions) {
+            const exhaustPositions = player.getExhaustPositions();
+            const exhaustDirections = player.getExhaustDirections ? player.getExhaustDirections() : [];
+            const exhaustRadius = playerConfig.exhaustRadius || 2.0;
+            const radiusSq = exhaustRadius * exhaustRadius;
             const multiplier = 5.0;
 
-            vortexPositions.forEach((vortexPos, index) => {
-                const distSq = position.distanceToSquared(vortexPos);
+            exhaustPositions.forEach((exhaustPos, index) => {
+                const distSq = position.distanceToSquared(exhaustPos);
                 if (distSq < radiusSq) {
                     // Use engine-specific direction if available, otherwise fall back to ship velocity
-                    if (vortexDirections[index]) {
-                        const exhaustDir = vortexDirections[index];
+                    if (exhaustDirections[index]) {
+                        const exhaustDir = exhaustDirections[index];
                         target.x += exhaustDir.x * multiplier;
                         target.y += exhaustDir.y * multiplier;
                         target.z += exhaustDir.z * multiplier;
