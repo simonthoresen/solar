@@ -22,8 +22,11 @@ export class EngineEffects {
             const smokeMaxRadius = 1.0;
 
             engineOffsets.forEach(engineOffset => {
-                const wakePos = getPositionCallback(engineOffset);
-                wakePos.z += smokeMaxRadius;
+                // Apply smoke offset in local space before rotation
+                const offsetWithSmoke = engineOffset.clone();
+                offsetWithSmoke.z += smokeMaxRadius;
+
+                const wakePos = getPositionCallback(offsetWithSmoke);
                 velocityField.calculateTotalVelocity(wakePos, celestialBodies || [], null, tempInfluenceVector);
                 particleSystem.spawnSmoke(wakePos, tempInfluenceVector, camera);
             });

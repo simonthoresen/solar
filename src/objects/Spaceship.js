@@ -234,7 +234,7 @@ export class Spaceship {
                 velocityField,
                 camera,
                 celestialBodies,
-                this._tempSmokeInfluence,
+                _tempSmokeInfluence,
                 playerConfig.smokeEmissionInterval || 0.05
             );
 
