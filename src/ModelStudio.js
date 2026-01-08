@@ -129,6 +129,13 @@ export class ModelStudio {
         this.smokeAccumulator = 0;
         this._tempSmokeInfluence = new THREE.Vector3();
 
+        // Manual ship controls
+        this.keys = {
+            w: false,
+            a: false,
+            d: false
+        };
+
         this.setupLights();
         this.setupInteraction(); // Custom controls
         this.setupUI();
@@ -171,6 +178,17 @@ export class ModelStudio {
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.mainMenu.toggle();
+            }
+
+            const k = e.key.toLowerCase();
+            if (this.keys.hasOwnProperty(k)) {
+                this.keys[k] = true;
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (this.keys.hasOwnProperty(k)) {
+                this.keys[k] = false;
             }
         });
 
@@ -487,13 +505,27 @@ export class ModelStudio {
 
         const dt = this.clock.getDelta();
 
-        // Engine Timer (15s cycle)
+        // Manual ship rotation (A/D keys)
+        if (this.currentShip) {
+            const turnSpeed = 2.0; // radians per second
+            let turn = 0;
+            if (this.keys.a) turn += 1; // Turn left
+            if (this.keys.d) turn += -1; // Turn right
+            this.currentShip.rotation.y += turn * turnSpeed * dt;
+        }
+
+        // Engine Timer (15s cycle for auto-thrust)
         this.engineTimer += dt;
-        if (this.engineTimer > 30.0) { // 30s total cycle (15 on, 15 off)? Or 15s toggle? "every 15 seconds"
+        if (this.engineTimer > 30.0) { // 30s total cycle (15 on, 15 off)
             this.engineTimer = 0;
         }
 
-        this.engineOn = this.engineTimer < 15.0; // On for first 15s, Off for next 15s
+        // Manual thrust override: W key overrides auto-thrust cycle
+        if (this.keys.w) {
+            this.engineOn = true; // Force engines on
+        } else {
+            this.engineOn = this.engineTimer < 15.0; // Auto-thrust: On for first 15s, Off for next 15s
+        }
 
         // Orbit Logic
         this.targetAngle += dt * 0.5; // Slow rotation
