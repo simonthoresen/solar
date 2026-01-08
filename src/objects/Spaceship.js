@@ -156,6 +156,7 @@ export class Spaceship {
             const config = this.thrusterConfigs[index] || {
                 exhaustWidth: 3.0,
                 exhaustLength: 6.0,
+                exhaustForce: 10.0,
                 smokeSize: 0.3,
                 smokeColor: 0xaaaaaa,
                 smokeLifetime: 3.0
@@ -183,15 +184,15 @@ export class Spaceship {
             this.exhaustRings.push(exhaustRect);
 
             // Add arrow to show force direction applied by exhaust field
-            // Arrow originates from center of the exhaust rectangle
-            const exhaustCenter = exhaustLength / 2.0;
+            // Arrow originates from near end of exhaust field (at the thruster)
+            const exhaustForce = config.exhaustForce || 10.0;
             const arrow = new THREE.ArrowHelper(
                 new THREE.Vector3(0, 0, 1), // Direction (will be updated in update())
-                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustCenter),
-                2.0, // Length (will be updated based on thrust state)
+                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z),
+                exhaustForce, // Length equals exhaust force (will be updated based on thrust state)
                 0x00ffff, // Cyan color
-                0.4, // Head length
-                0.2 // Head width
+                exhaustForce * 0.2, // Head length scales with force
+                exhaustForce * 0.1 // Head width scales with force
             );
             arrow.visible = false;
             this.mesh.add(arrow);
