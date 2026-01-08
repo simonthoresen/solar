@@ -32,8 +32,10 @@ export class EngineEffects {
 
         smokeAccumulator += dt;
 
-        if (smokeAccumulator >= emissionInterval) {
-            smokeAccumulator = 0;
+        // Spawn multiple particles if frame time is longer than emission interval
+        // This maintains correct emission rate even at low FPS
+        while (smokeAccumulator >= emissionInterval) {
+            smokeAccumulator -= emissionInterval;
             const smokeMaxRadius = 1.0;
 
             thrusterOffsets.forEach((thrusterOffset, index) => {
