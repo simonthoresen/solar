@@ -169,7 +169,7 @@ export const playerConfig = {
     "maxSpeed": 50,
     "turnSpeed": 3,
     "deceleration": 3,
-    "smokeEmissionInterval": 0.01,
+    "smokeEmissionInterval": 0.00333, // 3x more smoke (1/3 the interval)
     "exhaustRadius": 2,
     "hullColor": 0x4488ff,
     "modelScale": 1,

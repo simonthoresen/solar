@@ -326,8 +326,8 @@ export class ParticleSystem {
         p.position.z += spawnDistanceOffset;
 
         p.velocity.set(0, 0, 0);
-        // Shorter lifetime so smoke vanishes sooner (reduced from default 3.0)
-        p.life = lifetime * 0.4 + Math.random() * lifetime * 0.3; // 0.4x to 0.7x of original
+        // 2x longer lifetime (0.8x to 1.4x of original)
+        p.life = lifetime * 0.8 + Math.random() * lifetime * 0.6;
         p.maxLife = p.life;
         // Much more varied initial size (0.3x to 1.8x the base size)
         p.initialScale = size * (0.3 + Math.random() * 1.5);
