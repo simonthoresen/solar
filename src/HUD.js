@@ -299,15 +299,11 @@ export class HUD {
                 let diamondVisible = false;
                 let diamondColor = 0x00ff00; // Default green
 
-                // Check if player selected this item
+                const isPlayerShip = t.isPlayer || (t.constructor && t.constructor.name === 'Player');
                 const isSelectedByPlayer = (this.game.player && this.game.player.getSelectedItem() === t);
 
-                if (isSelectedByPlayer) {
-                    // Player selected this item → green diamond
-                    diamondVisible = true;
-                    diamondColor = 0x00ff00;
-                } else if (t.isPlayer || (t.constructor && t.constructor.name === 'Player')) {
-                    // This is the player - check if any other ship selected it
+                if (isPlayerShip) {
+                    // Special logic for player ship: prioritize "being selected by" over "selecting self"
                     let hasAggressiveSelector = false;
                     let hasNonAggressiveSelector = false;
 
@@ -325,13 +321,23 @@ export class HUD {
                     }
 
                     if (hasAggressiveSelector) {
-                        // Any aggressive ship selected player → red diamond
+                        // Priority 1: Any aggressive ship selected player → red diamond
                         diamondVisible = true;
                         diamondColor = 0xff0000;
                     } else if (hasNonAggressiveSelector) {
-                        // Only non-aggressive ships selected player → yellow diamond
+                        // Priority 2: Only non-aggressive ships selected player → yellow diamond
                         diamondVisible = true;
                         diamondColor = 0xffff00;
+                    } else if (isSelectedByPlayer) {
+                        // Priority 3: Player selected themselves → green diamond
+                        diamondVisible = true;
+                        diamondColor = 0x00ff00;
+                    }
+                } else {
+                    // For non-player items: show green diamond if player selected it
+                    if (isSelectedByPlayer) {
+                        diamondVisible = true;
+                        diamondColor = 0x00ff00;
                     }
                 }
 
