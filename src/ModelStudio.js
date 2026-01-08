@@ -17,33 +17,54 @@ class MockVelocityField {
         targetVec.set(0, 0, 1);
 
         // Apply exhaust field from ship thrusters (only when thrusters are on)
+        // Exhaust field is rectangular: 3 units wide x 6 units long
         if (this.studio.engineOn && this.studio.currentShipInfo && this.studio.currentShipInfo.thrusterOffsets) {
-            const exhaustRadius = 2.0;
-            const radiusSq = exhaustRadius * exhaustRadius;
+            const exhaustWidth = 3.0;
+            const exhaustLength = 6.0;
+            const halfWidth = exhaustWidth / 2.0;
+            const halfLength = exhaustLength / 2.0;
+            const exhaustCenter = exhaustLength / 2.0;
             const multiplier = 5.0;
 
             // Get thruster directions (for animated thrusters)
             const thrusterDirections = this.studio.thrusterDirections || [];
 
             this.studio.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
-                // Calculate exhaust position (radius units behind thruster, y=0)
+                // Calculate exhaust center position
                 const exhaustPos = new THREE.Vector3(
                     thrusterOffset.x,
                     0,
-                    thrusterOffset.z + exhaustRadius
+                    thrusterOffset.z + exhaustCenter
                 );
 
-                const distSq = position.distanceToSquared(exhaustPos);
-                if (distSq < radiusSq) {
-                    // Use thruster-specific direction if available
-                    if (thrusterDirections[index]) {
-                        const exhaustDir = thrusterDirections[index];
+                // Get vector from exhaust center to particle
+                const toParticle = position.clone().sub(exhaustPos);
+
+                // Use thruster-specific direction if available
+                if (thrusterDirections[index]) {
+                    const exhaustDir = thrusterDirections[index].clone().normalize();
+
+                    // Get perpendicular direction (cross with up vector)
+                    const perpDir = new THREE.Vector3().crossVectors(exhaustDir, new THREE.Vector3(0, 1, 0)).normalize();
+
+                    // Project onto exhaust direction (Z in local space)
+                    const alongExhaust = toParticle.dot(exhaustDir);
+
+                    // Project onto perpendicular direction (X in local space)
+                    const acrossExhaust = toParticle.dot(perpDir);
+
+                    // Check if within rectangular bounds
+                    if (Math.abs(alongExhaust) <= halfLength && Math.abs(acrossExhaust) <= halfWidth) {
+                        // Particle is within exhaust field - apply force
                         targetVec.x += exhaustDir.x * multiplier;
                         targetVec.y += exhaustDir.y * multiplier;
                         targetVec.z += exhaustDir.z * multiplier;
-                    } else {
-                        // Fallback: thrusters point backward (+Z in local space = backward)
-                        // For non-animated ships, just push in +Z direction
+                    }
+                } else {
+                    // Fallback: thrusters point backward (+Z in local space = backward)
+                    // Use simple distance check for non-animated ships
+                    const distSq = toParticle.lengthSq();
+                    if (distSq < halfLength * halfLength) {
                         targetVec.z += 1.0 * multiplier;
                     }
                 }
@@ -350,8 +371,7 @@ export class ModelStudio {
         boundaryLine.rotation.x = -Math.PI / 2;
         mesh.add(boundaryLine);
 
-        // 3. Exhaust Field (Magenta) - one ring per thruster
-        const exhaustRadius = 2.0;
+        // 3. Exhaust Field (Magenta) - rectangular field per thruster
         this.exhaustRings = [];
         this.exhaustArrows = [];
 
@@ -359,24 +379,34 @@ export class ModelStudio {
             thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
+        // Exhaust field is a rectangle: 3 units wide x 6 units long
+        const exhaustWidth = 3.0;
+        const exhaustLength = 6.0;
+        const halfWidth = exhaustWidth / 2.0;
+
         thrusterOffsets.forEach(thrusterOffset => {
-            const vCurve = new THREE.EllipseCurve(0, 0, exhaustRadius, exhaustRadius, 0, 2 * Math.PI, false, 0);
-            const vPoints = vCurve.getPoints(32);
-            const vGeom = new THREE.BufferGeometry().setFromPoints(vPoints);
-            const vMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
-            const vLine = new THREE.Line(vGeom, vMat);
+            const rectPoints = [
+                new THREE.Vector3(-halfWidth, 0, 0),
+                new THREE.Vector3(halfWidth, 0, 0),
+                new THREE.Vector3(halfWidth, 0, exhaustLength),
+                new THREE.Vector3(-halfWidth, 0, exhaustLength),
+                new THREE.Vector3(-halfWidth, 0, 0) // close the loop
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(rectPoints);
+            const material = new THREE.LineBasicMaterial({ color: 0xff00ff });
+            const exhaustRect = new THREE.Line(geometry, material);
 
-            // Position exhaust 'radius' units behind the thruster, with y=0
-            vLine.position.set(thrusterOffset.x, 0, thrusterOffset.z + exhaustRadius);
-            vLine.rotation.x = -Math.PI / 2;
-            mesh.add(vLine);
-            this.exhaustRings.push(vLine);
+            // Position rectangle starting at the thruster, extending backward
+            exhaustRect.position.set(thrusterOffset.x, 0, thrusterOffset.z);
+            mesh.add(exhaustRect);
+            this.exhaustRings.push(exhaustRect);
 
-            // Add cyan arrow showing velocity direction from exhaust center
+            // Add cyan arrow showing force direction from exhaust center
+            const exhaustCenter = exhaustLength / 2.0;
             const arrow = new THREE.ArrowHelper(
                 new THREE.Vector3(0, 0, 1), // Initial direction (will be updated)
-                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustRadius), // Position at exhaust center
-                2.0, // Length
+                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustCenter), // Position at exhaust center
+                2.0, // Length (will be updated based on engine state)
                 0x00ffff, // Cyan color
                 0.4, // Head length
                 0.2 // Head width
@@ -555,15 +585,30 @@ export class ModelStudio {
     }
 
     updateExhaustPositions() {
-        const exhaustRadius = 2.0;
-        EngineEffects.updateExhaustPositions(this.exhaustRings, this.currentShipInfo?.thrusterOffsets, exhaustRadius);
+        // Exhaust field is a rectangle: 3 units wide x 6 units long
+        const exhaustWidth = 3.0;
+        const exhaustLength = 6.0;
+
+        // Update rectangle positions for each thruster
+        if (this.exhaustRings && this.currentShipInfo?.thrusterOffsets) {
+            this.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
+                if (this.exhaustRings[index]) {
+                    // Position rectangle starting at the thruster, extending backward
+                    this.exhaustRings[index].position.set(thrusterOffset.x, 0, thrusterOffset.z);
+                }
+            });
+        }
 
         // Update exhaust direction arrows
+        // Arrow length based on thruster state (engineOn), not ship velocity
         if (this.exhaustArrows && this.currentShipInfo?.thrusterOffsets) {
+            const exhaustForce = 5.0; // Constant force magnitude when thrusters are active
+            const exhaustCenter = exhaustLength / 2.0;
+
             this.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
                 if (this.exhaustArrows[index]) {
-                    // Update arrow position to exhaust center (local coordinates)
-                    const exhaustPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustRadius);
+                    // Update arrow position to center of exhaust rectangle (local coordinates)
+                    const exhaustPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustCenter);
                     this.exhaustArrows[index].position.copy(exhaustPos);
 
                     // Arrows are children of the ship mesh, so use LOCAL exhaust direction
@@ -571,7 +616,17 @@ export class ModelStudio {
                     // For animated thrusters, the rotation of the animation group is inherited automatically
                     const localExhaustDir = new THREE.Vector3(0, 0, 1);
 
+                    // Arrow length based on thrust state, not ship velocity
+                    const arrowLength = this.engineOn ? exhaustForce * 0.4 : 0.0;
+
+                    // Update arrow direction and length
                     this.exhaustArrows[index].setDirection(localExhaustDir);
+                    if (arrowLength > 0) {
+                        this.exhaustArrows[index].setLength(arrowLength, arrowLength * 0.2, arrowLength * 0.1);
+                    } else {
+                        // Hide arrow when thrusters are off
+                        this.exhaustArrows[index].visible = false;
+                    }
                 }
             });
         }

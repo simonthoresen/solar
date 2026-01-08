@@ -144,32 +144,42 @@ export class Spaceship {
     initExhaustDebug() {
         this.exhaustRings = [];
         this.exhaustArrows = [];
-        const radius = playerConfig.exhaustRadius || 2.0;
 
         if (!this.thrusterOffsets || this.thrusterOffsets.length === 0) {
             this.thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
-        // Create an exhaust ring for each thruster
+        // Exhaust field is a rectangle: 3 units wide x 6 units long
+        const exhaustWidth = 3.0;
+        const exhaustLength = 6.0;
+        const halfWidth = exhaustWidth / 2.0;
+
+        // Create a rectangular exhaust field for each thruster
         this.thrusterOffsets.forEach(thrusterOffset => {
-            const curve = new THREE.EllipseCurve(0, 0, radius, radius, 0, 2 * Math.PI, false, 0);
-            const points = curve.getPoints(32);
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const rectPoints = [
+                new THREE.Vector3(-halfWidth, 0, 0),
+                new THREE.Vector3(halfWidth, 0, 0),
+                new THREE.Vector3(halfWidth, 0, exhaustLength),
+                new THREE.Vector3(-halfWidth, 0, exhaustLength),
+                new THREE.Vector3(-halfWidth, 0, 0) // close the loop
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(rectPoints);
             const material = new THREE.LineBasicMaterial({ color: 0xff00ff });
-            const exhaustRing = new THREE.Line(geometry, material);
+            const exhaustRect = new THREE.Line(geometry, material);
 
-            // Position exhaust ring 'radius' units behind the thruster, with y=0
-            exhaustRing.position.set(thrusterOffset.x, 0, thrusterOffset.z + radius);
-            exhaustRing.rotation.x = -Math.PI / 2;
-            exhaustRing.visible = false;
-            this.mesh.add(exhaustRing);
-            this.exhaustRings.push(exhaustRing);
+            // Position rectangle starting at the thruster, extending backward
+            exhaustRect.position.set(thrusterOffset.x, 0, thrusterOffset.z);
+            exhaustRect.visible = false;
+            this.mesh.add(exhaustRect);
+            this.exhaustRings.push(exhaustRect);
 
-            // Add arrow to show velocity direction applied by exhaust field
+            // Add arrow to show force direction applied by exhaust field
+            // Arrow originates from center of the exhaust rectangle
+            const exhaustCenter = exhaustLength / 2.0;
             const arrow = new THREE.ArrowHelper(
-                new THREE.Vector3(0, 0, 1), // Initial direction (will be updated in update())
-                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + radius), // Origin at exhaust center
-                2.0, // Length
+                new THREE.Vector3(0, 0, 1), // Direction (will be updated in update())
+                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustCenter),
+                2.0, // Length (will be updated based on thrust state)
                 0x00ffff, // Cyan color
                 0.4, // Head length
                 0.2 // Head width
@@ -392,29 +402,46 @@ export class Spaceship {
     }
 
     updateExhaustPositions() {
-        const radius = playerConfig.exhaustRadius || 2.0;
-        EngineEffects.updateExhaustPositions(this.exhaustRings, this.thrusterOffsets, radius);
+        // Exhaust field is a rectangle: 3 units wide x 6 units long
+        const exhaustWidth = 3.0;
+        const exhaustLength = 6.0;
 
-        // Update arrow directions to show velocity applied by exhaust field
-        // Exhaust field now applies velocity based on each thruster's exhaust direction
-        if (this.exhaustArrows && this.velocity.length() > 0.01) {
-            const multiplier = 5.0; // Same multiplier as in VelocityField
+        // Update rectangle positions for each thruster
+        this.thrusterOffsets.forEach((thrusterOffset, index) => {
+            if (this.exhaustRings[index]) {
+                // Position rectangle starting at the thruster, extending backward
+                this.exhaustRings[index].position.set(thrusterOffset.x, 0, thrusterOffset.z);
+            }
+        });
+
+        // Update arrow directions to show force applied by exhaust field
+        // Force magnitude is constant when thrusters are active, 0 when off
+        if (this.exhaustArrows) {
+            const exhaustForce = 5.0; // Constant force magnitude when thrusters are active
+            const exhaustCenter = exhaustLength / 2.0;
 
             this.thrusterOffsets.forEach((thrusterOffset, index) => {
                 if (this.exhaustArrows[index]) {
-                    // Update arrow position to follow the exhaust ring (local coordinates)
-                    const arrowPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + radius);
+                    // Update arrow position to center of exhaust rectangle (local coordinates)
+                    const arrowPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustCenter);
                     this.exhaustArrows[index].position.copy(arrowPos);
 
                     // Arrows are children of the ship mesh, so use LOCAL exhaust direction
                     // Thruster exhaust always points backward (+Z) in local space
-                    // The ship's rotation is inherited automatically
                     const localExhaustDir = new THREE.Vector3(0, 0, 1);
-                    const length = Math.min(this.velocity.length() * multiplier * 0.3, 3.0); // Scale length
+
+                    // Arrow length based on thrust state, not ship velocity
+                    const arrowLength = this.controls.thrust ? exhaustForce * 0.4 : 0.0;
 
                     // Update arrow direction and length
                     this.exhaustArrows[index].setDirection(localExhaustDir);
-                    this.exhaustArrows[index].setLength(length, length * 0.2, length * 0.1);
+                    if (arrowLength > 0) {
+                        this.exhaustArrows[index].setLength(arrowLength, arrowLength * 0.2, arrowLength * 0.1);
+                        this.exhaustArrows[index].visible = this.exhaustArrows[index].visible; // preserve visibility from debug state
+                    } else {
+                        // Hide arrow when thrusters are off
+                        this.exhaustArrows[index].visible = false;
+                    }
                 }
             });
         }
@@ -545,17 +572,19 @@ export class Spaceship {
     }
 
     getExhaustPositions() {
-        // Return exhaust positions for all thrusters
-        const exhaustRadius = playerConfig.exhaustRadius || 2.0;
+        // Return exhaust center positions for all thrusters
+        // Exhaust field is a rectangle: 3 units wide x 6 units long
+        const exhaustLength = 6.0;
+        const exhaustCenter = exhaustLength / 2.0;
         const exhaustPositions = [];
 
         if (this.thrusterOffsets && this.thrusterOffsets.length > 0) {
             this.thrusterOffsets.forEach(thrusterOffset => {
-                // Exhaust field is 'radius' units behind the thruster, with y=0
+                // Exhaust field center is at thruster + exhaustCenter in Z direction
                 const exhaustOffset = new THREE.Vector3(
                     thrusterOffset.x,
                     0,
-                    thrusterOffset.z + exhaustRadius
+                    thrusterOffset.z + exhaustCenter
                 );
                 const rotatedOffset = exhaustOffset.applyEuler(this.rotation);
                 const worldPos = this.position.clone().add(rotatedOffset);
@@ -563,7 +592,7 @@ export class Spaceship {
             });
         } else {
             // Fallback
-            const fallbackOffset = new THREE.Vector3(0, 0, exhaustRadius + 0.5);
+            const fallbackOffset = new THREE.Vector3(0, 0, exhaustCenter + 0.5);
             const rotatedOffset = fallbackOffset.applyEuler(this.rotation);
             exhaustPositions.push(this.position.clone().add(rotatedOffset));
         }

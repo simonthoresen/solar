@@ -34,24 +34,44 @@ export class VelocityField {
         }
 
         // 3. Player Engine Exhaust (check all engine exhausts)
+        // Exhaust field is rectangular: 3 units wide x 6 units long
         if (player && player.getExhaustPositions) {
             const exhaustPositions = player.getExhaustPositions();
             const exhaustDirections = player.getExhaustDirections ? player.getExhaustDirections() : [];
-            const exhaustRadius = playerConfig.exhaustRadius || 2.0;
-            const radiusSq = exhaustRadius * exhaustRadius;
+            const exhaustWidth = 3.0;
+            const exhaustLength = 6.0;
+            const halfWidth = exhaustWidth / 2.0;
+            const halfLength = exhaustLength / 2.0;
             const multiplier = 5.0;
 
             exhaustPositions.forEach((exhaustPos, index) => {
-                const distSq = position.distanceToSquared(exhaustPos);
-                if (distSq < radiusSq) {
-                    // Use engine-specific direction if available, otherwise fall back to ship velocity
-                    if (exhaustDirections[index]) {
-                        const exhaustDir = exhaustDirections[index];
+                // Check if particle is within rectangular exhaust field
+                // Get vector from exhaust center to particle
+                const toParticle = position.clone().sub(exhaustPos);
+
+                if (exhaustDirections[index]) {
+                    const exhaustDir = exhaustDirections[index].clone().normalize();
+
+                    // Get perpendicular direction (cross with up vector)
+                    const perpDir = new THREE.Vector3().crossVectors(exhaustDir, new THREE.Vector3(0, 1, 0)).normalize();
+
+                    // Project onto exhaust direction (Z in local space)
+                    const alongExhaust = toParticle.dot(exhaustDir);
+
+                    // Project onto perpendicular direction (X in local space)
+                    const acrossExhaust = toParticle.dot(perpDir);
+
+                    // Check if within rectangular bounds
+                    if (Math.abs(alongExhaust) <= halfLength && Math.abs(acrossExhaust) <= halfWidth) {
+                        // Particle is within exhaust field - apply force
                         target.x += exhaustDir.x * multiplier;
                         target.y += exhaustDir.y * multiplier;
                         target.z += exhaustDir.z * multiplier;
-                    } else {
-                        // Legacy fallback: opposite of ship velocity
+                    }
+                } else {
+                    // Legacy fallback: use simple distance check
+                    const distSq = toParticle.lengthSq();
+                    if (distSq < halfLength * halfLength) {
                         target.x -= player.velocity.x * multiplier;
                         target.y -= player.velocity.y * multiplier;
                         target.z -= player.velocity.z * multiplier;
