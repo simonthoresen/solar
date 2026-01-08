@@ -338,7 +338,7 @@ export class Game {
             this.celestialBodies,
             this.player,
             this.camera,
-            this.debugState.dustVelocity
+            DebugState.get('dustVelocity')
         );
 
         // Update Velocity Visualization
