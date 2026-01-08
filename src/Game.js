@@ -405,6 +405,9 @@ export class Game {
             );
         });
 
+        // Check ship-to-ship collisions
+        this.checkShipCollisions(allShips);
+
         // Legacy smoke code removed (now in Spaceship.update)
 
         // Camera follow update
@@ -577,6 +580,33 @@ export class Game {
                 }
             }
         });
+    }
+
+    checkShipCollisions(allShips) {
+        // Check all pairs of ships for collision
+        for (let i = 0; i < allShips.length; i++) {
+            const shipA = allShips[i];
+            if (!shipA.isActive || shipA.collisionCooldown > 0) continue;
+
+            for (let j = i + 1; j < allShips.length; j++) {
+                const shipB = allShips[j];
+                if (!shipB.isActive || shipB.collisionCooldown > 0) continue;
+
+                // Check if collision spheres intersect
+                const distance = shipA.position.distanceTo(shipB.position);
+                const collisionDistance = shipA.collisionRadius + shipB.collisionRadius;
+
+                if (distance < collisionDistance) {
+                    // Collision detected - apply damage to both ships
+                    shipA.takeDamage(50);
+                    shipB.takeDamage(50);
+
+                    // Set cooldown to prevent continuous damage (0.5 seconds)
+                    shipA.collisionCooldown = 0.5;
+                    shipB.collisionCooldown = 0.5;
+                }
+            }
+        }
     }
 
     onResize() {

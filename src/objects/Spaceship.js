@@ -39,6 +39,7 @@ export class Spaceship {
 
         this.shootCooldown = 0;
         this.smokeAccumulator = 0;
+        this.collisionCooldown = 0; // Prevent continuous collision damage
 
         this.hasAttacked = false;
 
@@ -303,9 +304,12 @@ export class Spaceship {
         // Update Animations
         this.updateAnimations(dt);
 
-        // Shooting
+        // Cooldowns
         if (this.shootCooldown > 0) {
             this.shootCooldown -= dt;
+        }
+        if (this.collisionCooldown > 0) {
+            this.collisionCooldown -= dt;
         }
 
         if (this.controls.fire && this.shootCooldown <= 0) {
