@@ -221,7 +221,14 @@ export class Game {
             playerVortex: 'Ship Vortex'
         };
 
-        Object.keys(DebugState.getAll()).forEach(key => {
+        // Sort keys alphabetically by their label
+        const sortedKeys = Object.keys(DebugState.getAll()).sort((a, b) => {
+            const labelA = labelMap[a] || a;
+            const labelB = labelMap[b] || b;
+            return labelA.localeCompare(labelB);
+        });
+
+        sortedKeys.forEach(key => {
             const row = document.createElement('div');
             row.style.marginBottom = '2px';
 
