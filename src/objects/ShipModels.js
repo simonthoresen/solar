@@ -287,6 +287,25 @@ export class ShipModels {
 
                 collisionRadius = 1.2;
                 thrusterOffsets = [new THREE.Vector3(-0.7, 0, 1.0), new THREE.Vector3(0.7, 0, 1.0)];
+
+                // Aggressive dual-color thrusters: red left, blue right
+                thrusterConfigs = [
+                    {
+                        exhaustWidth: 2.5,
+                        exhaustLength: 5.0,
+                        smokeSize: 0.35,
+                        smokeColor: 0xff4444,
+                        smokeLifetime: 2.5
+                    },
+                    {
+                        exhaustWidth: 2.5,
+                        exhaustLength: 5.0,
+                        smokeSize: 0.35,
+                        smokeColor: 0x4444ff,
+                        smokeLifetime: 2.5
+                    }
+                ];
+
                 turretMounts.push({ position: new THREE.Vector3(-0.7, 0.3, -0.2), type: 'triangular' });
                 turretMounts.push({ position: new THREE.Vector3(0.7, 0.3, -0.2), type: 'triangular' });
                 break;
@@ -308,6 +327,25 @@ export class ShipModels {
 
                 collisionRadius = 1.3;
                 thrusterOffsets = [new THREE.Vector3(-1.1, 0, 0.9), new THREE.Vector3(1.1, 0, 0.9)];
+
+                // Asymmetric thrusters: large hot orange left, small cool blue right
+                thrusterConfigs = [
+                    {
+                        exhaustWidth: 3.5,
+                        exhaustLength: 7.0,
+                        smokeSize: 0.45,
+                        smokeColor: 0xff8800,
+                        smokeLifetime: 3.5
+                    },
+                    {
+                        exhaustWidth: 2.0,
+                        exhaustLength: 4.0,
+                        smokeSize: 0.2,
+                        smokeColor: 0x6688ff,
+                        smokeLifetime: 2.0
+                    }
+                ];
+
                 turretMounts.push({ position: new THREE.Vector3(0, 0.2, -0.3), type: 'circular' });
                 break;
 
@@ -330,6 +368,25 @@ export class ShipModels {
 
                 collisionRadius = 1.2;
                 thrusterOffsets = [new THREE.Vector3(-0.6, -0.1, 1.0), new THREE.Vector3(0.6, -0.1, 1.0)];
+
+                // Military efficient thrusters: large white exhaust left, compact gray right
+                thrusterConfigs = [
+                    {
+                        exhaustWidth: 3.2,
+                        exhaustLength: 6.5,
+                        smokeSize: 0.4,
+                        smokeColor: 0xdddddd,
+                        smokeLifetime: 3.2
+                    },
+                    {
+                        exhaustWidth: 2.5,
+                        exhaustLength: 5.0,
+                        smokeSize: 0.25,
+                        smokeColor: 0x888888,
+                        smokeLifetime: 2.8
+                    }
+                ];
+
                 turretMounts.push({ position: new THREE.Vector3(0, 0.45, -0.4), type: 'square' });
                 turretMounts.push({ position: new THREE.Vector3(-0.6, -0.2, -0.3), type: 'triangular' });
                 turretMounts.push({ position: new THREE.Vector3(0.6, -0.2, -0.3), type: 'triangular' });
@@ -353,6 +410,25 @@ export class ShipModels {
 
                 collisionRadius = 0.9;
                 thrusterOffsets = [new THREE.Vector3(-0.5, 0, 1.1), new THREE.Vector3(0.5, 0, 1.1)];
+
+                // Stealthy thrusters: small dark smoke with subtle differences
+                thrusterConfigs = [
+                    {
+                        exhaustWidth: 2.2,
+                        exhaustLength: 4.5,
+                        smokeSize: 0.22,
+                        smokeColor: 0x444455,
+                        smokeLifetime: 2.3
+                    },
+                    {
+                        exhaustWidth: 2.0,
+                        exhaustLength: 4.0,
+                        smokeSize: 0.18,
+                        smokeColor: 0x333344,
+                        smokeLifetime: 2.0
+                    }
+                ];
+
                 turretMounts.push({ position: new THREE.Vector3(0, 0.25, 0), type: 'circular' });
                 break;
 
@@ -406,6 +482,25 @@ export class ShipModels {
 
                 collisionRadius = 1.4;
                 thrusterOffsets = baseEngineOffsets; // Initial offsets
+
+                // Elegant dual-color thrusters: purple left, cyan right with long trails
+                thrusterConfigs = [
+                    {
+                        exhaustWidth: 2.8,
+                        exhaustLength: 6.0,
+                        smokeSize: 0.32,
+                        smokeColor: 0xbb44ff,
+                        smokeLifetime: 4.0
+                    },
+                    {
+                        exhaustWidth: 2.8,
+                        exhaustLength: 6.0,
+                        smokeSize: 0.32,
+                        smokeColor: 0x44ffff,
+                        smokeLifetime: 4.0
+                    }
+                ];
+
                 turretMounts.push({ position: new THREE.Vector3(-0.9, -0.05, 0.1), type: 'circular' });
                 turretMounts.push({ position: new THREE.Vector3(0.9, -0.05, 0.1), type: 'circular' });
                 break;
