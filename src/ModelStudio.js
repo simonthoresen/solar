@@ -381,7 +381,6 @@ export class ModelStudio {
 
         // 3. Exhaust Field (Magenta) - rectangular field per thruster
         this.exhaustRings = [];
-        this.exhaustArrows = [];
 
         if (!thrusterOffsets || thrusterOffsets.length === 0) {
             thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
@@ -395,7 +394,7 @@ export class ModelStudio {
             const config = thrusterConfigs[index] || {
                 exhaustWidth: 3.0,
                 exhaustLength: 6.0,
-                exhaustForce: 10.0,
+                exhaustForce: 1000.0,
                 smokeSize: 0.3,
                 smokeColor: 0xaaaaaa,
                 smokeLifetime: 3.0
@@ -403,7 +402,6 @@ export class ModelStudio {
 
             const exhaustWidth = config.exhaustWidth;
             const exhaustLength = config.exhaustLength;
-            const exhaustForce = config.exhaustForce || 10.0;
             const halfWidth = exhaustWidth / 2.0;
 
             const rectPoints = [
@@ -421,19 +419,6 @@ export class ModelStudio {
             exhaustRect.position.set(thrusterOffset.x, 0, thrusterOffset.z);
             mesh.add(exhaustRect);
             this.exhaustRings.push(exhaustRect);
-
-            // Add arrow to show force direction applied by exhaust field
-            // Arrow originates from near end of exhaust field (at the thruster)
-            const arrow = new THREE.ArrowHelper(
-                new THREE.Vector3(0, 0, 1), // Initial direction (will be updated)
-                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z), // Position at thruster (near end)
-                exhaustForce, // Length equals exhaust force (will be updated based on engine state)
-                0x00ffff, // Cyan color
-                exhaustForce * 0.2, // Head length scales with force
-                exhaustForce * 0.1 // Head width scales with force
-            );
-            mesh.add(arrow);
-            this.exhaustArrows.push(arrow);
         });
     }
 
@@ -608,14 +593,13 @@ export class ModelStudio {
     }
 
     updateExhaustPositions() {
+        // Update exhaust field rectangles only (no arrows)
         if (this.currentShipInfo?.thrusterOffsets) {
-            EngineEffects.updateExhaustDebugVisuals(
-                this.currentShipInfo.thrusterOffsets,
-                this.currentShipInfo.thrusterConfigs || [],
-                this.exhaustRings,
-                this.exhaustArrows,
-                this.engineOn
-            );
+            this.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
+                if (this.exhaustRings[index]) {
+                    this.exhaustRings[index].position.set(thrusterOffset.x, 0, thrusterOffset.z);
+                }
+            });
         }
     }
 }

@@ -144,7 +144,6 @@ export class Spaceship {
 
     initExhaustDebug() {
         this.exhaustRings = [];
-        this.exhaustArrows = [];
 
         if (!this.thrusterOffsets || this.thrusterOffsets.length === 0) {
             this.thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
@@ -156,7 +155,7 @@ export class Spaceship {
             const config = this.thrusterConfigs[index] || {
                 exhaustWidth: 3.0,
                 exhaustLength: 6.0,
-                exhaustForce: 10.0,
+                exhaustForce: 1000.0,
                 smokeSize: 0.3,
                 smokeColor: 0xaaaaaa,
                 smokeLifetime: 3.0
@@ -182,21 +181,6 @@ export class Spaceship {
             exhaustRect.visible = false;
             this.mesh.add(exhaustRect);
             this.exhaustRings.push(exhaustRect);
-
-            // Add arrow to show force direction applied by exhaust field
-            // Arrow originates from near end of exhaust field (at the thruster)
-            const exhaustForce = config.exhaustForce || 10.0;
-            const arrow = new THREE.ArrowHelper(
-                new THREE.Vector3(0, 0, 1), // Direction (will be updated in update())
-                new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z),
-                exhaustForce, // Length equals exhaust force (will be updated based on thrust state)
-                0x00ffff, // Cyan color
-                exhaustForce * 0.2, // Head length scales with force
-                exhaustForce * 0.1 // Head width scales with force
-            );
-            arrow.visible = false;
-            this.mesh.add(arrow);
-            this.exhaustArrows.push(arrow);
         });
 
         // Keep backward compatibility - first exhaust ring is the "main" exhaust ring
@@ -414,13 +398,12 @@ export class Spaceship {
     }
 
     updateExhaustPositions() {
-        EngineEffects.updateExhaustDebugVisuals(
-            this.thrusterOffsets,
-            this.thrusterConfigs,
-            this.exhaustRings,
-            this.exhaustArrows,
-            this.controls.thrust
-        );
+        // Update exhaust field rectangles only (no arrows)
+        this.thrusterOffsets.forEach((thrusterOffset, index) => {
+            if (this.exhaustRings[index]) {
+                this.exhaustRings[index].position.set(thrusterOffset.x, 0, thrusterOffset.z);
+            }
+        });
     }
 
     checkBoundaries() {
@@ -665,12 +648,6 @@ export class Spaceship {
             const exhaustVisible = DebugState.get('shipExhaust');
             this.exhaustRings.forEach(line => {
                 line.visible = exhaustVisible;
-            });
-        }
-        if (this.exhaustArrows) {
-            const exhaustVisible = DebugState.get('shipExhaust');
-            this.exhaustArrows.forEach(arrow => {
-                arrow.visible = exhaustVisible;
             });
         }
     }

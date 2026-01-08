@@ -422,13 +422,6 @@ export class ParticleSystem {
 
             this.updateInstance(this.dustMesh, i, p.position, p.initialScale * scaleMod * this.dustScale, target, cameraQuaternion);
 
-            // Debug: Color particles magenta if in exhaust field (don't reset if not)
-            const inExhaust = velocityField.isInExhaustField(p.position, celestialBodies, player);
-            if (inExhaust) {
-                const color = new THREE.Color(0xff00ff);
-                this.dustMesh.instanceColor.setXYZ(i, color.r, color.g, color.b);
-            }
-
             // Viz Output (Sampled for performance distribution)
             // Show every 20th particle to get a spread across the field
             if (i % 20 === 0 && p.smoothedInfluence.lengthSq() > 0.01) {
@@ -484,13 +477,6 @@ export class ParticleSystem {
                     target = p.position.clone().add(this._tempEffectiveVel);
                 }
                 this.updateInstance(this.smokeMesh, i, p.position, currentScale, target, cameraQuaternion);
-
-                // Debug: Color particles magenta if in exhaust field (don't reset if not)
-                const inExhaust = velocityField.isInExhaustField(p.position, celestialBodies, player);
-                if (inExhaust) {
-                    const color = new THREE.Color(0xff00ff);
-                    this.smokeMesh.instanceColor.setXYZ(i, color.r, color.g, color.b);
-                }
 
                 // Show every 5th active smoke particle
                 if (i % 5 === 0 && p.smoothedInfluence.lengthSq() > 0.01) {

@@ -26,7 +26,7 @@ export class ShipModels {
         const defaultThrusterConfig = {
             exhaustWidth: 3.0,
             exhaustLength: 6.0,
-            exhaustForce: 10.0,
+            exhaustForce: 1000.0,
             smokeSize: 0.3,
             smokeColor: 0xaaaaaa,
             smokeLifetime: 3.0
@@ -78,7 +78,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 16.0,
+                    exhaustForce: 1600.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -97,7 +97,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 11.0,
+                    exhaustForce: 1100.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -119,7 +119,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 9.0,
+                    exhaustForce: 900.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -143,7 +143,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 17.0,
+                    exhaustForce: 1700.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -162,7 +162,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 18.0,
+                    exhaustForce: 1800.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -185,7 +185,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 13.0,
+                    exhaustForce: 1300.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -205,7 +205,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 14.0,
+                    exhaustForce: 1400.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -227,7 +227,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 19.0,
+                    exhaustForce: 1900.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -252,7 +252,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 12.0,
+                    exhaustForce: 1200.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -276,7 +276,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 10.0,
+                    exhaustForce: 1000.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -301,7 +301,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 11.0,
+                    exhaustForce: 1100.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -327,7 +327,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 15.0,
+                    exhaustForce: 1500.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -348,7 +348,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 16.0,
+                    exhaustForce: 1600.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -375,7 +375,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 13.0,
+                    exhaustForce: 1300.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
@@ -406,7 +406,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 2.5,
                         exhaustLength: 5.0,
-                        exhaustForce: 15.0,
+                        exhaustForce: 1500.0,
                         smokeSize: 0.35,
                         smokeColor: 0xff4444,
                         smokeLifetime: 2.5
@@ -414,7 +414,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 2.5,
                         exhaustLength: 5.0,
-                        exhaustForce: 12.0,
+                        exhaustForce: 1200.0,
                         smokeSize: 0.35,
                         smokeColor: 0x4444ff,
                         smokeLifetime: 2.5
@@ -448,7 +448,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 3.5,
                         exhaustLength: 7.0,
-                        exhaustForce: 20.0,
+                        exhaustForce: 2000.0,
                         smokeSize: 0.45,
                         smokeColor: 0xff8800,
                         smokeLifetime: 3.5
@@ -456,7 +456,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 2.0,
                         exhaustLength: 4.0,
-                        exhaustForce: 8.0,
+                        exhaustForce: 800.0,
                         smokeSize: 0.2,
                         smokeColor: 0x6688ff,
                         smokeLifetime: 2.0
@@ -491,7 +491,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 3.2,
                         exhaustLength: 6.5,
-                        exhaustForce: 14.0,
+                        exhaustForce: 1400.0,
                         smokeSize: 0.4,
                         smokeColor: 0xdddddd,
                         smokeLifetime: 3.2
@@ -499,7 +499,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 2.5,
                         exhaustLength: 5.0,
-                        exhaustForce: 11.0,
+                        exhaustForce: 1100.0,
                         smokeSize: 0.25,
                         smokeColor: 0x888888,
                         smokeLifetime: 2.8
@@ -535,7 +535,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 2.2,
                         exhaustLength: 4.5,
-                        exhaustForce: 9.0,
+                        exhaustForce: 900.0,
                         smokeSize: 0.22,
                         smokeColor: 0x444455,
                         smokeLifetime: 2.3
@@ -543,7 +543,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 2.0,
                         exhaustLength: 4.0,
-                        exhaustForce: 7.0,
+                        exhaustForce: 700.0,
                         smokeSize: 0.18,
                         smokeColor: 0x333344,
                         smokeLifetime: 2.0
@@ -609,7 +609,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 2.8,
                         exhaustLength: 6.0,
-                        exhaustForce: 13.0,
+                        exhaustForce: 1300.0,
                         smokeSize: 0.32,
                         smokeColor: 0xbb44ff,
                         smokeLifetime: 4.0
@@ -617,7 +617,7 @@ export class ShipModels {
                     {
                         exhaustWidth: 2.8,
                         exhaustLength: 6.0,
-                        exhaustForce: 13.0,
+                        exhaustForce: 1300.0,
                         smokeSize: 0.32,
                         smokeColor: 0x44ffff,
                         smokeLifetime: 4.0
@@ -643,7 +643,7 @@ export class ShipModels {
                 thrusterConfigs = [{
                     exhaustWidth: 3.0,
                     exhaustLength: 6.0,
-                    exhaustForce: 12.0,
+                    exhaustForce: 1200.0,
                     smokeSize: 0.3,
                     smokeColor: 0xaaaaaa,
                     smokeLifetime: 3.0
