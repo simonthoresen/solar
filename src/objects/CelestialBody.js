@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { DebugState } from '../DebugState.js';
 
 const _tempRadial = new THREE.Vector3();
 const _tempTangent = new THREE.Vector3();
@@ -78,18 +79,13 @@ export class CelestialBody {
     }
 
     setSelected(isSelected) {
-        // Requested visuals:
-        // 1. Wireframe circle (rotation radius) -> this.ring
-        // 2. Line to parent -> this.directionLine
-        // 3. Axis -> this.axisLine
-
-        if (this.ring) this.ring.visible = isSelected;
-        if (this.directionLine) this.directionLine.visible = isSelected;
-        if (this.axisLine) this.axisLine.visible = isSelected;
-
-        // Old selection box (square) - Disable or remove?
-        // User didn't ask for it, they asked for circle + line.
-        if (this.selectionBox) this.selectionBox.visible = false;
+        // Update global selection state
+        if (isSelected) {
+            DebugState.setSelected(this);
+        } else if (DebugState.getSelected() === this) {
+            DebugState.setSelected(null);
+        }
+        // Visual update happens in updateDebugVisuals()
 
         if (isSelected) {
             this.updatePosition(); // Update visuals immediately
@@ -324,6 +320,9 @@ export class CelestialBody {
 
             this.velocityLine.geometry.attributes.position.needsUpdate = true;
         }
+
+        // Update debug visuals based on global state
+        this.updateDebugVisuals();
     }
 
     updatePosition() {
@@ -401,22 +400,40 @@ export class CelestialBody {
         return target;
     }
 
-    setDebugVisibility(state) {
+    // Update debug visuals based on global DebugState
+    updateDebugVisuals() {
+        const isSelected = DebugState.isSelected(this);
+
+        // Ring: visible if selected OR debug enabled
         if (this.ring) {
-            this.ring.visible = state.planetRing;
+            this.ring.visible = isSelected || DebugState.get('planetRing');
         }
+
+        // Axis: visible if selected OR debug enabled
         if (this.axisLine) {
-            this.axisLine.visible = state.planetAxis;
+            this.axisLine.visible = isSelected || DebugState.get('planetAxis');
         }
+
+        // Direction to parent: visible if selected OR debug enabled
         if (this.directionLine) {
-            this.directionLine.visible = state.planetToParent;
+            this.directionLine.visible = isSelected || DebugState.get('planetToParent');
         }
+
+        // Player line: visible if debug enabled
         if (this.playerLine) {
-            this.playerLine.visible = state.planetToPlayer;
+            this.playerLine.visible = DebugState.get('planetToPlayer');
         }
+
+        // Velocity arrow: visible if debug enabled
         if (this.velocityLine) {
-            this.velocityLine.visible = state.planetVelocity;
+            this.velocityLine.visible = DebugState.get('planetVelocity');
         }
+    }
+
+    // DEPRECATED: Kept for backwards compatibility, does nothing now
+    // Debug state is managed globally via DebugState singleton
+    setDebugVisibility(state) {
+        // No-op: Debug visuals now reference global DebugState directly
     }
 
     setColor(hex) {

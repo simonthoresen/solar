@@ -13,6 +13,7 @@ import { solarSystemConfig, dustConfig, playerConfig } from './config.js';
 import { HUD } from './HUD.js';
 import { DetailPanel } from './DetailPanel.js';
 import { ArrowKeyCameraRotation, PointerLockCameraRotation, ZoomWhileRotating } from './utils/CameraControls.js';
+import { DebugState } from './DebugState.js';
 
 export class Game {
     constructor() {
@@ -140,18 +141,7 @@ export class Game {
 
         this.clock = new THREE.Clock();
 
-        // Debug State
-        this.debugState = {
-            planetRing: false,
-            playerRing: false,
-            planetAxis: false,
-            playerAxis: false,
-            planetToParent: false,
-            planetToPlayer: false,
-            planetVelocity: false,
-            dustVelocity: false,
-            playerVortex: false
-        };
+        // Debug State is now global via DebugState singleton
 
         this.initDebugUI();
 
@@ -231,20 +221,24 @@ export class Game {
             playerVortex: 'Player Vortex'
         };
 
-        Object.keys(this.debugState).forEach(key => {
+        Object.keys(DebugState.getAll()).forEach(key => {
             const row = document.createElement('div');
             row.style.marginBottom = '2px';
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = `debug-${key}`;
-            checkbox.checked = this.debugState[key];
+            checkbox.checked = DebugState.get(key);
             checkbox.style.marginRight = '5px';
             checkbox.style.cursor = 'pointer';
 
             checkbox.addEventListener('change', (e) => {
-                this.debugState[key] = e.target.checked;
-                this.updateDebugVisibility();
+                DebugState.set(key, e.target.checked);
+                // Update velocity field visibility directly
+                if (key === 'dustVelocity') {
+                    this.velocityField.setVisible(e.target.checked);
+                }
+                // Entities will update themselves on their next update() call
             });
 
             const label = document.createElement('label');
@@ -260,33 +254,8 @@ export class Game {
         });
 
         document.body.appendChild(container);
-
-        // Apply initial state
-        this.updateDebugVisibility();
     }
 
-
-
-    updateDebugVisibility() {
-        if (this.player.setDebugVisibility) {
-            this.player.setDebugVisibility(this.debugState);
-        }
-
-        // Apply debug state to all NPCs
-        this.npcs.forEach(npc => {
-            if (npc.setDebugVisibility) {
-                npc.setDebugVisibility(this.debugState);
-            }
-        });
-
-        // Force Grid Arrows (Now Velocity Field Arrows)
-        this.velocityField.setVisible(this.debugState.dustVelocity);
-
-        // Celestial Rings
-        this.celestialBodies.forEach(body => {
-            body.setDebugVisibility(this.debugState);
-        });
-    }
 
     setupLights() {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.1); // Reduced ambient light for space atmosphere
@@ -524,10 +493,7 @@ export class Game {
                 tempCam.lookAt(newPlayerPos);
                 this.respawnTargetCameraQuat.copy(tempCam.quaternion);
 
-                // Apply current debug state to respawned player
-                if (this.player.setDebugVisibility) {
-                    this.player.setDebugVisibility(this.debugState);
-                }
+                // Debug visuals will be applied automatically on next update()
 
                 this.playerRespawnTimer = 3.0;
             }
@@ -564,10 +530,7 @@ export class Game {
         // Re-bind onExplode (referencing local function from constructor is hard here. easier to make it a method)
         npc.onExplode = this.handleShipExplosion.bind(this);
 
-        // Apply current debug state to new NPC
-        if (npc.setDebugVisibility) {
-            npc.setDebugVisibility(this.debugState);
-        }
+        // Debug visuals will be applied automatically on next update()
 
         this.npcs.push(npc);
         if (this.hud) this.hud.addSpaceship(npc);

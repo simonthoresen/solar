@@ -7,6 +7,7 @@ import { Nebula } from './objects/Nebula.js';
 import { MainMenu } from './MainMenu.js';
 import { solarSystemConfig, dustConfig } from './config.js';
 import { ArrowKeyCameraRotation, PointerLockCameraRotation, ZoomWhileRotating } from './utils/CameraControls.js';
+import { DebugState } from './DebugState.js';
 
 export class SolarStudio {
     constructor() {
@@ -52,15 +53,7 @@ export class SolarStudio {
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
 
-        // Debug State
-        this.debugState = {
-            planetRing: false,
-            planetAxis: false,
-            planetToParent: false,
-            planetToPlayer: false,
-            planetVelocity: false,
-            dustVelocity: false
-        };
+        // Debug State is now global via DebugState singleton
 
         // Event Listeners
         window.addEventListener('resize', this.onResize.bind(this));
@@ -440,7 +433,7 @@ export class SolarStudio {
             this.celestialBodies,
             null,
             this.camera,
-            this.debugState.dustVelocity
+            DebugState.get('dustVelocity')
         );
 
         this.velocityField.updateVisuals(particleVizItems);

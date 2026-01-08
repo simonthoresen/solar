@@ -3,6 +3,7 @@ import { playerConfig, dustConfig } from '../config.js';
 import { ShipModels } from './ShipModels.js';
 import { Turret } from './Turret.js';
 import { EngineEffects } from '../utils/EngineEffects.js';
+import { DebugState } from '../DebugState.js';
 
 // Scratch vectors for wake calculation
 const _tempWakeDiff = new THREE.Vector3();
@@ -334,6 +335,10 @@ export class Spaceship {
         }
 
         // Removed updateLasers call, now handled by ProjectileSystem
+
+        // Update debug visuals based on global state
+        this.updateDebugVisuals();
+
         this.mesh.position.copy(this.position);
     }
 
@@ -595,29 +600,48 @@ export class Spaceship {
         return vortexDirections;
     }
 
-    setDebugVisibility(visible) {
-        // Base logic for debug
-        if (typeof visible === 'object') {
-            if (this.axisHelper) this.axisHelper.visible = visible.playerAxis;
-            if (this.boundaryLine) this.boundaryLine.visible = visible.playerRing;
-            if (this.vortexLines) {
-                this.vortexLines.forEach(line => {
-                    line.visible = visible.playerVortex;
-                });
-            }
-            if (this.vortexArrows) {
-                this.vortexArrows.forEach(arrow => {
-                    arrow.visible = visible.playerVortex;
-                });
-            }
-        } else {
-            // Fallback
+    // Update debug visuals based on global DebugState
+    updateDebugVisuals() {
+        const isSelected = DebugState.isSelected(this);
+
+        // Axis helper: visible if selected OR debug enabled
+        if (this.axisHelper) {
+            this.axisHelper.visible = isSelected || DebugState.get('playerAxis');
+        }
+
+        // Boundary ring: visible if debug enabled
+        if (this.boundaryLine) {
+            this.boundaryLine.visible = DebugState.get('playerRing');
+        }
+
+        // Vortex visualization: visible if debug enabled
+        if (this.vortexLines) {
+            const vortexVisible = DebugState.get('playerVortex');
+            this.vortexLines.forEach(line => {
+                line.visible = vortexVisible;
+            });
+        }
+        if (this.vortexArrows) {
+            const vortexVisible = DebugState.get('playerVortex');
+            this.vortexArrows.forEach(arrow => {
+                arrow.visible = vortexVisible;
+            });
         }
     }
 
+    // DEPRECATED: Kept for backwards compatibility, does nothing now
+    // Debug state is managed globally via DebugState singleton
+    setDebugVisibility(visible) {
+        // No-op: Debug visuals now reference global DebugState directly
+    }
+
     setSelected(isSelected) {
-        if (this.axisHelper) {
-            this.axisHelper.visible = isSelected;
+        // Update global selection state
+        if (isSelected) {
+            DebugState.setSelected(this);
+        } else if (DebugState.getSelected() === this) {
+            DebugState.setSelected(null);
         }
+        // Visual update happens in updateDebugVisuals()
     }
 }
