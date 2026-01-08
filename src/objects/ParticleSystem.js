@@ -466,7 +466,7 @@ export class ParticleSystem {
 
             p.life -= dt;
 
-            // 2. Visuals (Growing and Fading to transparent)
+            // 2. Visuals (Growing only)
             if (p.life <= 0) {
                 p.active = false;
                 // Scale to 0 to hide
@@ -474,21 +474,12 @@ export class ParticleSystem {
             } else {
                 const lifeRatio = p.life / p.maxLife;
 
-                // Smoke grows over lifetime
+                // Smoke grows over lifetime and maintains original color
                 // Growth phase: scale from 1.0 to 4.0 over full lifetime
                 const growthProgress = 1.0 - lifeRatio; // 0 at spawn, 1 at death
                 const scaleMod = 1.0 + growthProgress * 3.0; // Grows to 4x size
 
-                // Fade to transparent (black) in last 40% of life
-                // With lower material opacity (0.6), black appears fully transparent
-                if (lifeRatio < 0.4) {
-                    const fadeRatio = lifeRatio / 0.4; // 0 at death, 1 at 40% life
-                    // Lerp from original color to black
-                    const fadedColor = new THREE.Color();
-                    fadedColor.lerpColors(new THREE.Color(0x000000), p.originalColor, fadeRatio);
-                    this.smokeMesh.setColorAt(i, fadedColor);
-                    this.smokeMesh.instanceColor.needsUpdate = true;
-                }
+                // Keep original color throughout lifetime (material opacity handles transparency)
 
                 const currentScale = p.initialScale * scaleMod;
 
