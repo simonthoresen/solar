@@ -21,9 +21,11 @@ class MockVelocityField {
             const vortexRadius = 2.0;
             const radiusSq = vortexRadius * vortexRadius;
             const multiplier = 5.0;
-            const simulatedVelocity = new THREE.Vector3(0, 0, -10); // Simulate ship moving forward
 
-            this.studio.currentShipInfo.engineOffsets.forEach(engineOffset => {
+            // Get engine directions (for animated engines)
+            const engineDirections = this.studio.engineDirections || [];
+
+            this.studio.currentShipInfo.engineOffsets.forEach((engineOffset, index) => {
                 // Calculate vortex position (radius units behind engine, y=0)
                 const vortexPos = new THREE.Vector3(
                     engineOffset.x,
@@ -33,10 +35,17 @@ class MockVelocityField {
 
                 const distSq = position.distanceToSquared(vortexPos);
                 if (distSq < radiusSq) {
-                    // Apply inverted velocity (backwards push)
-                    targetVec.x -= simulatedVelocity.x * multiplier;
-                    targetVec.y -= simulatedVelocity.y * multiplier;
-                    targetVec.z -= simulatedVelocity.z * multiplier;
+                    // Use engine-specific direction if available
+                    if (engineDirections[index]) {
+                        const exhaustDir = engineDirections[index];
+                        targetVec.x += exhaustDir.x * multiplier;
+                        targetVec.y += exhaustDir.y * multiplier;
+                        targetVec.z += exhaustDir.z * multiplier;
+                    } else {
+                        // Fallback: engines point backward (+Z in local space = backward)
+                        // For non-animated ships, just push in +Z direction
+                        targetVec.z += 1.0 * multiplier;
+                    }
                 }
             });
         }
@@ -486,13 +495,46 @@ export class ModelStudio {
     }
 
     updateAnimations(dt) {
-        EngineEffects.updateAnimations(
-            this.animations,
-            dt,
-            (newOffsets) => { this.currentShipInfo.engineOffsets = newOffsets; },
-            () => this.updateWakePositions(),
-            () => this.updateVortexPositions()
-        );
+        if (!this.animations || this.animations.length === 0) return;
+
+        this.animations.forEach(anim => {
+            if (anim.type === 'rotate') {
+                // Rotate the animated mesh
+                if (anim.axis === 'x') {
+                    anim.mesh.rotation.x += anim.speed * dt;
+                } else if (anim.axis === 'y') {
+                    anim.mesh.rotation.y += anim.speed * dt;
+                } else if (anim.axis === 'z') {
+                    anim.mesh.rotation.z += anim.speed * dt;
+                }
+
+                // If this animation has dynamic engines, update engine offsets AND directions
+                if (anim.dynamicEngines && anim.engineOffsets) {
+                    const newOffsets = [];
+                    const newDirections = [];
+
+                    anim.engineOffsets.forEach(baseOffset => {
+                        // Calculate engine position
+                        const rotatedOffset = baseOffset.clone();
+                        rotatedOffset.applyEuler(anim.mesh.rotation);
+                        rotatedOffset.add(anim.mesh.position);
+                        newOffsets.push(rotatedOffset);
+
+                        // Calculate engine exhaust direction
+                        // Engine points in +Z direction in its local space
+                        const localExhaustDir = new THREE.Vector3(0, 0, 1);
+                        // Apply engine group rotation (no ship rotation in model studio)
+                        const worldExhaustDir = localExhaustDir.clone().applyEuler(anim.mesh.rotation);
+                        newDirections.push(worldExhaustDir);
+                    });
+
+                    this.currentShipInfo.engineOffsets = newOffsets;
+                    this.engineDirections = newDirections;
+                    this.updateWakePositions();
+                    this.updateVortexPositions();
+                }
+            }
+        });
     }
 
     updateWakePositions() {

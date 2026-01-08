@@ -36,16 +36,26 @@ export class VelocityField {
         // 3. Player Engine Vortex (check all engine vortices)
         if (player && player.getVortexPositions) {
             const vortexPositions = player.getVortexPositions();
+            const vortexDirections = player.getVortexDirections ? player.getVortexDirections() : [];
             const vortexRadius = playerConfig.vortexRadius || 2.0;
             const radiusSq = vortexRadius * vortexRadius;
             const multiplier = 5.0;
 
-            vortexPositions.forEach(vortexPos => {
+            vortexPositions.forEach((vortexPos, index) => {
                 const distSq = position.distanceToSquared(vortexPos);
                 if (distSq < radiusSq) {
-                    target.x -= player.velocity.x * multiplier;
-                    target.y -= player.velocity.y * multiplier;
-                    target.z -= player.velocity.z * multiplier;
+                    // Use engine-specific direction if available, otherwise fall back to ship velocity
+                    if (vortexDirections[index]) {
+                        const exhaustDir = vortexDirections[index];
+                        target.x += exhaustDir.x * multiplier;
+                        target.y += exhaustDir.y * multiplier;
+                        target.z += exhaustDir.z * multiplier;
+                    } else {
+                        // Legacy fallback: opposite of ship velocity
+                        target.x -= player.velocity.x * multiplier;
+                        target.y -= player.velocity.y * multiplier;
+                        target.z -= player.velocity.z * multiplier;
+                    }
                 }
             });
         }

@@ -107,6 +107,7 @@ export class Spaceship {
         this.engineOffsets = modelData.engineOffsets; // Array of Vector3
         this.baseEngineOffsets = modelData.engineOffsets.map(v => v.clone()); // Store base offsets
         this.animations = modelData.animations || []; // Array of animation data
+        this.engineDirections = null; // Will be calculated dynamically for animated engines
 
         // Apply scale from config if needed (or keep modelScale 1.0)
         const scale = playerConfig.modelScale || 1.0;
@@ -141,6 +142,7 @@ export class Spaceship {
 
     initVortexDebug() {
         this.vortexLines = [];
+        this.vortexArrows = [];
         const radius = playerConfig.vortexRadius || 2.0;
 
         if (!this.engineOffsets || this.engineOffsets.length === 0) {
@@ -161,6 +163,19 @@ export class Spaceship {
             vortexLine.visible = false;
             this.mesh.add(vortexLine);
             this.vortexLines.push(vortexLine);
+
+            // Add arrow to show velocity direction applied by vortex
+            const arrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, 1), // Initial direction (will be updated in update())
+                new THREE.Vector3(engineOffset.x, 0, engineOffset.z + radius), // Origin at vortex center
+                2.0, // Length
+                0x00ffff, // Cyan color
+                0.4, // Head length
+                0.2 // Head width
+            );
+            arrow.visible = false;
+            this.mesh.add(arrow);
+            this.vortexArrows.push(arrow);
         });
 
         // Keep backward compatibility - first vortex is the "main" vortex
@@ -323,13 +338,48 @@ export class Spaceship {
     }
 
     updateAnimations(dt) {
-        EngineEffects.updateAnimations(
-            this.animations,
-            dt,
-            (newOffsets) => { this.engineOffsets = newOffsets; },
-            () => this.updateWakePositions(),
-            () => this.updateVortexPositions()
-        );
+        if (!this.animations || this.animations.length === 0) return;
+
+        this.animations.forEach(anim => {
+            if (anim.type === 'rotate') {
+                // Rotate the animated mesh
+                if (anim.axis === 'x') {
+                    anim.mesh.rotation.x += anim.speed * dt;
+                } else if (anim.axis === 'y') {
+                    anim.mesh.rotation.y += anim.speed * dt;
+                } else if (anim.axis === 'z') {
+                    anim.mesh.rotation.z += anim.speed * dt;
+                }
+
+                // If this animation has dynamic engines, update engine offsets AND directions
+                if (anim.dynamicEngines && anim.engineOffsets) {
+                    const newOffsets = [];
+                    const newDirections = [];
+
+                    anim.engineOffsets.forEach(baseOffset => {
+                        // Calculate engine position
+                        const rotatedOffset = baseOffset.clone();
+                        rotatedOffset.applyEuler(anim.mesh.rotation);
+                        rotatedOffset.add(anim.mesh.position);
+                        newOffsets.push(rotatedOffset);
+
+                        // Calculate engine exhaust direction
+                        // Engine points in +Z direction in its local space
+                        const localExhaustDir = new THREE.Vector3(0, 0, 1);
+                        // Apply engine group rotation
+                        const groupExhaustDir = localExhaustDir.applyEuler(anim.mesh.rotation);
+                        // Apply ship rotation to get world-space direction
+                        const worldExhaustDir = groupExhaustDir.applyEuler(this.rotation);
+                        newDirections.push(worldExhaustDir);
+                    });
+
+                    this.engineOffsets = newOffsets;
+                    this.engineDirections = newDirections;
+                    this.updateWakePositions();
+                    this.updateVortexPositions();
+                }
+            }
+        });
     }
 
     updateWakePositions() {
@@ -339,6 +389,29 @@ export class Spaceship {
     updateVortexPositions() {
         const radius = playerConfig.vortexRadius || 2.0;
         EngineEffects.updateVortexPositions(this.vortexLines, this.engineOffsets, radius);
+
+        // Update arrow directions to show velocity applied by vortex
+        // Vortex now applies velocity based on each engine's exhaust direction
+        if (this.vortexArrows && this.velocity.length() > 0.01) {
+            const vortexDirections = this.getVortexDirections();
+            const multiplier = 5.0; // Same multiplier as in VelocityField
+
+            this.engineOffsets.forEach((engineOffset, index) => {
+                if (this.vortexArrows[index] && vortexDirections[index]) {
+                    // Update arrow position to follow the vortex ring
+                    const arrowPos = new THREE.Vector3(engineOffset.x, 0, engineOffset.z + radius);
+                    this.vortexArrows[index].position.copy(arrowPos);
+
+                    // Use the engine's exhaust direction
+                    const direction = vortexDirections[index].clone().normalize();
+                    const length = Math.min(this.velocity.length() * multiplier * 0.3, 3.0); // Scale length
+
+                    // Update arrow direction and length
+                    this.vortexArrows[index].setDirection(direction);
+                    this.vortexArrows[index].setLength(length, length * 0.2, length * 0.1);
+                }
+            });
+        }
     }
 
     checkBoundaries() {
@@ -492,6 +565,36 @@ export class Spaceship {
         return vortexPositions;
     }
 
+    getVortexDirections() {
+        // Return the exhaust direction for each engine (the direction smoke should be pushed)
+        // Use stored directions if available (for animated engines), otherwise calculate from ship rotation
+
+        if (this.engineDirections) {
+            // Use pre-calculated directions (updated by animations)
+            return this.engineDirections;
+        }
+
+        // Calculate from ship rotation (for non-animated engines)
+        const vortexDirections = [];
+
+        if (this.engineOffsets && this.engineOffsets.length > 0) {
+            this.engineOffsets.forEach(() => {
+                // Engine exhaust direction in local space is +Z
+                const localExhaustDir = new THREE.Vector3(0, 0, 1);
+                // Apply ship rotation to get world-space direction
+                const worldExhaustDir = localExhaustDir.applyEuler(this.rotation);
+                vortexDirections.push(worldExhaustDir);
+            });
+        } else {
+            // Fallback
+            const localExhaustDir = new THREE.Vector3(0, 0, 1);
+            const worldExhaustDir = localExhaustDir.applyEuler(this.rotation);
+            vortexDirections.push(worldExhaustDir);
+        }
+
+        return vortexDirections;
+    }
+
     setDebugVisibility(visible) {
         // Base logic for debug
         if (typeof visible === 'object') {
@@ -500,6 +603,11 @@ export class Spaceship {
             if (this.vortexLines) {
                 this.vortexLines.forEach(line => {
                     line.visible = visible.playerVortex;
+                });
+            }
+            if (this.vortexArrows) {
+                this.vortexArrows.forEach(arrow => {
+                    arrow.visible = visible.playerVortex;
                 });
             }
         } else {
