@@ -157,6 +157,61 @@ export class EngineEffects {
         });
     }
 
+    static updateExhaustDebugVisuals(
+        thrusterOffsets,
+        thrusterConfigs,
+        exhaustRings,
+        exhaustArrows,
+        isThrusting
+    ) {
+        if (!thrusterOffsets || !exhaustRings || !exhaustArrows) return;
+
+        // Update rectangle positions and arrows for each thruster
+        thrusterOffsets.forEach((thrusterOffset, index) => {
+            // Get config for this thruster
+            const config = thrusterConfigs[index] || {
+                exhaustWidth: 3.0,
+                exhaustLength: 6.0,
+                exhaustForce: 10.0,
+                smokeSize: 0.3,
+                smokeColor: 0xaaaaaa,
+                smokeLifetime: 3.0
+            };
+
+            const exhaustForce = config.exhaustForce;
+
+            // Update rectangle position
+            if (exhaustRings[index]) {
+                // Position rectangle starting at the thruster, extending backward
+                exhaustRings[index].position.set(thrusterOffset.x, 0, thrusterOffset.z);
+            }
+
+            // Update arrow
+            if (exhaustArrows[index]) {
+                // Position arrow at near end of exhaust field (at the thruster)
+                const arrowPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z);
+                exhaustArrows[index].position.copy(arrowPos);
+
+                // Arrows are children of the ship mesh, so use LOCAL exhaust direction
+                // Thruster exhaust always points backward (+Z) in local space
+                const localExhaustDir = new THREE.Vector3(0, 0, 1);
+
+                // Arrow length equals exhaust force when thrusters active
+                const arrowLength = isThrusting ? exhaustForce : 0.0;
+
+                // Update arrow direction and length
+                exhaustArrows[index].setDirection(localExhaustDir);
+                if (arrowLength > 0) {
+                    exhaustArrows[index].setLength(arrowLength, arrowLength * 0.2, arrowLength * 0.1);
+                    exhaustArrows[index].visible = exhaustArrows[index].visible; // preserve visibility from debug state
+                } else {
+                    // Hide arrow when thrusters are off
+                    exhaustArrows[index].visible = false;
+                }
+            }
+        });
+    }
+
     static initFlames(thrusterOffsets, parentMesh) {
         const flameMeshes = [];
 

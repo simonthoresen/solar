@@ -605,54 +605,14 @@ export class ModelStudio {
     }
 
     updateExhaustPositions() {
-        const thrusterConfigs = this.currentShipInfo?.thrusterConfigs || [];
-
-        // Update rectangle positions and arrows for each thruster
         if (this.currentShipInfo?.thrusterOffsets) {
-            this.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
-                // Get config for this thruster
-                const config = thrusterConfigs[index] || {
-                    exhaustWidth: 3.0,
-                    exhaustLength: 6.0,
-                    exhaustForce: 10.0,
-                    smokeSize: 0.3,
-                    smokeColor: 0xaaaaaa,
-                    smokeLifetime: 3.0
-                };
-
-                const exhaustLength = config.exhaustLength;
-                const exhaustForce = config.exhaustForce;
-
-                // Update rectangle position
-                if (this.exhaustRings && this.exhaustRings[index]) {
-                    // Position rectangle starting at the thruster, extending backward
-                    this.exhaustRings[index].position.set(thrusterOffset.x, 0, thrusterOffset.z);
-                }
-
-                // Update arrow
-                if (this.exhaustArrows && this.exhaustArrows[index]) {
-                    // Update arrow position to forward edge of exhaust rectangle (middle of forward edge)
-                    const exhaustPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustLength);
-                    this.exhaustArrows[index].position.copy(exhaustPos);
-
-                    // Arrows are children of the ship mesh, so use LOCAL exhaust direction
-                    // Thruster exhaust always points backward (+Z) in local space
-                    // For animated thrusters, the rotation of the animation group is inherited automatically
-                    const localExhaustDir = new THREE.Vector3(0, 0, 1);
-
-                    // Arrow length equals exhaust rectangle length when thrusters active
-                    const arrowLength = this.engineOn ? exhaustLength : 0.0;
-
-                    // Update arrow direction and length
-                    this.exhaustArrows[index].setDirection(localExhaustDir);
-                    if (arrowLength > 0) {
-                        this.exhaustArrows[index].setLength(arrowLength, arrowLength * 0.2, arrowLength * 0.1);
-                    } else {
-                        // Hide arrow when thrusters are off
-                        this.exhaustArrows[index].visible = false;
-                    }
-                }
-            });
+            EngineEffects.updateExhaustDebugVisuals(
+                this.currentShipInfo.thrusterOffsets,
+                this.currentShipInfo.thrusterConfigs || [],
+                this.exhaustRings,
+                this.exhaustArrows,
+                this.engineOn
+            );
         }
     }
 }
