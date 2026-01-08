@@ -597,18 +597,7 @@ export class Game {
                 const collisionDistance = shipA.collisionRadius + shipB.collisionRadius;
 
                 if (distance < collisionDistance) {
-                    // Collision detected - apply damage to both ships
-                    shipA.takeDamage(25);
-                    shipB.takeDamage(25);
-
-                    // Set cooldown to prevent continuous damage (0.5 seconds)
-                    shipA.collisionCooldown = 0.5;
-                    shipB.collisionCooldown = 0.5;
-
-                    // Apply physics separation - push ships apart
-                    const overlap = collisionDistance - distance;
-
-                    // Calculate normal from A to B
+                    // Calculate collision normal from A to B
                     const normal = new THREE.Vector3();
                     normal.subVectors(shipB.position, shipA.position);
 
@@ -619,14 +608,33 @@ export class Game {
                         normal.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
                     }
 
+                    // Calculate relative velocity and impact speed
+                    const relativeVelocity = new THREE.Vector3().subVectors(shipB.velocity, shipA.velocity);
+                    const velocityAlongNormal = relativeVelocity.dot(normal);
+
+                    // Calculate damage based on impact velocity (1 to 50)
+                    // Use absolute value since negative means approaching
+                    const impactSpeed = Math.abs(velocityAlongNormal);
+                    // Scale: 0 speed = 1 damage, 100 speed = 50 damage (capped)
+                    const damage = Math.max(1, Math.min(50, 1 + (impactSpeed / 100) * 49));
+
+                    // Apply velocity-scaled damage to both ships
+                    shipA.takeDamage(damage);
+                    shipB.takeDamage(damage);
+
+                    // Set cooldown to prevent continuous damage (0.5 seconds)
+                    shipA.collisionCooldown = 0.5;
+                    shipB.collisionCooldown = 0.5;
+
+                    // Apply physics separation - push ships apart
+                    const overlap = collisionDistance - distance;
+
                     // Push ships apart by half the overlap each
                     shipA.position.addScaledVector(normal, -overlap * 0.5);
                     shipB.position.addScaledVector(normal, overlap * 0.5);
 
                     // Apply velocity impulse - bounce apart
                     const bounceStrength = 20.0; // Adjust for desired bounce intensity
-                    const relativeVelocity = new THREE.Vector3().subVectors(shipB.velocity, shipA.velocity);
-                    const velocityAlongNormal = relativeVelocity.dot(normal);
 
                     // Only apply impulse if ships are moving toward each other
                     if (velocityAlongNormal < 0) {
