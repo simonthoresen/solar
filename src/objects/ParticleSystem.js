@@ -45,7 +45,7 @@ export class ParticleSystem {
         this.smokeMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.6, // Lower opacity so black colors become fully transparent
             side: THREE.DoubleSide,
             depthWrite: false
         });
@@ -72,7 +72,8 @@ export class ParticleSystem {
                 life: 0,
                 maxLife: 1,
                 initialScale: 1,
-                smoothedInfluence: new THREE.Vector3()
+                smoothedInfluence: new THREE.Vector3(),
+                originalColor: new THREE.Color(1, 1, 1) // Store original spawn color
             };
             // Hide initially
             this.dummy.position.set(0, 0, 0);
@@ -337,8 +338,9 @@ export class ParticleSystem {
             p.smoothedInfluence.set(0, 0, 0);
         }
 
-        // Set per-instance color
+        // Set per-instance color and store original
         const tempColor = new THREE.Color(color);
+        p.originalColor.copy(tempColor);
         this.smokeMesh.setColorAt(idx, tempColor);
         this.smokeMesh.instanceColor.needsUpdate = true;
 
@@ -464,7 +466,7 @@ export class ParticleSystem {
 
             p.life -= dt;
 
-            // 2. Visuals (Growing only, no fade)
+            // 2. Visuals (Growing and Fading to transparent)
             if (p.life <= 0) {
                 p.active = false;
                 // Scale to 0 to hide
@@ -472,10 +474,21 @@ export class ParticleSystem {
             } else {
                 const lifeRatio = p.life / p.maxLife;
 
-                // Smoke grows over lifetime and stays at full size
+                // Smoke grows over lifetime
                 // Growth phase: scale from 1.0 to 4.0 over full lifetime
                 const growthProgress = 1.0 - lifeRatio; // 0 at spawn, 1 at death
                 const scaleMod = 1.0 + growthProgress * 3.0; // Grows to 4x size
+
+                // Fade to transparent (black) in last 40% of life
+                // With lower material opacity (0.6), black appears fully transparent
+                if (lifeRatio < 0.4) {
+                    const fadeRatio = lifeRatio / 0.4; // 0 at death, 1 at 40% life
+                    // Lerp from original color to black
+                    const fadedColor = new THREE.Color();
+                    fadedColor.lerpColors(new THREE.Color(0x000000), p.originalColor, fadeRatio);
+                    this.smokeMesh.setColorAt(i, fadedColor);
+                    this.smokeMesh.instanceColor.needsUpdate = true;
+                }
 
                 const currentScale = p.initialScale * scaleMod;
 
