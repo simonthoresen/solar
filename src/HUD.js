@@ -329,15 +329,17 @@ export class HUD {
                         diamondVisible = true;
                         diamondColor = 0xffff00;
                     } else if (isSelectedByPlayer) {
-                        // Priority 3: Player selected themselves → green diamond
+                        // Priority 3: Player selected themselves
                         diamondVisible = true;
-                        diamondColor = 0x00ff00;
+                        // Red if autofire is on, green if autofire is off
+                        diamondColor = (this.game.player && this.game.player.autofire) ? 0xff0000 : 0x00ff00;
                     }
                 } else {
-                    // For non-player items: show green diamond if player selected it
+                    // For non-player items: show diamond if player selected it
                     if (isSelectedByPlayer) {
                         diamondVisible = true;
-                        diamondColor = 0x00ff00;
+                        // Red if autofire is on, green if autofire is off
+                        diamondColor = (this.game.player && this.game.player.autofire) ? 0xff0000 : 0x00ff00;
                     }
                 }
 
