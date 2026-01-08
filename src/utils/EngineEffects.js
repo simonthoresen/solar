@@ -24,9 +24,9 @@ export class EngineEffects {
             const speed = shipVelocity.length();
             // Scale emission rate with speed: interval decreases as speed increases
             // At speed 0: interval = baseInterval
-            // At speed 50: interval = baseInterval / 3
-            // At speed 100: interval = baseInterval / 5
-            const speedFactor = 1.0 + (speed * 0.04);
+            // At speed 50: interval = baseInterval / 5.5
+            // At speed 100: interval = baseInterval / 10
+            const speedFactor = 1.0 + (speed * 0.09);
             emissionInterval = baseEmissionInterval / speedFactor;
         }
 
