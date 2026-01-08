@@ -466,7 +466,7 @@ export class ParticleSystem {
 
             p.life -= dt;
 
-            // 2. Visuals (Growing only)
+            // 2. Visuals (Growing then shrinking)
             if (p.life <= 0) {
                 p.active = false;
                 // Scale to 0 to hide
@@ -474,12 +474,15 @@ export class ParticleSystem {
             } else {
                 const lifeRatio = p.life / p.maxLife;
 
-                // Smoke grows over lifetime and maintains original color
-                // Growth phase: scale from 1.0 to 4.0 over full lifetime
+                // Smoke grows over lifetime, then shrinks in last 10% to avoid pop
                 const growthProgress = 1.0 - lifeRatio; // 0 at spawn, 1 at death
-                const scaleMod = 1.0 + growthProgress * 3.0; // Grows to 4x size
+                let scaleMod = 1.0 + growthProgress * 3.0; // Grows to 4x size
 
-                // Keep original color throughout lifetime (material opacity handles transparency)
+                // Shrink to 0 in last 10% of life to avoid pop effect
+                if (lifeRatio < 0.1) {
+                    const shrinkRatio = lifeRatio / 0.1; // 0 at death, 1 at 10% life
+                    scaleMod *= shrinkRatio;
+                }
 
                 const currentScale = p.initialScale * scaleMod;
 
