@@ -45,17 +45,18 @@ export class ParticleSystem {
         this.smokeMaterial = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             transparent: true,
-            opacity: 0.8,
+            opacity: 1.0, // Use per-instance alpha instead
+            vertexColors: true, // Enable per-instance colors with alpha
             side: THREE.DoubleSide,
             depthWrite: false
         });
 
         this.smokeMesh = new THREE.InstancedMesh(this.smokeGeometry, this.smokeMaterial, this.smokeMaxCount);
         this.smokeMesh.frustumCulled = false; // Prevent culling
-        // Enable per-instance colors
+        // Enable per-instance colors with alpha (RGBA = 4 components)
         this.smokeMesh.instanceColor = new THREE.InstancedBufferAttribute(
-            new Float32Array(this.smokeMaxCount * 3),
-            3
+            new Float32Array(this.smokeMaxCount * 4),
+            4
         );
         this.scene.add(this.smokeMesh);
 
@@ -79,7 +80,15 @@ export class ParticleSystem {
             this.dummy.scale.set(0, 0, 0);
             this.dummy.updateMatrix();
             this.smokeMesh.setMatrixAt(i, this.dummy.matrix);
+
+            // Initialize color with alpha (RGBA)
+            const baseIndex = i * 4;
+            this.smokeMesh.instanceColor.array[baseIndex + 0] = 1.0; // R
+            this.smokeMesh.instanceColor.array[baseIndex + 1] = 1.0; // G
+            this.smokeMesh.instanceColor.array[baseIndex + 2] = 1.0; // B
+            this.smokeMesh.instanceColor.array[baseIndex + 3] = 0.0; // A (hidden)
         }
+        this.smokeMesh.instanceColor.needsUpdate = true;
 
         this.initExplosions();
         this.initBlastSpheres();
@@ -337,9 +346,13 @@ export class ParticleSystem {
             p.smoothedInfluence.set(0, 0, 0);
         }
 
-        // Set per-instance color
+        // Set per-instance color with alpha (RGBA)
         const tempColor = new THREE.Color(color);
-        this.smokeMesh.setColorAt(idx, tempColor);
+        const baseIndex = idx * 4;
+        this.smokeMesh.instanceColor.array[baseIndex + 0] = tempColor.r;
+        this.smokeMesh.instanceColor.array[baseIndex + 1] = tempColor.g;
+        this.smokeMesh.instanceColor.array[baseIndex + 2] = tempColor.b;
+        this.smokeMesh.instanceColor.array[baseIndex + 3] = 0.8; // Initial alpha
         this.smokeMesh.instanceColor.needsUpdate = true;
 
         const cameraQuaternion = camera ? camera.quaternion : null;
@@ -471,17 +484,21 @@ export class ParticleSystem {
                 this.updateInstance(this.smokeMesh, i, p.position, 0, null, null);
             } else {
                 const lifeRatio = p.life / p.maxLife;
-                let scaleMod = 1.0;
 
-                // Smoke grows over lifetime then fades away at the end
+                // Smoke grows over lifetime
                 // Growth phase: scale from 1.0 to 4.0 over full lifetime
                 const growthProgress = 1.0 - lifeRatio; // 0 at spawn, 1 at death
-                scaleMod = 1.0 + growthProgress * 3.0; // Grows to 4x size
+                const scaleMod = 1.0 + growthProgress * 3.0; // Grows to 4x size
 
-                // Fade out in last 30% of life
+                // Fade to transparent in last 30% of life (alpha channel)
+                let alpha = 0.8; // Base alpha
                 if (lifeRatio < 0.3) {
-                    scaleMod *= (lifeRatio / 0.3);
+                    alpha = 0.8 * (lifeRatio / 0.3); // Fade from 0.8 to 0.0
                 }
+
+                // Update alpha in instanceColor (RGBA)
+                const baseIndex = i * 4;
+                this.smokeMesh.instanceColor.array[baseIndex + 3] = alpha;
 
                 const currentScale = p.initialScale * scaleMod;
 
