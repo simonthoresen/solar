@@ -672,61 +672,50 @@ export class Game {
         // Can't select if player is dead
         if (!this.player || !this.player.isActive) return;
 
-        // Collect all selectable items
-        const selectableItems = [];
+        // Separate ships into aggressive and non-aggressive
+        const aggressiveShips = [];
+        const nonAggressiveShips = [];
 
-        // Add celestial bodies
-        this.celestialBodies.forEach(body => {
-            selectableItems.push({
-                object: body,
-                position: body.position
-            });
-        });
-
-        // Add NPCs
         this.npcs.forEach(npc => {
-            if (npc.isActive) {
-                selectableItems.push({
-                    object: npc,
-                    position: npc.position
-                });
+            if (!npc.isActive) return;
+
+            const isAggressive = npc.hasAttacked || npc.role === 'kamikaze' || npc.role === 'shooter';
+            if (isAggressive) {
+                aggressiveShips.push(npc);
+            } else {
+                nonAggressiveShips.push(npc);
             }
         });
 
-        // Don't add player - Tab should only select external targets
+        // Priority: cycle through aggressive ships first, then non-aggressive
+        const targetList = aggressiveShips.length > 0 ? aggressiveShips : nonAggressiveShips;
 
-        if (selectableItems.length === 0) return;
+        if (targetList.length === 0) return;
 
-        // Find nearest item to player position
-        const playerPos = this.player.getPosition();
-        let nearest = null;
-        let minDistance = Infinity;
+        // Get current selected item
+        const currentSelection = this.player.getSelectedItem();
+        let nextIndex = 0;
 
-        selectableItems.forEach(item => {
-            const distance = playerPos.distanceTo(item.position);
-            if (distance < minDistance) {
-                minDistance = distance;
-                nearest = item;
+        // Find current selection in the target list
+        if (currentSelection) {
+            const currentIndex = targetList.indexOf(currentSelection);
+            if (currentIndex !== -1) {
+                // Cycle to next ship (wrap around to start)
+                nextIndex = (currentIndex + 1) % targetList.length;
             }
-        });
+            // If current selection is not in target list, start from beginning
+        }
 
-        if (nearest) {
-            const target = nearest.object;
+        const nextTarget = targetList[nextIndex];
 
-            // If already selected, do nothing
-            if (this.player.getSelectedItem() === target) {
-                return;
-            }
+        // Deselect current
+        this.deselectAll();
 
-            // Deselect current
-            this.deselectAll();
+        // Select next target
+        this.player.setSelectedItem(nextTarget);
 
-            // Select nearest using player's selection
-            this.player.setSelectedItem(target);
-
-            if (this.detailPanel) {
-                this.detailPanel.show(target);
-            }
+        if (this.detailPanel) {
+            this.detailPanel.show(nextTarget);
         }
     }
 
