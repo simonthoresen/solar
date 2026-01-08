@@ -59,6 +59,11 @@ export class HUD {
             overlay.mesh.geometry.dispose();
             overlay.mesh.material.dispose();
 
+            if (overlay.diamond) {
+                overlay.diamond.geometry.dispose();
+                overlay.diamondMaterial.dispose();
+            }
+
             if (overlay.hitMesh) {
                 overlay.hitMesh.geometry.dispose();
                 overlay.hitMesh.material.dispose();
@@ -110,6 +115,21 @@ export class HUD {
         const box = new Line2(geometry, material);
         box.frustumCulled = false;
 
+        // Create diamond (rotated square) for selection indicator
+        const diamondGeometry = new LineGeometry();
+        diamondGeometry.setPositions(positions);
+        const diamondMaterial = new LineMaterial({
+            color: color,
+            linewidth: 2,
+            resolution: this.resolution,
+            dashed: false
+        });
+        const diamond = new Line2(diamondGeometry, diamondMaterial);
+        diamond.frustumCulled = false;
+        diamond.rotation.z = Math.PI / 4; // Rotate 45 degrees
+        diamond.visible = false; // Hidden by default, shown when selected
+        box.add(diamond); // Add as child so it moves with box
+
         // Invisible Hit Mesh for Raycasting
         // Only valid if target is a CelestialBody (has a mesh)
         let hitMesh = null;
@@ -125,6 +145,8 @@ export class HUD {
 
         this.overlays.push({
             mesh: box,
+            diamond: diamond,
+            diamondMaterial: diamondMaterial,
             hitMesh: hitMesh,
             target: celestialBody,
             material: material,
@@ -274,13 +296,18 @@ export class HUD {
                 desiredColor = 0x00ff00; // Green
             }
 
-            // Set Thickness based on Selection
+            // Set Selection Diamond visibility
             const isSelected = (this.selectedBody === t);
-            if (isSelected) {
-                desiredLineWidth = 4; // Thicker for selected
-            } else {
-                desiredLineWidth = 2; // Standard
+            if (item.diamond) {
+                item.diamond.visible = isSelected;
+                // Update diamond color to match box color
+                if (item.diamondMaterial.color.getHex() !== desiredColor) {
+                    item.diamondMaterial.color.setHex(desiredColor);
+                }
             }
+
+            // Keep line width standard (no thickness change)
+            desiredLineWidth = 2;
 
             // Apply Changes
             if (item.material.color.getHex() !== desiredColor) {
