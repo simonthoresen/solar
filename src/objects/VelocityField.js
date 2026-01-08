@@ -34,17 +34,19 @@ export class VelocityField {
         }
 
         // 3. Player Engine Exhaust (check all engine exhausts)
-        // Exhaust field is rectangular: 3 units wide x 6 units long
+        // Use per-thruster exhaust field dimensions
         if (player && player.getExhaustPositions) {
             const exhaustPositions = player.getExhaustPositions();
             const exhaustDirections = player.getExhaustDirections ? player.getExhaustDirections() : [];
-            const exhaustWidth = 3.0;
-            const exhaustLength = 6.0;
-            const halfWidth = exhaustWidth / 2.0;
-            const halfLength = exhaustLength / 2.0;
+            const exhaustDimensions = player.getExhaustDimensions ? player.getExhaustDimensions() : [];
             const multiplier = 5.0;
 
             exhaustPositions.forEach((exhaustPos, index) => {
+                // Get dimensions for this thruster
+                const dimensions = exhaustDimensions[index] || { width: 3.0, length: 6.0 };
+                const halfWidth = dimensions.width / 2.0;
+                const halfLength = dimensions.length / 2.0;
+
                 // Check if particle is within rectangular exhaust field
                 // Get vector from exhaust center to particle
                 const toParticle = position.clone().sub(exhaustPos);

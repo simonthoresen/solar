@@ -11,7 +11,8 @@ export class EngineEffects {
         camera,
         celestialBodies,
         tempInfluenceVector,
-        emissionInterval = 0.05
+        emissionInterval = 0.05,
+        thrusterConfigs = []
     ) {
         if (!particleSystem || !camera || !velocityField) return smokeAccumulator;
 
@@ -21,14 +22,32 @@ export class EngineEffects {
             smokeAccumulator = 0;
             const smokeMaxRadius = 1.0;
 
-            thrusterOffsets.forEach(thrusterOffset => {
+            thrusterOffsets.forEach((thrusterOffset, index) => {
+                // Get config for this thruster
+                const config = thrusterConfigs[index] || {
+                    exhaustWidth: 3.0,
+                    exhaustLength: 6.0,
+                    smokeSize: 0.3,
+                    smokeColor: 0xaaaaaa,
+                    smokeLifetime: 3.0
+                };
+
                 // Apply smoke offset in local space before rotation
                 const offsetWithSmoke = thrusterOffset.clone();
                 offsetWithSmoke.z += smokeMaxRadius;
 
                 const flamePos = getPositionCallback(offsetWithSmoke);
                 velocityField.calculateTotalVelocity(flamePos, celestialBodies || [], null, tempInfluenceVector);
-                particleSystem.spawnSmoke(flamePos, tempInfluenceVector, camera);
+
+                // Spawn smoke with per-thruster configuration
+                particleSystem.spawnSmoke(
+                    flamePos,
+                    tempInfluenceVector,
+                    camera,
+                    config.smokeSize,
+                    config.smokeColor,
+                    config.smokeLifetime
+                );
             });
         }
 

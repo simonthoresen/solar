@@ -12,14 +12,24 @@ export class ShipModels {
      * Creates a ship model group based on type.
      * @param {string} type
      * @param {number} color
-     * @returns {object} { mesh: THREE.Group, collisionRadius: number, thrusterOffsets: THREE.Vector3[], turretMounts: Array, animations: Array }
+     * @returns {object} { mesh: THREE.Group, collisionRadius: number, thrusterOffsets: THREE.Vector3[], thrusterConfigs: Array, turretMounts: Array, animations: Array }
      */
     static createModel(type, color) {
         const mesh = new THREE.Group();
         let collisionRadius = 1.0;
         let thrusterOffsets = [new THREE.Vector3(0, 0, 1.0)]; // Array to support multiple engines
+        let thrusterConfigs = []; // Array of { exhaustWidth, exhaustLength, smokeSize, smokeColor, smokeLifetime }
         let turretMounts = []; // Array of { position: Vector3, type: string }
         let animations = []; // Array of { mesh: THREE.Mesh, type: string, axis: string, speed: number, thrusterOffsets?: Vector3[] }
+
+        // Default thruster configuration
+        const defaultThrusterConfig = {
+            exhaustWidth: 3.0,
+            exhaustLength: 6.0,
+            smokeSize: 0.3,
+            smokeColor: 0xaaaaaa,
+            smokeLifetime: 3.0
+        };
 
         // Materials
         // Materials - Use Phong for per-pixel lighting (better for low poly)
@@ -418,7 +428,12 @@ export class ShipModels {
 
         // Common Axis Helper (optional, handled by Spaceship debug)
 
-        return { mesh, collisionRadius, thrusterOffsets, turretMounts, animations };
+        // Populate thrusterConfigs with defaults if not specified
+        while (thrusterConfigs.length < thrusterOffsets.length) {
+            thrusterConfigs.push({ ...defaultThrusterConfig });
+        }
+
+        return { mesh, collisionRadius, thrusterOffsets, thrusterConfigs, turretMounts, animations };
     }
 
     static getRandomType() {

@@ -17,19 +17,27 @@ class MockVelocityField {
         targetVec.set(0, 0, 1);
 
         // Apply exhaust field from ship thrusters (only when thrusters are on)
-        // Exhaust field is rectangular: 3 units wide x 6 units long
+        // Use per-thruster exhaust field dimensions
         if (this.studio.engineOn && this.studio.currentShipInfo && this.studio.currentShipInfo.thrusterOffsets) {
-            const exhaustWidth = 3.0;
-            const exhaustLength = 6.0;
-            const halfWidth = exhaustWidth / 2.0;
-            const halfLength = exhaustLength / 2.0;
-            const exhaustCenter = exhaustLength / 2.0;
             const multiplier = 5.0;
 
             // Get thruster directions (for animated thrusters)
             const thrusterDirections = this.studio.thrusterDirections || [];
+            const thrusterConfigs = this.studio.currentShipInfo.thrusterConfigs || [];
 
             this.studio.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
+                // Get config for this thruster
+                const config = thrusterConfigs[index] || {
+                    exhaustWidth: 3.0,
+                    exhaustLength: 6.0
+                };
+
+                const exhaustWidth = config.exhaustWidth;
+                const exhaustLength = config.exhaustLength;
+                const halfWidth = exhaustWidth / 2.0;
+                const halfLength = exhaustLength / 2.0;
+                const exhaustCenter = exhaustLength / 2.0;
+
                 // Calculate exhaust center position
                 const exhaustPos = new THREE.Vector3(
                     thrusterOffset.x,
@@ -379,12 +387,23 @@ export class ModelStudio {
             thrusterOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
-        // Exhaust field is a rectangle: 3 units wide x 6 units long
-        const exhaustWidth = 3.0;
-        const exhaustLength = 6.0;
-        const halfWidth = exhaustWidth / 2.0;
+        // Get thruster configs from currentShipInfo
+        const thrusterConfigs = this.currentShipInfo?.thrusterConfigs || [];
 
-        thrusterOffsets.forEach(thrusterOffset => {
+        thrusterOffsets.forEach((thrusterOffset, index) => {
+            // Get config for this thruster
+            const config = thrusterConfigs[index] || {
+                exhaustWidth: 3.0,
+                exhaustLength: 6.0,
+                smokeSize: 0.3,
+                smokeColor: 0xaaaaaa,
+                smokeLifetime: 3.0
+            };
+
+            const exhaustWidth = config.exhaustWidth;
+            const exhaustLength = config.exhaustLength;
+            const halfWidth = exhaustWidth / 2.0;
+
             const rectPoints = [
                 new THREE.Vector3(-halfWidth, 0, 0),
                 new THREE.Vector3(halfWidth, 0, 0),
@@ -519,7 +538,8 @@ export class ModelStudio {
                     this.camera,
                     [],
                     this._tempSmokeInfluence,
-                    0.05
+                    0.05,
+                    this.currentShipInfo.thrusterConfigs
                 );
             }
 
@@ -585,28 +605,32 @@ export class ModelStudio {
     }
 
     updateExhaustPositions() {
-        // Exhaust field is a rectangle: 3 units wide x 6 units long
-        const exhaustWidth = 3.0;
-        const exhaustLength = 6.0;
+        const exhaustForce = 5.0; // Constant force magnitude when thrusters are active
+        const thrusterConfigs = this.currentShipInfo?.thrusterConfigs || [];
 
-        // Update rectangle positions for each thruster
-        if (this.exhaustRings && this.currentShipInfo?.thrusterOffsets) {
+        // Update rectangle positions and arrows for each thruster
+        if (this.currentShipInfo?.thrusterOffsets) {
             this.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
-                if (this.exhaustRings[index]) {
+                // Get config for this thruster
+                const config = thrusterConfigs[index] || {
+                    exhaustWidth: 3.0,
+                    exhaustLength: 6.0,
+                    smokeSize: 0.3,
+                    smokeColor: 0xaaaaaa,
+                    smokeLifetime: 3.0
+                };
+
+                const exhaustLength = config.exhaustLength;
+                const exhaustCenter = exhaustLength / 2.0;
+
+                // Update rectangle position
+                if (this.exhaustRings && this.exhaustRings[index]) {
                     // Position rectangle starting at the thruster, extending backward
                     this.exhaustRings[index].position.set(thrusterOffset.x, 0, thrusterOffset.z);
                 }
-            });
-        }
 
-        // Update exhaust direction arrows
-        // Arrow length based on thruster state (engineOn), not ship velocity
-        if (this.exhaustArrows && this.currentShipInfo?.thrusterOffsets) {
-            const exhaustForce = 5.0; // Constant force magnitude when thrusters are active
-            const exhaustCenter = exhaustLength / 2.0;
-
-            this.currentShipInfo.thrusterOffsets.forEach((thrusterOffset, index) => {
-                if (this.exhaustArrows[index]) {
+                // Update arrow
+                if (this.exhaustArrows && this.exhaustArrows[index]) {
                     // Update arrow position to center of exhaust rectangle (local coordinates)
                     const exhaustPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustCenter);
                     this.exhaustArrows[index].position.copy(exhaustPos);

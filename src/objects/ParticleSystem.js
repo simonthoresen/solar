@@ -46,6 +46,11 @@ export class ParticleSystem {
 
         this.smokeMesh = new THREE.InstancedMesh(this.smokeGeometry, this.smokeMaterial, this.smokeMaxCount);
         this.smokeMesh.frustumCulled = false; // Prevent culling
+        // Enable per-instance colors
+        this.smokeMesh.instanceColor = new THREE.InstancedBufferAttribute(
+            new Float32Array(this.smokeMaxCount * 3),
+            3
+        );
         this.scene.add(this.smokeMesh);
 
         // Smoke Data (Ring Buffer)
@@ -292,7 +297,7 @@ export class ParticleSystem {
         this.dustMesh.instanceMatrix.needsUpdate = true;
     }
 
-    spawnSmoke(position, initialInfluence = null, camera = null) {
+    spawnSmoke(position, initialInfluence = null, camera = null, size = 0.3, color = 0xaaaaaa, lifetime = 3.0) {
         // Get next slot in ring buffer
         const idx = this.smokeCursor;
         this.smokeCursor = (this.smokeCursor + 1) % this.smokeMaxCount;
@@ -307,15 +312,20 @@ export class ParticleSystem {
         p.position.z += (Math.random() - 0.5) * 0.5;
 
         p.velocity.set(0, 0, 0);
-        p.life = 3 + Math.random() * 6;
+        p.life = lifetime + Math.random() * lifetime; // Random variation around specified lifetime
         p.maxLife = p.life;
-        p.initialScale = 0.1 + Math.random() * 0.9;
+        p.initialScale = size + Math.random() * size * 0.5; // Size with random variation
 
         if (initialInfluence) {
             p.smoothedInfluence.copy(initialInfluence);
         } else {
             p.smoothedInfluence.set(0, 0, 0);
         }
+
+        // Set per-instance color
+        const tempColor = new THREE.Color(color);
+        this.smokeMesh.setColorAt(idx, tempColor);
+        this.smokeMesh.instanceColor.needsUpdate = true;
 
         const cameraQuaternion = camera ? camera.quaternion : null;
         this.updateInstance(this.smokeMesh, idx, p.position, p.initialScale, null, cameraQuaternion);
