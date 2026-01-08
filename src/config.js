@@ -170,10 +170,8 @@ export const playerConfig = {
     "turnSpeed": 3,
     "deceleration": 3,
     "smokeEmissionInterval": 0.01,
-    "vortexRadius": 3,
-    "vortexOffsetZ": 3.5,
+    "vortexRadius": 2,
     "hullColor": 0x4488ff,
     "modelScale": 1,
-    "wakeOffsetZ": 1.5,
     "laserColor": 0x00ff00
 };

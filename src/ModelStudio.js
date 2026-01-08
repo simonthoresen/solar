@@ -374,7 +374,7 @@ export class ModelStudio {
 
         this.initWake(modelData.engineOffsets);
         this.initStudioTurrets(modelData.turretMounts);
-        this.addDebugHelpers(this.currentShip, modelData.collisionRadius);
+        this.addDebugHelpers(this.currentShip, modelData.collisionRadius, modelData.engineOffsets);
 
         this.updateTurretUI();
 
@@ -385,7 +385,7 @@ export class ModelStudio {
         }
     }
 
-    addDebugHelpers(mesh, radius) {
+    addDebugHelpers(mesh, radius, engineOffsets) {
         // 1. Axis Helper
         const axisHelper = new THREE.AxesHelper(2);
         axisHelper.scale.set(1, 1, -1);
@@ -400,21 +400,27 @@ export class ModelStudio {
         boundaryLine.rotation.x = -Math.PI / 2;
         mesh.add(boundaryLine);
 
-        // 3. Vortex Field (Magenta)
-        // Default playerConfig.vortexRadius is 1.0 (from seeing Spaceship.js or config)
-        // Actually reading Spaceship.js: initVortexDebug uses playerConfig.vortexRadius || 1.0
-        const vortexRadius = 1.0;
-        const vCurve = new THREE.EllipseCurve(0, 0, vortexRadius, vortexRadius, 0, 2 * Math.PI, false, 0);
-        const vPoints = vCurve.getPoints(32);
-        const vGeom = new THREE.BufferGeometry().setFromPoints(vPoints);
-        const vMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
-        const vLine = new THREE.Line(vGeom, vMat);
+        // 3. Vortex Field (Magenta) - one ring per engine
+        const vortexRadius = 2.0;
+        this.vortexLines = [];
 
-        // Offset Z
-        const offsetZ = 1.5; // playerConfig.vortexOffsetZ || 1.5
-        vLine.position.set(0, 0, offsetZ);
-        vLine.rotation.x = -Math.PI / 2;
-        mesh.add(vLine);
+        if (!engineOffsets || engineOffsets.length === 0) {
+            engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
+        }
+
+        engineOffsets.forEach(engineOffset => {
+            const vCurve = new THREE.EllipseCurve(0, 0, vortexRadius, vortexRadius, 0, 2 * Math.PI, false, 0);
+            const vPoints = vCurve.getPoints(32);
+            const vGeom = new THREE.BufferGeometry().setFromPoints(vPoints);
+            const vMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
+            const vLine = new THREE.Line(vGeom, vMat);
+
+            // Position vortex 'radius' units behind the engine, with y=0
+            vLine.position.set(engineOffset.x, 0, engineOffset.z + vortexRadius);
+            vLine.rotation.x = -Math.PI / 2;
+            mesh.add(vLine);
+            this.vortexLines.push(vLine);
+        });
     }
 
     initWake(engineOffsets) {
@@ -654,6 +660,7 @@ export class ModelStudio {
 
                     // Update wake positions to match engine offsets
                     this.updateWakePositions();
+                    this.updateVortexPositions();
                 }
             }
         });
@@ -666,6 +673,20 @@ export class ModelStudio {
         this.currentShipInfo.engineOffsets.forEach((offset, index) => {
             if (this.wakeMeshes[index]) {
                 this.wakeMeshes[index].position.copy(offset);
+            }
+        });
+    }
+
+    updateVortexPositions() {
+        if (!this.vortexLines || !this.currentShipInfo.engineOffsets) return;
+
+        const vortexRadius = 2.0;
+
+        // Update each vortex ring to match its corresponding engine offset
+        this.currentShipInfo.engineOffsets.forEach((offset, index) => {
+            if (this.vortexLines[index]) {
+                // Position vortex 'radius' units behind the engine, with y=0
+                this.vortexLines[index].position.set(offset.x, 0, offset.z + vortexRadius);
             }
         });
     }

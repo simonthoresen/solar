@@ -33,25 +33,21 @@ export class VelocityField {
             target.add(pVel);
         }
 
-        // 3. Player Engine Vortex
-        if (player && player.getEnginePosition) {
-            const enginePos = player.getEnginePosition();
-            const distSq = position.distanceToSquared(enginePos);
-            const vortexRadius = playerConfig.vortexRadius || 1.0;
+        // 3. Player Engine Vortex (check all engine vortices)
+        if (player && player.getVortexPositions) {
+            const vortexPositions = player.getVortexPositions();
+            const vortexRadius = playerConfig.vortexRadius || 2.0;
+            const radiusSq = vortexRadius * vortexRadius;
+            const multiplier = 5.0;
 
-            if (distSq < vortexRadius * vortexRadius) {
-                // Apply inverted player velocity
-                // Use temp vector to avoid allocation if possible, but player.velocity is safe to clone/negate?
-                // Actually, let's just use a scratch vector or direct add if we want performance.
-                // target.add(player.velocity.clone().negate());
-
-                // Better:
-                // Boost the force to overcome smoothing
-                const multiplier = 5.0;
-                target.x -= player.velocity.x * multiplier;
-                target.y -= player.velocity.y * multiplier;
-                target.z -= player.velocity.z * multiplier;
-            }
+            vortexPositions.forEach(vortexPos => {
+                const distSq = position.distanceToSquared(vortexPos);
+                if (distSq < radiusSq) {
+                    target.x -= player.velocity.x * multiplier;
+                    target.y -= player.velocity.y * multiplier;
+                    target.z -= player.velocity.z * multiplier;
+                }
+            });
         }
 
         return target;

@@ -139,18 +139,31 @@ export class Spaceship {
     }
 
     initVortexDebug() {
-        const radius = playerConfig.vortexRadius || 1.0;
-        const curve = new THREE.EllipseCurve(0, 0, radius, radius, 0, 2 * Math.PI, false, 0);
-        const points = curve.getPoints(32);
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ color: 0xff00ff });
-        this.vortexLine = new THREE.Line(geometry, material);
+        this.vortexLines = [];
+        const radius = playerConfig.vortexRadius || 2.0;
 
-        const offsetZ = playerConfig.vortexOffsetZ || 1.5;
-        this.vortexLine.position.set(0, 0, offsetZ);
-        this.vortexLine.rotation.x = -Math.PI / 2;
-        this.vortexLine.visible = false;
-        this.mesh.add(this.vortexLine);
+        if (!this.engineOffsets || this.engineOffsets.length === 0) {
+            this.engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
+        }
+
+        // Create a vortex ring for each engine
+        this.engineOffsets.forEach(engineOffset => {
+            const curve = new THREE.EllipseCurve(0, 0, radius, radius, 0, 2 * Math.PI, false, 0);
+            const points = curve.getPoints(32);
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({ color: 0xff00ff });
+            const vortexLine = new THREE.Line(geometry, material);
+
+            // Position vortex 'radius' units behind the engine, with y=0
+            vortexLine.position.set(engineOffset.x, 0, engineOffset.z + radius);
+            vortexLine.rotation.x = -Math.PI / 2;
+            vortexLine.visible = false;
+            this.mesh.add(vortexLine);
+            this.vortexLines.push(vortexLine);
+        });
+
+        // Keep backward compatibility - first vortex is the "main" vortex
+        this.vortexLine = this.vortexLines[0];
     }
 
     initTurrets(mounts) {
@@ -401,6 +414,7 @@ export class Spaceship {
 
                     // Update wake positions to match engine offsets
                     this.updateWakePositions();
+                    this.updateVortexPositions();
                 }
             }
         });
@@ -413,6 +427,20 @@ export class Spaceship {
         this.engineOffsets.forEach((offset, index) => {
             if (this.wakeMeshes[index]) {
                 this.wakeMeshes[index].position.copy(offset);
+            }
+        });
+    }
+
+    updateVortexPositions() {
+        if (!this.vortexLines || !this.engineOffsets) return;
+
+        const radius = playerConfig.vortexRadius || 2.0;
+
+        // Update each vortex ring to match its corresponding engine offset
+        this.engineOffsets.forEach((offset, index) => {
+            if (this.vortexLines[index]) {
+                // Position vortex 'radius' units behind the engine, with y=0
+                this.vortexLines[index].position.set(offset.x, 0, offset.z + radius);
             }
         });
     }
@@ -548,12 +576,43 @@ export class Spaceship {
         return this.getEnginePosition();
     }
 
+    getVortexPositions() {
+        // Return vortex positions for all engines
+        const vortexRadius = playerConfig.vortexRadius || 2.0;
+        const vortexPositions = [];
+
+        if (this.engineOffsets && this.engineOffsets.length > 0) {
+            this.engineOffsets.forEach(engineOffset => {
+                // Vortex is 'radius' units behind the engine, with y=0
+                const vortexOffset = new THREE.Vector3(
+                    engineOffset.x,
+                    0,
+                    engineOffset.z + vortexRadius
+                );
+                const rotatedOffset = vortexOffset.applyEuler(this.rotation);
+                const worldPos = this.position.clone().add(rotatedOffset);
+                vortexPositions.push(worldPos);
+            });
+        } else {
+            // Fallback
+            const fallbackOffset = new THREE.Vector3(0, 0, vortexRadius + 0.5);
+            const rotatedOffset = fallbackOffset.applyEuler(this.rotation);
+            vortexPositions.push(this.position.clone().add(rotatedOffset));
+        }
+
+        return vortexPositions;
+    }
+
     setDebugVisibility(visible) {
         // Base logic for debug
         if (typeof visible === 'object') {
-            if (this.axisHelper) this.axisHelper.visible = visible.playerAxis; // Usually we want separate debug?
+            if (this.axisHelper) this.axisHelper.visible = visible.playerAxis;
             if (this.boundaryLine) this.boundaryLine.visible = visible.playerRing;
-            if (this.vortexLine) this.vortexLine.visible = visible.playerVortex;
+            if (this.vortexLines) {
+                this.vortexLines.forEach(line => {
+                    line.visible = visible.playerVortex;
+                });
+            }
         } else {
             // Fallback
         }

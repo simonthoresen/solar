@@ -231,22 +231,14 @@ export class ShipModels {
                 break;
 
             case 'corsair':
-                // Pirate-style with curved irregular shapes
                 // Main body
-                addPart(new THREE.SphereGeometry(0.6, 12, 8), primaryMat, [0, 0, 0], [0, 0, 0]);
-                // Extended front
-                addPart(new THREE.ConeGeometry(0.4, 1.2, 10), primaryMat, [0, 0, -0.9], [Math.PI / 2, 0, 0]);
-                // Irregular wings
-                addPart(new THREE.BoxGeometry(1.4, 0.1, 0.8), primaryMat, [0, -0.2, 0.3], [0, 0, Math.PI / 12]);
-                // Cabin bubble
-                addPart(new THREE.SphereGeometry(0.3, 8, 6), cabinMat, [0, 0.4, -0.2]);
-                // Engine cluster
-                addPart(new THREE.CylinderGeometry(0.3, 0.4, 0.7, 10), darkMat, [0, 0, 0.8], [Math.PI / 2, 0, 0]);
+                addPart(new THREE.SphereGeometry(1.0, 12, 8), primaryMat, [0, 0, 0], [0, 0, 0]);
+                // Engine cone from 0z to 2z
+                addPart(new THREE.CylinderGeometry(0.3, 0.4, 2.0, 10), darkMat, [0, 0, 1], [Math.PI / 2, 0, 0]);
 
                 collisionRadius = 1.1;
-                engineOffsets = [new THREE.Vector3(0, 0, 1.2)];
-                turretMounts.push({ position: new THREE.Vector3(-0.5, -0.1, 0.1), type: 'circular' });
-                turretMounts.push({ position: new THREE.Vector3(0.5, -0.1, 0.1), type: 'circular' });
+                engineOffsets = [new THREE.Vector3(0, 0, 2)];
+                turretMounts.push({ position: new THREE.Vector3(0, 0, 0), type: 'circular' });
                 break;
 
             case 'sentinel':
@@ -361,9 +353,9 @@ export class ShipModels {
                 // Elegant cockpit
                 addPart(new THREE.SphereGeometry(0.3, 16, 12), cabinMat, [0, 0.2, -0.5]);
                 // Graceful swept wings
-                addPart(new THREE.BoxGeometry(2.4, 0.06, 1.0), primaryMat, [0, 0, 0.2], [0, 0, -Math.PI / 10]);
+                addPart(new THREE.BoxGeometry(2.4, 0.06, 1.0), primaryMat, [0, 0, 0.2], [0, 0, 0]);
                 // Wing decorations
-                addPart(new THREE.BoxGeometry(2.2, 0.04, 0.3), darkMat, [0, -0.08, 0.5], [0, 0, -Math.PI / 10]);
+                addPart(new THREE.BoxGeometry(2.2, 0.04, 0.3), darkMat, [0, 0, 0.5], [0, 0, 0]);
                 // Tail stabilizer
                 addPart(new THREE.BoxGeometry(0.4, 0.5, 0.06), primaryMat, [0, 0.3, 0.9]);
 
@@ -373,7 +365,7 @@ export class ShipModels {
 
                 // Left wingtip engine nacelle (relative to engine group)
                 const leftEngine = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.27, 1.0, 16), darkMat);
-                leftEngine.position.set(-1.2, -0.05, 0);
+                leftEngine.position.set(-1.2, 0, 0);
                 leftEngine.rotation.set(Math.PI / 2, 0, 0);
                 leftEngine.castShadow = true;
                 leftEngine.receiveShadow = true;
@@ -381,7 +373,7 @@ export class ShipModels {
 
                 // Right wingtip engine nacelle (relative to engine group)
                 const rightEngine = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.27, 1.0, 16), darkMat);
-                rightEngine.position.set(1.2, -0.05, 0);
+                rightEngine.position.set(1.2, 0, 0);
                 rightEngine.rotation.set(Math.PI / 2, 0, 0);
                 rightEngine.castShadow = true;
                 rightEngine.receiveShadow = true;
@@ -390,7 +382,7 @@ export class ShipModels {
                 mesh.add(engineGroup);
 
                 // Base engine offsets relative to the rotating group center
-                const baseEngineOffsets = [new THREE.Vector3(-1.2, -0.05, 0.5), new THREE.Vector3(1.2, -0.05, 0.5)];
+                const baseEngineOffsets = [new THREE.Vector3(-1.2, 0, 0.5), new THREE.Vector3(1.2, 0, 0.5)];
 
                 // Add animation with dynamic engine calculation
                 animations.push({
