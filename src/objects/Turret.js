@@ -82,10 +82,15 @@ export class Turret {
     }
 
     /**
-     * @param {THREE.Vector3} targetWorldPos - The world position to aim at
+     * @param {THREE.Vector3} targetWorldPos - The world position to aim at (null to reset to forward)
      */
     update(dt, targetWorldPos) {
-        if (!targetWorldPos) return;
+        if (!targetWorldPos) {
+            // No target - reset to forward (0 rotation)
+            this.mesh.rotation.y = 0;
+            this.pivot.rotation.x = 0;
+            return;
+        }
 
         // Convert target world position to local space of the turret parent (ship)
         // Actually, we want it in the local space of the turret's parent (this.parentMesh)

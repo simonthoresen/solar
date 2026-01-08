@@ -82,6 +82,14 @@ export class HUD {
                 overlay.shieldBar.fg.material.dispose();
             }
 
+            // Dispose beingSelectedByDiamonds
+            if (overlay.beingSelectedByDiamonds) {
+                overlay.beingSelectedByDiamonds.forEach(diamondObj => {
+                    diamondObj.diamond.geometry.dispose();
+                    diamondObj.material.dispose();
+                });
+            }
+
             this.overlays.splice(index, 1);
         }
     }
@@ -151,7 +159,8 @@ export class HUD {
             material: material,
             baseColor: color, // Store base color to revert to
             healthBar: null,
-            shieldBar: null
+            shieldBar: null,
+            beingSelectedByDiamonds: [] // Array of diamonds showing who selected this ship
         });
 
         // Initialize Health/Shield Bars for Ships
@@ -220,6 +229,33 @@ export class HUD {
         return mesh;
     }
 
+    createBeingSelectedByDiamond(parentBox, scaleFactor, color) {
+        // Create a diamond (rotated square) at a specific scale
+        const positions = [
+            -0.5, -0.5, 0,
+            0.5, -0.5, 0,
+            0.5, 0.5, 0,
+            -0.5, 0.5, 0,
+            -0.5, -0.5, 0
+        ];
+
+        const geometry = new LineGeometry();
+        geometry.setPositions(positions);
+        const material = new LineMaterial({
+            color: color,
+            linewidth: 2,
+            resolution: this.resolution,
+            dashed: false
+        });
+        const diamond = new Line2(geometry, material);
+        diamond.frustumCulled = false;
+        diamond.rotation.z = Math.PI / 4; // Rotate 45 degrees
+        diamond.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        parentBox.add(diamond);
+
+        return { diamond, material };
+    }
+
     onResize(width, height) {
         this.camera.left = -width / 2;
         this.camera.right = width / 2;
@@ -232,6 +268,16 @@ export class HUD {
         this.overlays.forEach(item => {
             if (item.material && item.material.resolution) {
                 item.material.resolution.set(width, height);
+            }
+            if (item.diamondMaterial && item.diamondMaterial.resolution) {
+                item.diamondMaterial.resolution.set(width, height);
+            }
+            if (item.beingSelectedByDiamonds) {
+                item.beingSelectedByDiamonds.forEach(diamondObj => {
+                    if (diamondObj.material && diamondObj.material.resolution) {
+                        diamondObj.material.resolution.set(width, height);
+                    }
+                });
             }
         });
     }
@@ -290,7 +336,7 @@ export class HUD {
                 desiredColor = 0x00ff00; // Green
             }
 
-            // Set Selection Diamond visibility
+            // Set Selection Diamond visibility (this ship selected something)
             const isSelected = (this.game.player && this.game.player.getSelectedItem() === t);
             if (item.diamond) {
                 item.diamond.visible = isSelected;
@@ -299,6 +345,46 @@ export class HUD {
                     item.diamondMaterial.color.setHex(desiredColor);
                 }
             }
+
+            // Handle "being selected by" diamonds (other ships selected this ship)
+            // Collect all ships that have selected this target
+            const selectingShips = [];
+            if (this.game.npcs) {
+                this.game.npcs.forEach(npc => {
+                    if (npc.isActive && npc.getSelectedItem && npc.getSelectedItem() === t) {
+                        selectingShips.push(npc);
+                    }
+                });
+            }
+
+            // Update "being selected by" diamonds
+            const neededCount = selectingShips.length;
+            const currentCount = item.beingSelectedByDiamonds.length;
+
+            // Create more diamonds if needed
+            while (item.beingSelectedByDiamonds.length < neededCount) {
+                const index = item.beingSelectedByDiamonds.length;
+                const scaleFactor = 1.1 + (index * 0.15); // Each diamond 15% bigger than previous
+                const newDiamond = this.createBeingSelectedByDiamond(item.mesh, scaleFactor, 0x00ff00);
+                item.beingSelectedByDiamonds.push(newDiamond);
+            }
+
+            // Update visibility and color of diamonds
+            item.beingSelectedByDiamonds.forEach((diamondObj, index) => {
+                if (index < neededCount) {
+                    const selector = selectingShips[index];
+                    // Determine if selector is aggressive
+                    const selectorIsAggressive = selector.hasAttacked || selector.role === 'kamikaze' || selector.role === 'shooter';
+                    const diamondColor = selectorIsAggressive ? 0xff0000 : 0x00ff00;
+
+                    diamondObj.diamond.visible = true;
+                    if (diamondObj.material.color.getHex() !== diamondColor) {
+                        diamondObj.material.color.setHex(diamondColor);
+                    }
+                } else {
+                    diamondObj.diamond.visible = false;
+                }
+            });
 
             // Keep line width standard (no thickness change)
             desiredLineWidth = 2;

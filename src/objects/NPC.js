@@ -99,6 +99,11 @@ export class NPC extends Spaceship {
 
     updateKamikaze(dt) {
         if (this.player && this.player.isActive) {
+            // Select player as target
+            if (this.selectedItem !== this.player) {
+                this.setSelectedItem(this.player);
+            }
+
             this.flyTowards(this.player.position);
             this.controls.thrust = true;
 
@@ -106,11 +111,21 @@ export class NPC extends Spaceship {
             if (this.position.distanceTo(this.player.position) < 100) {
                 this.hasAttacked = true;
             }
+        } else {
+            // Clear selection if player is not active
+            if (this.selectedItem) {
+                this.clearSelection();
+            }
         }
     }
 
     updateShooter(dt) {
         if (this.player && this.player.isActive) {
+            // Select player as target
+            if (this.selectedItem !== this.player) {
+                this.setSelectedItem(this.player);
+            }
+
             const dist = this.position.distanceTo(this.player.position);
 
             this.flyTowards(this.player.position);
@@ -131,6 +146,11 @@ export class NPC extends Spaceship {
                 this.controls.thrust = false;
             } else {
                 this.controls.thrust = true;
+            }
+        } else {
+            // Clear selection if player is not active
+            if (this.selectedItem) {
+                this.clearSelection();
             }
         }
     }

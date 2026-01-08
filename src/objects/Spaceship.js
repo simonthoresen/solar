@@ -289,43 +289,13 @@ export class Spaceship {
         this.handlePlanetCollisions(celestialBodies);
 
         // Determine Target for Turrets
+        // All ships aim turrets at their selectedItem
         let targetPos = null;
-
-        // Note: Spaceship doesn't inherently know if it's player or NPC logic-wise here easily unless we pass extra info.
-        // But we passed 'camera' to update().
-        // If this is the Player, we aim at where the camera looks.
-        // If NPC, we aim at 'ships' (target)? 
-        // We need a better way to define target. 
-        // Let's assume subclasses set `this.aimTarget` or we derive it.
-
-        // Quick hack: check if this is player by checking if controls.turn is driven by input? 
-        // Or better: Spaceship doesn't aim. Player/NPC subclasses aim.
-        // BUT: Turret update needs to happen HERE or be called.
-
-        // Actually, let's allow `update` simply to accept an aim position?
-        // Or we calculate it here.
-
-        // For Player: Aim at point far ahead of Camera.
-        // For NPC: Aim at current target (if any).
-
-        if (this.constructor.name === 'Player') {
-            // We need camera forward. We have camera.
-            if (camera) {
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                // Point far away
-                targetPos = camera.position.clone().add(forward.multiplyScalar(100));
-            }
-        } else if (this.constructor.name === 'NPC') {
-            if (this.target) {
-                targetPos = this.target.position ? this.target.position : null;
-            } else {
-                // Forward
-                const forward = new THREE.Vector3(0, 0, -1).applyEuler(this.rotation);
-                targetPos = this.position.clone().add(forward.multiplyScalar(20));
-            }
+        if (this.selectedItem && this.selectedItem.position) {
+            targetPos = this.selectedItem.position;
         }
 
-        // Update Turrets
+        // Update Turrets (null targetPos will reset turrets to forward)
         this.turrets.forEach(turret => {
             turret.update(dt, targetPos);
         });
