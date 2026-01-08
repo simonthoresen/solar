@@ -315,16 +315,21 @@ export class ParticleSystem {
         const p = this.smokeData[idx];
         p.active = true;
 
-        // Jitter Position
+        // More varied spawn position - spread particles out more
         p.position.copy(position);
-        p.position.x += (Math.random() - 0.5) * 0.5;
-        p.position.y += (Math.random() - 0.5) * 0.2; // Allow Y variation (was: p.position.y = 0)
-        p.position.z += (Math.random() - 0.5) * 0.5;
+        p.position.x += (Math.random() - 0.5) * 1.5; // Increased from 0.5
+        p.position.y += (Math.random() - 0.5) * 0.8; // Increased from 0.2
+        p.position.z += (Math.random() - 0.5) * 1.5; // Increased from 0.5
+        // Add random distance from engine (some spawn further away)
+        const spawnDistanceOffset = Math.random() * 1.0;
+        p.position.z += spawnDistanceOffset;
 
         p.velocity.set(0, 0, 0);
-        p.life = lifetime + Math.random() * lifetime; // Random variation around specified lifetime
+        // Shorter lifetime so smoke vanishes sooner (reduced from default 3.0)
+        p.life = lifetime * 0.4 + Math.random() * lifetime * 0.3; // 0.4x to 0.7x of original
         p.maxLife = p.life;
-        p.initialScale = size + Math.random() * size * 0.5; // Size with random variation
+        // Much more varied initial size (0.3x to 1.8x the base size)
+        p.initialScale = size * (0.3 + Math.random() * 1.5);
 
         if (initialInfluence) {
             p.smoothedInfluence.copy(initialInfluence);
@@ -459,7 +464,7 @@ export class ParticleSystem {
 
             p.life -= dt;
 
-            // 2. Visuals (Fading)
+            // 2. Visuals (Growing and Fading)
             if (p.life <= 0) {
                 p.active = false;
                 // Scale to 0 to hide
@@ -467,8 +472,16 @@ export class ParticleSystem {
             } else {
                 const lifeRatio = p.life / p.maxLife;
                 let scaleMod = 1.0;
-                // Smoke spawns at full size, only fades out
-                if (lifeRatio < 0.5) scaleMod = lifeRatio / 0.5;
+
+                // Smoke grows over lifetime then fades away at the end
+                // Growth phase: scale from 1.0 to 4.0 over full lifetime
+                const growthProgress = 1.0 - lifeRatio; // 0 at spawn, 1 at death
+                scaleMod = 1.0 + growthProgress * 3.0; // Grows to 4x size
+
+                // Fade out in last 30% of life
+                if (lifeRatio < 0.3) {
+                    scaleMod *= (lifeRatio / 0.3);
+                }
 
                 const currentScale = p.initialScale * scaleMod;
 
