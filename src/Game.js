@@ -165,7 +165,7 @@ export class Game {
                 }
             }
             if (e.key === 'Escape') {
-                const hasSelection = (this.hud && this.hud.selectedBody);
+                const hasSelection = (this.player && this.player.getSelectedItem());
                 if (hasSelection) {
                     this.deselectAll();
                 } else {
@@ -584,16 +584,12 @@ export class Game {
     }
 
     deselectAll() {
-        // Reset all 3D objects
-        this.celestialBodies.forEach(cb => cb.setSelected(false));
-        this.player.setSelected(false);
-        this.npcs.forEach(npc => npc.setSelected(false));
-
-        // Reset HUD selection
-        if (this.hud) {
-            this.hud.setSelected(null);
+        // Clear player's selection (which will deselect the item)
+        if (this.player) {
+            this.player.clearSelection();
         }
 
+        // Hide detail panel
         if (this.detailPanel) {
             this.detailPanel.hide();
         }
@@ -642,18 +638,16 @@ export class Game {
             const target = nearest.object;
 
             // If already selected, do nothing
-            if (this.hud.selectedBody === target) {
+            if (this.player.getSelectedItem() === target) {
                 return;
             }
 
             // Deselect current
             this.deselectAll();
 
-            // Select nearest
-            this.hud.setSelected(target);
-            if (target.setSelected) {
-                target.setSelected(true);
-            }
+            // Select nearest using player's selection
+            this.player.setSelectedItem(target);
+
             if (this.detailPanel) {
                 this.detailPanel.show(target);
             }
@@ -681,21 +675,15 @@ export class Game {
             const target = hit.object.userData.target;
             if (target) {
                 // If already selected, do nothing
-                if (this.hud.selectedBody === target) {
+                if (this.player.getSelectedItem() === target) {
                     return;
                 }
 
-                // Update 3D Object Selection (Exclusive)
-                // 1. Reset all
+                // Deselect current
                 this.deselectAll();
 
-                // Update HUD selection AFTER reset
-                this.hud.setSelected(target);
-
-                // 2. Set new 3D selection
-                if (target.setSelected) {
-                    target.setSelected(true);
-                }
+                // Select using player's selection
+                this.player.setSelectedItem(target);
 
                 // Show Detail Panel
                 if (this.detailPanel) {

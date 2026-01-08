@@ -29,7 +29,6 @@ export class HUD {
 
         this.scene = new THREE.Scene();
         this.overlays = [];
-        this.selectedBody = null;
     }
 
     init(celestialBodies) {
@@ -221,11 +220,6 @@ export class HUD {
         return mesh;
     }
 
-    setSelected(targetOrBody) {
-        this.selectedBody = targetOrBody;
-        // Visual updates are handled in the update() loop
-    }
-
     onResize(width, height) {
         this.camera.left = -width / 2;
         this.camera.right = width / 2;
@@ -297,7 +291,7 @@ export class HUD {
             }
 
             // Set Selection Diamond visibility
-            const isSelected = (this.selectedBody === t);
+            const isSelected = (this.game.player && this.game.player.getSelectedItem() === t);
             if (item.diamond) {
                 item.diamond.visible = isSelected;
                 // Update diamond color to match box color
@@ -642,9 +636,10 @@ export class HUD {
         this.playerTriangle.style.left = pX + 'px';
 
         // 3. Target (Yellow Triangle)
-        if (this.selectedBody) {
+        const selectedItem = this.game.player ? this.game.player.getSelectedItem() : null;
+        if (selectedItem) {
             this.targetTriangle.classList.remove('hidden');
-            const targetPos = this.selectedBody.position;
+            const targetPos = selectedItem.position;
             // Vector from Camera to Target
             _tempPoint.subVectors(targetPos, this.mainCamera.position);
 
@@ -664,8 +659,8 @@ export class HUD {
 
             // Update Color based on Aggression (Matches HUD Box)
             let isAggressive = false;
-            if (this.selectedBody.hasAttacked) isAggressive = true;
-            if (this.selectedBody.type === 'kamikaze' || this.selectedBody.type === 'shooter') isAggressive = true;
+            if (selectedItem.hasAttacked) isAggressive = true;
+            if (selectedItem.type === 'kamikaze' || selectedItem.type === 'shooter') isAggressive = true;
 
             // Target Triangle is an Up-pointing triangle (border-bottom has color)
             // Wait, CSS says: query ".compass-triangle.target"

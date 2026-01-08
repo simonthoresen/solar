@@ -46,7 +46,7 @@ export class Player extends Spaceship {
 
         // Turn: -1 (Left/A), 1 (Right/D)
         // Original logic: A -> rot.y += speed (Left/PlusY). D -> rot.y -= speed (Right/MinusY).
-        // Base logic: rot.y += -turn * speed. 
+        // Base logic: rot.y += -turn * speed.
         // If turn = -1 (Left), += -(-1) = +1. Correct.
         // If turn = 1 (Right), += -(1) = -1. Correct.
 
@@ -60,9 +60,17 @@ export class Player extends Spaceship {
         this.controls.fire = this.keys.space;
     }
 
+    explode() {
+        // Clear selection when player dies
+        this.clearSelection();
+
+        // Call parent explode
+        super.explode();
+    }
+
     // Override getVelocityAt if needed, but it was in base as well since it depends on wake.
-    // However, getVelocityAt was logic for "does the wake push particles". 
-    // It's specific to the Player's wake affecting the world. 
-    // Ideally NPCs also affect world? "same model". 
+    // However, getVelocityAt was logic for "does the wake push particles".
+    // It's specific to the Player's wake affecting the world.
+    // Ideally NPCs also affect world? "same model".
     // Yes, keep it in Base.
 }

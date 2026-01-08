@@ -31,6 +31,9 @@ export class Spaceship {
         this.turrets = [];
         this.onExplode = null;
 
+        // Selection: each ship can select one item
+        this.selectedItem = null;
+
         this.initMesh(color);
         this.initFlames();
 
@@ -666,5 +669,31 @@ export class Spaceship {
             DebugState.setSelected(null);
         }
         // Visual update happens in updateDebugVisuals()
+    }
+
+    // Selection management: each ship can select one item
+    setSelectedItem(item) {
+        // Deselect previous item
+        if (this.selectedItem && this.selectedItem.setSelected) {
+            this.selectedItem.setSelected(false);
+        }
+
+        this.selectedItem = item;
+
+        // Select new item
+        if (this.selectedItem && this.selectedItem.setSelected) {
+            this.selectedItem.setSelected(true);
+        }
+    }
+
+    getSelectedItem() {
+        return this.selectedItem;
+    }
+
+    clearSelection() {
+        if (this.selectedItem && this.selectedItem.setSelected) {
+            this.selectedItem.setSelected(false);
+        }
+        this.selectedItem = null;
     }
 }
