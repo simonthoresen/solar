@@ -412,21 +412,20 @@ export class Spaceship {
     }
 
     updateExhaustPositions() {
-        const exhaustForce = 5.0; // Constant force magnitude when thrusters are active
-
         // Update rectangle positions and arrows for each thruster
         this.thrusterOffsets.forEach((thrusterOffset, index) => {
             // Get config for this thruster
             const config = this.thrusterConfigs[index] || {
                 exhaustWidth: 3.0,
                 exhaustLength: 6.0,
+                exhaustForce: 10.0,
                 smokeSize: 0.3,
                 smokeColor: 0xaaaaaa,
                 smokeLifetime: 3.0
             };
 
             const exhaustLength = config.exhaustLength;
-            const exhaustCenter = exhaustLength / 2.0;
+            const exhaustForce = config.exhaustForce;
 
             // Update rectangle position
             if (this.exhaustRings[index]) {
@@ -436,16 +435,16 @@ export class Spaceship {
 
             // Update arrow
             if (this.exhaustArrows[index]) {
-                // Update arrow position to center of exhaust rectangle (local coordinates)
-                const arrowPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustCenter);
+                // Update arrow position to forward edge of exhaust rectangle (middle of forward edge)
+                const arrowPos = new THREE.Vector3(thrusterOffset.x, 0, thrusterOffset.z + exhaustLength);
                 this.exhaustArrows[index].position.copy(arrowPos);
 
                 // Arrows are children of the ship mesh, so use LOCAL exhaust direction
                 // Thruster exhaust always points backward (+Z) in local space
                 const localExhaustDir = new THREE.Vector3(0, 0, 1);
 
-                // Arrow length based on thrust state, not ship velocity
-                const arrowLength = this.controls.thrust ? exhaustForce * 0.4 : 0.0;
+                // Arrow length equals exhaust rectangle length when thrusters active
+                const arrowLength = this.controls.thrust ? exhaustLength : 0.0;
 
                 // Update arrow direction and length
                 this.exhaustArrows[index].setDirection(localExhaustDir);
@@ -636,6 +635,21 @@ export class Spaceship {
         });
 
         return dimensions;
+    }
+
+    getExhaustForces() {
+        // Return the exhaust force for each thruster
+        const forces = [];
+
+        this.thrusterOffsets.forEach((_, index) => {
+            const config = this.thrusterConfigs[index] || {
+                exhaustForce: 10.0
+            };
+
+            forces.push(config.exhaustForce);
+        });
+
+        return forces;
     }
 
     getExhaustDirections() {

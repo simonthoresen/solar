@@ -34,16 +34,17 @@ export class VelocityField {
         }
 
         // 3. Player Engine Exhaust (check all engine exhausts)
-        // Use per-thruster exhaust field dimensions
+        // Use per-thruster exhaust field dimensions and forces
         if (player && player.getExhaustPositions) {
             const exhaustPositions = player.getExhaustPositions();
             const exhaustDirections = player.getExhaustDirections ? player.getExhaustDirections() : [];
             const exhaustDimensions = player.getExhaustDimensions ? player.getExhaustDimensions() : [];
-            const multiplier = 5.0;
+            const exhaustForces = player.getExhaustForces ? player.getExhaustForces() : [];
 
             exhaustPositions.forEach((exhaustPos, index) => {
-                // Get dimensions for this thruster
+                // Get dimensions and force for this thruster
                 const dimensions = exhaustDimensions[index] || { width: 3.0, length: 6.0 };
+                const exhaustForce = exhaustForces[index] || 10.0;
                 const halfWidth = dimensions.width / 2.0;
                 const halfLength = dimensions.length / 2.0;
 
@@ -65,18 +66,18 @@ export class VelocityField {
 
                     // Check if within rectangular bounds
                     if (Math.abs(alongExhaust) <= halfLength && Math.abs(acrossExhaust) <= halfWidth) {
-                        // Particle is within exhaust field - apply force
-                        target.x += exhaustDir.x * multiplier;
-                        target.y += exhaustDir.y * multiplier;
-                        target.z += exhaustDir.z * multiplier;
+                        // Particle is within exhaust field - apply per-thruster force
+                        target.x += exhaustDir.x * exhaustForce;
+                        target.y += exhaustDir.y * exhaustForce;
+                        target.z += exhaustDir.z * exhaustForce;
                     }
                 } else {
                     // Legacy fallback: use simple distance check
                     const distSq = toParticle.lengthSq();
                     if (distSq < halfLength * halfLength) {
-                        target.x -= player.velocity.x * multiplier;
-                        target.y -= player.velocity.y * multiplier;
-                        target.z -= player.velocity.z * multiplier;
+                        target.x -= player.velocity.x * exhaustForce;
+                        target.y -= player.velocity.y * exhaustForce;
+                        target.z -= player.velocity.z * exhaustForce;
                     }
                 }
             });
