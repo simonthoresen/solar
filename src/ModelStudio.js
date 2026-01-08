@@ -81,6 +81,18 @@ class MockVelocityField {
 
         return targetVec;
     }
+
+    // Separate exhaust force calculation (for compatibility with ParticleSystem)
+    // In the mock, exhaust is already included in calculateTotalVelocity, so return zero
+    calculateExhaustForce(position, celestialBodies, ships, target = new THREE.Vector3()) {
+        target.set(0, 0, 0);
+        return target;
+    }
+
+    // Check if position is in exhaust field (for debug purposes)
+    isInExhaustField(position, celestialBodies, ships) {
+        return false; // Mock doesn't need this
+    }
 }
 
 export class ModelStudio {
