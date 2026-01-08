@@ -12,6 +12,7 @@ import { MainMenu } from './MainMenu.js';
 import { solarSystemConfig, dustConfig, playerConfig } from './config.js';
 import { HUD } from './HUD.js';
 import { DetailPanel } from './DetailPanel.js';
+import { ArrowKeyCameraRotation, PointerLockCameraRotation, ZoomWhileRotating } from './utils/CameraControls.js';
 
 export class Game {
     constructor() {
@@ -168,14 +169,6 @@ export class Game {
         this.respawnTargetCameraPos = new THREE.Vector3();
         this.respawnTargetCameraQuat = new THREE.Quaternion();
 
-        // Track arrow key state for camera rotation
-        this.arrowKeys = {
-            up: false,
-            down: false,
-            left: false,
-            right: false
-        };
-
         window.addEventListener('keydown', (e) => {
             if (e.key.toLowerCase() === 'h') {
                 if (this.debugUIContainer) {
@@ -199,18 +192,6 @@ export class Game {
                 e.preventDefault(); // Prevent default tab behavior
                 this.selectNearestItem();
             }
-            // Track arrow keys for camera rotation
-            if (e.key === 'ArrowUp') this.arrowKeys.up = true;
-            if (e.key === 'ArrowDown') this.arrowKeys.down = true;
-            if (e.key === 'ArrowLeft') this.arrowKeys.left = true;
-            if (e.key === 'ArrowRight') this.arrowKeys.right = true;
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowUp') this.arrowKeys.up = false;
-            if (e.key === 'ArrowDown') this.arrowKeys.down = false;
-            if (e.key === 'ArrowLeft') this.arrowKeys.left = false;
-            if (e.key === 'ArrowRight') this.arrowKeys.right = false;
         });
     }
 
@@ -329,63 +310,10 @@ export class Game {
                 RIGHT: THREE.MOUSE.ROTATE
             };
 
-            // Pointer Lock for Right Click Rotation
-            // We do NOT disable controls, because we need controls.update() to run for manual rotation to work.
-            // OrbitControls ignores mousemove when pointer is locked (clientX/Y are constant).
-
-            this.renderer.domElement.addEventListener('mousedown', (e) => {
-                if (e.button === 2) { // Right Click
-                    this.renderer.domElement.requestPointerLock();
-                }
-            });
-
-            document.addEventListener('mouseup', () => {
-                // If we are locked and release right click, unlock
-                if (document.pointerLockElement === this.renderer.domElement) {
-                    document.exitPointerLock();
-                }
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (document.pointerLockElement === this.renderer.domElement) {
-                    const { movementX, movementY } = e;
-                    const rotateSpeed = this.controls.rotateSpeed || 1.0;
-                    const element = this.renderer.domElement;
-
-                    // Manual Rotation Logic using Spherical Coordinates
-                    const offset = new THREE.Vector3();
-                    const spherical = new THREE.Spherical();
-
-                    // 1. Get offset from target
-                    offset.copy(this.camera.position).sub(this.controls.target);
-
-                    // 2. Convert to Spherical
-                    spherical.setFromVector3(offset);
-
-                    // 3. Apply Deltas
-                    // Adjust sign to match desired drag behavior (Drag Left -> Camera Left -> Theta Increases)
-                    const deltaTheta = 2 * Math.PI * movementX / element.clientHeight * rotateSpeed; // Left/Right
-                    const deltaPhi = 2 * Math.PI * movementY / element.clientHeight * rotateSpeed;   // Up/Down
-
-                    spherical.theta -= deltaTheta;
-                    spherical.phi -= deltaPhi;
-
-                    // 4. Clamp Phi (Vertical Angle)
-                    const minPolarAngle = this.controls.minPolarAngle || 0;
-                    const maxPolarAngle = this.controls.maxPolarAngle || Math.PI;
-                    spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
-
-                    spherical.makeSafe();
-
-                    // 5. Apply back to Camera
-                    offset.setFromSpherical(spherical);
-                    this.camera.position.copy(this.controls.target).add(offset);
-                    this.camera.lookAt(this.controls.target);
-
-                    // OrbitControls.update() in loop will handle damping if enabled, but might conflict if we manually set pos?
-                    // Usually safe if we update pos, then calling update() will just re-sync.
-                }
-            });
+            // Initialize camera controls
+            this.arrowKeyRotation = new ArrowKeyCameraRotation(this.camera, this.controls, 2.0);
+            this.pointerLockRotation = new PointerLockCameraRotation(this.camera, this.controls, this.renderer);
+            this.zoomWhileRotating = new ZoomWhileRotating(this.camera, this.controls, this.renderer);
         }
 
         // Target the player
@@ -393,45 +321,6 @@ export class Game {
         this.controls.maxDistance = 500;
 
         this.controls.update();
-
-        // Custom Wheel Listener for Zooming while Rotating
-        this.renderer.domElement.addEventListener('wheel', (e) => {
-            // Check if Right Mouse Button is held (Bitmask 2)
-            if (e.buttons & 2) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const zoomSpeed = this.controls.zoomSpeed || 1.0;
-                const delta = -Math.sign(e.deltaY); // -1 for Zoom OUT (Scroll Down), +1 for Zoom IN (Scroll Up)
-                // Note: Standard DeltaY > 0 is Scroll Down.
-
-                if (delta === 0) return;
-
-                // Scale factor: 0.95 ^ speed
-                const scale = Math.pow(0.95, zoomSpeed);
-
-                // If Zooming IN (Delta < 0 -> e.deltaY < 0), we want distance to shrink -> multiply by scale < 1.
-                // If Zooming OUT (Delta > 0 -> e.deltaY > 0), we want distance to grow -> divide by scale (or mult by 1/scale).
-
-                const finalScale = (e.deltaY < 0) ? scale : (1 / scale);
-
-                const offset = new THREE.Vector3().copy(this.camera.position).sub(this.controls.target);
-                offset.multiplyScalar(finalScale);
-
-                // Clamp
-                const dist = offset.length();
-                if (dist < this.controls.minDistance) {
-                    offset.setLength(this.controls.minDistance);
-                } else if (dist > this.controls.maxDistance) {
-                    offset.setLength(this.controls.maxDistance);
-                }
-
-                this.camera.position.copy(this.controls.target).add(offset);
-
-                // Optional: Update controls? 
-                // controls.update() will be called in animate loop anyway, which reads camera position.
-            }
-        }, { passive: false }); // Passive false mostly needed for preventDefault, though 'wheel' is passive by default in some browsers
     }
 
     start() {
@@ -574,29 +463,8 @@ export class Game {
         }
 
         // Arrow key camera rotation
-        if (this.arrowKeys.up || this.arrowKeys.down || this.arrowKeys.left || this.arrowKeys.right) {
-            const rotateSpeed = 2.0; // Speed of rotation with arrow keys
-            const offset = new THREE.Vector3();
-            const spherical = new THREE.Spherical();
-
-            offset.copy(this.camera.position).sub(this.controls.target);
-            spherical.setFromVector3(offset);
-
-            // Apply rotations based on arrow keys
-            if (this.arrowKeys.left) spherical.theta += rotateSpeed * delta;
-            if (this.arrowKeys.right) spherical.theta -= rotateSpeed * delta;
-            if (this.arrowKeys.up) spherical.phi -= rotateSpeed * delta;
-            if (this.arrowKeys.down) spherical.phi += rotateSpeed * delta;
-
-            // Clamp phi to prevent flipping
-            const minPolarAngle = this.controls.minPolarAngle || 0;
-            const maxPolarAngle = this.controls.maxPolarAngle || Math.PI;
-            spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
-            spherical.makeSafe();
-
-            offset.setFromSpherical(spherical);
-            this.camera.position.copy(this.controls.target).add(offset);
-            this.camera.lookAt(this.controls.target);
+        if (this.arrowKeyRotation) {
+            this.arrowKeyRotation.update(delta);
         }
 
         this.controls.update();

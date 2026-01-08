@@ -6,6 +6,7 @@ import { ParticleSystem } from './objects/ParticleSystem.js';
 import { Nebula } from './objects/Nebula.js';
 import { MainMenu } from './MainMenu.js';
 import { solarSystemConfig, dustConfig } from './config.js';
+import { ArrowKeyCameraRotation, PointerLockCameraRotation, ZoomWhileRotating } from './utils/CameraControls.js';
 
 export class SolarStudio {
     constructor() {
@@ -65,14 +66,6 @@ export class SolarStudio {
         window.addEventListener('resize', this.onResize.bind(this));
         this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
 
-        // Track arrow key state
-        this.arrowKeys = {
-            up: false,
-            down: false,
-            left: false,
-            right: false
-        };
-
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 if (this.selectedBody) {
@@ -81,18 +74,6 @@ export class SolarStudio {
                     this.mainMenu.toggle();
                 }
             }
-            // Track arrow keys
-            if (e.key === 'ArrowUp') this.arrowKeys.up = true;
-            if (e.key === 'ArrowDown') this.arrowKeys.down = true;
-            if (e.key === 'ArrowLeft') this.arrowKeys.left = true;
-            if (e.key === 'ArrowRight') this.arrowKeys.right = true;
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowUp') this.arrowKeys.up = false;
-            if (e.key === 'ArrowDown') this.arrowKeys.down = false;
-            if (e.key === 'ArrowLeft') this.arrowKeys.left = false;
-            if (e.key === 'ArrowRight') this.arrowKeys.right = false;
         });
 
         // Start animation loop
@@ -178,76 +159,10 @@ export class SolarStudio {
             RIGHT: THREE.MOUSE.ROTATE
         };
 
-        // Pointer Lock for Right Click Rotation
-        this.renderer.domElement.addEventListener('mousedown', (e) => {
-            if (e.button === 2) {
-                this.renderer.domElement.requestPointerLock();
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (document.pointerLockElement === this.renderer.domElement) {
-                document.exitPointerLock();
-            }
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === this.renderer.domElement) {
-                const { movementX, movementY } = e;
-                const rotateSpeed = this.controls.rotateSpeed || 1.0;
-                const element = this.renderer.domElement;
-
-                const offset = new THREE.Vector3();
-                const spherical = new THREE.Spherical();
-
-                offset.copy(this.camera.position).sub(this.controls.target);
-                spherical.setFromVector3(offset);
-
-                const deltaTheta = 2 * Math.PI * movementX / element.clientHeight * rotateSpeed;
-                const deltaPhi = 2 * Math.PI * movementY / element.clientHeight * rotateSpeed;
-
-                spherical.theta -= deltaTheta;
-                spherical.phi -= deltaPhi;
-
-                const minPolarAngle = this.controls.minPolarAngle || 0;
-                const maxPolarAngle = this.controls.maxPolarAngle || Math.PI;
-                spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
-
-                spherical.makeSafe();
-
-                offset.setFromSpherical(spherical);
-                this.camera.position.copy(this.controls.target).add(offset);
-                this.camera.lookAt(this.controls.target);
-            }
-        });
-
-        // Custom Wheel Listener for Zooming while Rotating
-        this.renderer.domElement.addEventListener('wheel', (e) => {
-            if (e.buttons & 2) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const zoomSpeed = this.controls.zoomSpeed || 1.0;
-                const delta = -Math.sign(e.deltaY);
-
-                if (delta === 0) return;
-
-                const scale = Math.pow(0.95, zoomSpeed);
-                const finalScale = (e.deltaY < 0) ? scale : (1 / scale);
-
-                const offset = new THREE.Vector3().copy(this.camera.position).sub(this.controls.target);
-                offset.multiplyScalar(finalScale);
-
-                const dist = offset.length();
-                if (dist < this.controls.minDistance) {
-                    offset.setLength(this.controls.minDistance);
-                } else if (dist > this.controls.maxDistance) {
-                    offset.setLength(this.controls.maxDistance);
-                }
-
-                this.camera.position.copy(this.controls.target).add(offset);
-            }
-        }, { passive: false });
+        // Initialize camera controls
+        this.arrowKeyRotation = new ArrowKeyCameraRotation(this.camera, this.controls, 2.0);
+        this.pointerLockRotation = new PointerLockCameraRotation(this.camera, this.controls, this.renderer);
+        this.zoomWhileRotating = new ZoomWhileRotating(this.camera, this.controls, this.renderer);
 
         this.controls.update();
     }
@@ -510,27 +425,8 @@ export class SolarStudio {
         }
 
         // Arrow key camera rotation
-        if (this.arrowKeys.up || this.arrowKeys.down || this.arrowKeys.left || this.arrowKeys.right) {
-            const rotateSpeed = 2.0; // Speed of rotation with arrow keys
-            const offset = new THREE.Vector3();
-            const spherical = new THREE.Spherical();
-
-            offset.copy(this.camera.position).sub(this.controls.target);
-            spherical.setFromVector3(offset);
-
-            // Apply rotations based on arrow keys
-            if (this.arrowKeys.left) spherical.theta += rotateSpeed * delta;
-            if (this.arrowKeys.right) spherical.theta -= rotateSpeed * delta;
-            if (this.arrowKeys.up) spherical.phi -= rotateSpeed * delta;
-            if (this.arrowKeys.down) spherical.phi += rotateSpeed * delta;
-
-            // Clamp phi to prevent flipping
-            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
-            spherical.makeSafe();
-
-            offset.setFromSpherical(spherical);
-            this.camera.position.copy(this.controls.target).add(offset);
-            this.camera.lookAt(this.controls.target);
+        if (this.arrowKeyRotation) {
+            this.arrowKeyRotation.update(delta);
         }
 
         this.controls.update();

@@ -9,7 +9,7 @@ export class Player extends Spaceship {
         const startPos = new THREE.Vector3(0, 0, 15);
         const color = playerConfig.hullColor !== undefined ? playerConfig.hullColor : 0x4488ff;
 
-        const type = ShipModels.getRandomType();
+        const type = 'valkyrie';
 
         super(scene, color, startPos, type);
 

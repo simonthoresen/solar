@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { playerConfig, dustConfig } from '../config.js';
 import { ShipModels } from './ShipModels.js';
 import { Turret } from './Turret.js';
+import { EngineEffects } from '../utils/EngineEffects.js';
 
 // Scratch vectors for wake calculation
 const _tempWakeDiff = new THREE.Vector3();
@@ -176,44 +177,14 @@ export class Spaceship {
     }
 
     initWake() {
-        this.wakeMeshes = []; // Array to store multiple wakes
-        this.wakeLights = []; // Array to store multiple lights
-
         if (!this.engineOffsets || this.engineOffsets.length === 0) {
-            // Fallback if no engine offsets defined
             this.engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
-        // Create a wake for each engine
-        this.engineOffsets.forEach(engineOffset => {
-            const height = 3.0; // Wake length
-            const radius = 0.5;
+        this.wakeMeshes = EngineEffects.initWakes(this.engineOffsets, this.mesh);
 
-            const geometry = new THREE.ConeGeometry(radius, height, 8);
-            geometry.rotateX(Math.PI / 2);
-
-            const zStart = engineOffset.z;
-
-            // Shift geometry so tip is at 0,0,0, extending to +Z
-            geometry.translate(0, 0, height / 2);
-
-            const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 });
-            const wakeMesh = new THREE.Mesh(geometry, material);
-            wakeMesh.visible = false;
-            wakeMesh.position.copy(engineOffset);
-
-            const wakeLight = new THREE.PointLight(0xffff00, 2, 10);
-            wakeLight.position.set(0, 0, 1.0); // Local to wakeMesh
-            wakeMesh.add(wakeLight);
-
-            this.mesh.add(wakeMesh);
-            this.wakeMeshes.push(wakeMesh);
-            this.wakeLights.push(wakeLight);
-        });
-
-        // Keep backward compatibility - first wake is the "main" wake
+        // Keep backward compatibility
         this.wakeMesh = this.wakeMeshes[0];
-        this.wakeLight = this.wakeLights[0];
     }
 
     // Abstract method for input/AI
@@ -252,59 +223,24 @@ export class Spaceship {
         if (this.controls.thrust) {
             this.velocity.add(forward.multiplyScalar(playerConfig.acceleration * dt));
 
-            // Update all wake meshes
-            if (this.wakeMeshes && this.wakeMeshes.length > 0) {
-                const pulse = 1.0 + Math.sin(Date.now() * 0.02) * 0.2 + (Math.random() - 0.5) * 0.5;
-                const lenPulse = 1.0 + (Math.random() - 0.5) * 0.8;
+            EngineEffects.updateWakeVisuals(this.wakeMeshes, dt);
 
-                // Random color for all wakes
-                let col = null;
-                if (Math.random() > 0.8) {
-                    const colors = [0xffff00, 0xff4400, 0xffffff, 0xffaa00, 0xff0000];
-                    col = colors[Math.floor(Math.random() * colors.length)];
-                }
-
-                this.wakeMeshes.forEach((wakeMesh, index) => {
-                    wakeMesh.visible = true;
-                    wakeMesh.rotation.z += 15 * dt;
-                    wakeMesh.scale.set(pulse, pulse, lenPulse);
-
-                    if (col !== null) {
-                        wakeMesh.material.color.setHex(col);
-                        if (this.wakeLights[index]) {
-                            this.wakeLights[index].color.setHex(col);
-                        }
-                    }
-                });
-            }
-
-            // Smoke Emission from all engines
-            if (particleSystem && camera && velocityField) {
-                this.smokeAccumulator += dt;
-                const emissionInterval = playerConfig.smokeEmissionInterval || 0.05;
-
-                if (this.smokeAccumulator >= emissionInterval) {
-                    this.smokeAccumulator = 0;
-
-                    // Spawn smoke from each engine
-                    this.engineOffsets.forEach(engineOffset => {
-                        const wakePos = this.getEnginePositionFromOffset(engineOffset);
-
-                        // Influence at wake pos
-                        velocityField.calculateTotalVelocity(wakePos, celestialBodies, null, this._tempSmokeInfluence);
-
-                        particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, camera);
-                    });
-                }
-            }
+            this.smokeAccumulator = EngineEffects.emitSmoke(
+                this.engineOffsets,
+                (offset) => this.getEnginePositionFromOffset(offset),
+                this.smokeAccumulator,
+                dt,
+                particleSystem,
+                velocityField,
+                camera,
+                celestialBodies,
+                this._tempSmokeInfluence,
+                playerConfig.smokeEmissionInterval || 0.05
+            );
 
         } else {
             // Hide all wakes
-            if (this.wakeMeshes && this.wakeMeshes.length > 0) {
-                this.wakeMeshes.forEach(wakeMesh => {
-                    wakeMesh.visible = false;
-                });
-            }
+            EngineEffects.hideWakes(this.wakeMeshes);
             this.velocity.multiplyScalar(1 - (playerConfig.deceleration * dt));
             // Reset smoke
             this.smokeAccumulator = 0.05;
@@ -387,62 +323,22 @@ export class Spaceship {
     }
 
     updateAnimations(dt) {
-        if (!this.animations || this.animations.length === 0) return;
-
-        this.animations.forEach(anim => {
-            if (anim.type === 'rotate') {
-                // Rotate the animated mesh
-                if (anim.axis === 'x') {
-                    anim.mesh.rotation.x += anim.speed * dt;
-                } else if (anim.axis === 'y') {
-                    anim.mesh.rotation.y += anim.speed * dt;
-                } else if (anim.axis === 'z') {
-                    anim.mesh.rotation.z += anim.speed * dt;
-                }
-
-                // If this animation has dynamic engines, update engine offsets
-                if (anim.dynamicEngines && anim.engineOffsets) {
-                    // Calculate current engine positions based on rotation
-                    this.engineOffsets = anim.engineOffsets.map(baseOffset => {
-                        // Apply the group's rotation to the base offset
-                        const rotatedOffset = baseOffset.clone();
-                        rotatedOffset.applyEuler(anim.mesh.rotation);
-                        // Add the group's position
-                        rotatedOffset.add(anim.mesh.position);
-                        return rotatedOffset;
-                    });
-
-                    // Update wake positions to match engine offsets
-                    this.updateWakePositions();
-                    this.updateVortexPositions();
-                }
-            }
-        });
+        EngineEffects.updateAnimations(
+            this.animations,
+            dt,
+            (newOffsets) => { this.engineOffsets = newOffsets; },
+            () => this.updateWakePositions(),
+            () => this.updateVortexPositions()
+        );
     }
 
     updateWakePositions() {
-        if (!this.wakeMeshes || !this.engineOffsets) return;
-
-        // Update each wake mesh to match its corresponding engine offset
-        this.engineOffsets.forEach((offset, index) => {
-            if (this.wakeMeshes[index]) {
-                this.wakeMeshes[index].position.copy(offset);
-            }
-        });
+        EngineEffects.updateWakePositions(this.wakeMeshes, this.engineOffsets);
     }
 
     updateVortexPositions() {
-        if (!this.vortexLines || !this.engineOffsets) return;
-
         const radius = playerConfig.vortexRadius || 2.0;
-
-        // Update each vortex ring to match its corresponding engine offset
-        this.engineOffsets.forEach((offset, index) => {
-            if (this.vortexLines[index]) {
-                // Position vortex 'radius' units behind the engine, with y=0
-                this.vortexLines[index].position.set(offset.x, 0, offset.z + radius);
-            }
-        });
+        EngineEffects.updateVortexPositions(this.vortexLines, this.engineOffsets, radius);
     }
 
     checkBoundaries() {
@@ -553,18 +449,11 @@ export class Spaceship {
     }
 
     getEnginePosition() {
-        // Return first engine position for backward compatibility
-        if (this.engineOffsets && this.engineOffsets.length > 0) {
-            return this.getEnginePositionFromOffset(this.engineOffsets[0]);
-        }
-        // Fallback
-        const offset = new THREE.Vector3(0, 0, 1.5).applyEuler(this.rotation);
-        return this.position.clone().add(offset);
+        return EngineEffects.getEnginePosition(this.engineOffsets, this.rotation, this.position);
     }
 
     getEnginePositionFromOffset(engineOffset) {
-        const offset = engineOffset.clone().applyEuler(this.rotation);
-        return this.position.clone().add(offset);
+        return EngineEffects.getEnginePositionFromOffset(engineOffset, this.rotation, this.position);
     }
 
     getRandomWakePosition() {

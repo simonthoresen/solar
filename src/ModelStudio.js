@@ -4,6 +4,8 @@ import { ShipModels, SHIP_TYPES } from './objects/ShipModels.js';
 import { ParticleSystem } from './objects/ParticleSystem.js';
 import { MainMenu } from './MainMenu.js';
 import { Turret } from './objects/Turret.js';
+import { EngineEffects } from './utils/EngineEffects.js';
+import { ArrowKeyCameraRotation, PointerLockCameraRotation, ZoomWhileRotating } from './utils/CameraControls.js';
 
 // Mock Velocity Field for Studio (smoke drifting)
 class MockVelocityField {
@@ -74,7 +76,6 @@ export class ModelStudio {
         this.engineOn = true;
         this.engineTimer = 0;
         this.wakeMesh = null;
-        this.wakeLight = null;
         this.smokeAccumulator = 0;
         this._tempSmokeInfluence = new THREE.Vector3();
 
@@ -116,31 +117,11 @@ export class ModelStudio {
 
         this.targetAngle = 0;
 
-        // Track arrow key state for camera rotation
-        this.arrowKeys = {
-            up: false,
-            down: false,
-            left: false,
-            right: false
-        };
-
         window.addEventListener('resize', this.onResize.bind(this));
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 this.mainMenu.toggle();
             }
-            // Track arrow keys for camera rotation
-            if (e.key === 'ArrowUp') this.arrowKeys.up = true;
-            if (e.key === 'ArrowDown') this.arrowKeys.down = true;
-            if (e.key === 'ArrowLeft') this.arrowKeys.left = true;
-            if (e.key === 'ArrowRight') this.arrowKeys.right = true;
-        });
-
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowUp') this.arrowKeys.up = false;
-            if (e.key === 'ArrowDown') this.arrowKeys.down = false;
-            if (e.key === 'ArrowLeft') this.arrowKeys.left = false;
-            if (e.key === 'ArrowRight') this.arrowKeys.right = false;
         });
 
         this.animate();
@@ -179,77 +160,10 @@ export class ModelStudio {
             RIGHT: THREE.MOUSE.ROTATE
         };
 
-        // Pointer Lock for Right Click (Matches Game.js behavior)
-        this.renderer.domElement.addEventListener('mousedown', (e) => {
-            if (e.button === 2) { // Right Click
-                this.renderer.domElement.requestPointerLock();
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (document.pointerLockElement === this.renderer.domElement) {
-                document.exitPointerLock();
-            }
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === this.renderer.domElement) {
-                const { movementX, movementY } = e;
-                const rotateSpeed = 0.002; // Sensitivity
-
-                // OrbitControls usually handles rotation via drag. 
-                // When pointer is locked, we need to manually update camera or controls.
-                // Simpler approach: Manually orbit camera around target (0,0,0)
-
-                // Convert to Spherical
-                const offset = new THREE.Vector3().copy(this.camera.position).sub(this.controls.target);
-                const spherical = new THREE.Spherical().setFromVector3(offset);
-
-                // Apply Delta
-                spherical.theta -= movementX * rotateSpeed;
-                spherical.phi -= movementY * rotateSpeed;
-
-                // Clamp Phi
-                spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
-
-                spherical.makeSafe();
-
-                // Apply back
-                offset.setFromSpherical(spherical);
-                this.camera.position.copy(this.controls.target).add(offset);
-                this.camera.lookAt(this.controls.target);
-            }
-        });
-
-        // Custom Wheel Listener for Zooming while Rotating
-        this.renderer.domElement.addEventListener('wheel', (e) => {
-            // Check if Right Mouse Button is held (Bitmask 2)
-            if (e.buttons & 2) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const zoomSpeed = this.controls.zoomSpeed || 1.0;
-                const delta = -Math.sign(e.deltaY);
-
-                if (delta === 0) return;
-
-                const scale = Math.pow(0.95, zoomSpeed);
-                const finalScale = (e.deltaY < 0) ? scale : (1 / scale);
-
-                const offset = new THREE.Vector3().copy(this.camera.position).sub(this.controls.target);
-                offset.multiplyScalar(finalScale);
-
-                // Clamp
-                const dist = offset.length();
-                if (dist < this.controls.minDistance) {
-                    offset.setLength(this.controls.minDistance);
-                } else if (dist > this.controls.maxDistance) {
-                    offset.setLength(this.controls.maxDistance);
-                }
-
-                this.camera.position.copy(this.controls.target).add(offset);
-            }
-        }, { passive: false });
+        // Initialize camera controls
+        this.arrowKeyRotation = new ArrowKeyCameraRotation(this.camera, this.controls, 2.0);
+        this.pointerLockRotation = new PointerLockCameraRotation(this.camera, this.controls, this.renderer);
+        this.zoomWhileRotating = new ZoomWhileRotating(this.camera, this.controls, this.renderer);
 
         // Initial Camera Position (Slightly above and away)
         this.camera.position.set(3, 4, 6);
@@ -451,44 +365,15 @@ export class ModelStudio {
     }
 
     initWake(engineOffsets) {
-        this.wakeMeshes = []; // Array to store multiple wakes
-        this.wakeLights = []; // Array to store multiple lights
-
         if (!engineOffsets || engineOffsets.length === 0) {
             // Fallback if no engine offsets defined
             engineOffsets = [new THREE.Vector3(0, 0, 0.5)];
         }
 
-        // Create a wake for each engine
-        engineOffsets.forEach(engineOffset => {
-            const height = 3.0; // Wake length
-            const radius = 0.5;
-
-            const geometry = new THREE.ConeGeometry(radius, height, 8);
-            geometry.rotateX(Math.PI / 2);
-
-            const zStart = engineOffset.z;
-
-            // Shift geometry so tip is at 0,0,0, extending to +Z
-            geometry.translate(0, 0, height / 2);
-
-            const material = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.6 });
-            const wakeMesh = new THREE.Mesh(geometry, material);
-            wakeMesh.visible = false;
-            wakeMesh.position.copy(engineOffset);
-
-            const wakeLight = new THREE.PointLight(0xffff00, 2, 10);
-            wakeLight.position.set(0, 0, 1.0); // Local to wakeMesh
-            wakeMesh.add(wakeLight);
-
-            this.currentShip.add(wakeMesh);
-            this.wakeMeshes.push(wakeMesh);
-            this.wakeLights.push(wakeLight);
-        });
+        this.wakeMeshes = EngineEffects.initWakes(engineOffsets, this.currentShip);
 
         // Keep backward compatibility - first wake is the "main" wake
         this.wakeMesh = this.wakeMeshes[0];
-        this.wakeLight = this.wakeLights[0];
     }
 
     initStudioTurrets(mounts) {
@@ -510,25 +395,14 @@ export class ModelStudio {
     getEnginePosition() {
         if (!this.currentShip || !this.currentShipInfo) return new THREE.Vector3();
 
-        // Return first engine position for backward compatibility
-        if (this.currentShipInfo.engineOffsets && this.currentShipInfo.engineOffsets.length > 0) {
-            return this.getEnginePositionFromOffset(this.currentShipInfo.engineOffsets[0]);
-        }
-
-        // Fallback
-        const offset = new THREE.Vector3(0, 0, 1.5);
-        if (this.currentShip) {
-            offset.applyEuler(this.currentShip.rotation);
-        }
-        return offset; // World pos is same as local since ship is at 0,0,0
+        const engineOffsets = this.currentShipInfo.engineOffsets;
+        const rotation = this.currentShip ? this.currentShip.rotation : new THREE.Euler();
+        return EngineEffects.getEnginePosition(engineOffsets, rotation, null);
     }
 
     getEnginePositionFromOffset(engineOffset) {
-        const offset = engineOffset.clone();
-        if (this.currentShip) {
-            offset.applyEuler(this.currentShip.rotation);
-        }
-        return offset; // World pos is same as local since ship is at 0,0,0
+        const rotation = this.currentShip ? this.currentShip.rotation : new THREE.Euler();
+        return EngineEffects.getEnginePositionFromOffset(engineOffset, rotation, null);
     }
 
     animate() {
@@ -566,27 +440,8 @@ export class ModelStudio {
         });
 
         // Arrow key camera rotation
-        if (this.arrowKeys.up || this.arrowKeys.down || this.arrowKeys.left || this.arrowKeys.right) {
-            const rotateSpeed = 2.0; // Speed of rotation with arrow keys
-            const offset = new THREE.Vector3();
-            const spherical = new THREE.Spherical();
-
-            offset.copy(this.camera.position).sub(this.controls.target);
-            spherical.setFromVector3(offset);
-
-            // Apply rotations based on arrow keys
-            if (this.arrowKeys.left) spherical.theta += rotateSpeed * dt;
-            if (this.arrowKeys.right) spherical.theta -= rotateSpeed * dt;
-            if (this.arrowKeys.up) spherical.phi -= rotateSpeed * dt;
-            if (this.arrowKeys.down) spherical.phi += rotateSpeed * dt;
-
-            // Clamp phi to prevent flipping
-            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
-            spherical.makeSafe();
-
-            offset.setFromSpherical(spherical);
-            this.camera.position.copy(this.controls.target).add(offset);
-            this.camera.lookAt(this.controls.target);
+        if (this.arrowKeyRotation) {
+            this.arrowKeyRotation.update(dt);
         }
 
         // Update Camera
@@ -597,61 +452,28 @@ export class ModelStudio {
         if (this.engineOn) {
             // Update all wake meshes
             if (this.wakeMeshes && this.wakeMeshes.length > 0) {
-                const pulse = 1.0 + Math.sin(Date.now() * 0.02) * 0.2 + (Math.random() - 0.5) * 0.5;
-                const lenPulse = 1.0 + (Math.random() - 0.5) * 0.8;
-
-                // Random color for all wakes
-                let col = null;
-                if (Math.random() > 0.8) {
-                    const colors = [0xffff00, 0xff4400, 0xffffff, 0xffaa00, 0xff0000];
-                    col = colors[Math.floor(Math.random() * colors.length)];
-                }
-
-                this.wakeMeshes.forEach((wakeMesh, index) => {
-                    wakeMesh.visible = true;
-                    wakeMesh.rotation.z += 15 * dt;
-                    wakeMesh.scale.set(pulse, pulse, lenPulse);
-
-                    if (col !== null) {
-                        wakeMesh.material.color.setHex(col);
-                        if (this.wakeLights[index]) {
-                            this.wakeLights[index].color.setHex(col);
-                        }
-                    }
-                });
+                EngineEffects.updateWakeVisuals(this.wakeMeshes, dt);
             }
 
             // Smoke Emission from all engines
-            this.smokeAccumulator += dt;
-            const emissionInterval = 0.05;
-
-            if (this.smokeAccumulator >= emissionInterval) {
-                this.smokeAccumulator = 0;
-
-                // Spawn smoke from each engine
-                if (this.currentShipInfo && this.currentShipInfo.engineOffsets) {
-                    this.currentShipInfo.engineOffsets.forEach(engineOffset => {
-                        const wakePos = this.getEnginePositionFromOffset(engineOffset);
-
-                        // Move spawn position backwards by max smoke radius (1 unit)
-                        const smokeMaxRadius = 1.0;
-                        wakePos.z += smokeMaxRadius;
-
-                        // Get influence at this point
-                        this.velocityField.calculateTotalVelocity(wakePos, [], null, this._tempSmokeInfluence);
-
-                        this.particleSystem.spawnSmoke(wakePos, this._tempSmokeInfluence, this.camera);
-                    });
-                }
+            if (this.currentShipInfo && this.currentShipInfo.engineOffsets) {
+                this.smokeAccumulator = EngineEffects.emitSmoke(
+                    this.currentShipInfo.engineOffsets,
+                    (offset) => this.getEnginePositionFromOffset(offset),
+                    this.smokeAccumulator,
+                    dt,
+                    this.particleSystem,
+                    this.velocityField,
+                    this.camera,
+                    [],
+                    this._tempSmokeInfluence,
+                    0.05
+                );
             }
 
         } else {
             // Hide all wakes
-            if (this.wakeMeshes && this.wakeMeshes.length > 0) {
-                this.wakeMeshes.forEach(wakeMesh => {
-                    wakeMesh.visible = false;
-                });
-            }
+            EngineEffects.hideWakes(this.wakeMeshes);
         }
 
         // Update Animations
@@ -664,61 +486,21 @@ export class ModelStudio {
     }
 
     updateAnimations(dt) {
-        if (!this.animations || this.animations.length === 0) return;
-
-        this.animations.forEach(anim => {
-            if (anim.type === 'rotate') {
-                // Rotate the animated mesh
-                if (anim.axis === 'x') {
-                    anim.mesh.rotation.x += anim.speed * dt;
-                } else if (anim.axis === 'y') {
-                    anim.mesh.rotation.y += anim.speed * dt;
-                } else if (anim.axis === 'z') {
-                    anim.mesh.rotation.z += anim.speed * dt;
-                }
-
-                // If this animation has dynamic engines, update engine offsets
-                if (anim.dynamicEngines && anim.engineOffsets) {
-                    // Calculate current engine positions based on rotation
-                    this.currentShipInfo.engineOffsets = anim.engineOffsets.map(baseOffset => {
-                        // Apply the group's rotation to the base offset
-                        const rotatedOffset = baseOffset.clone();
-                        rotatedOffset.applyEuler(anim.mesh.rotation);
-                        // Add the group's position
-                        rotatedOffset.add(anim.mesh.position);
-                        return rotatedOffset;
-                    });
-
-                    // Update wake positions to match engine offsets
-                    this.updateWakePositions();
-                    this.updateVortexPositions();
-                }
-            }
-        });
+        EngineEffects.updateAnimations(
+            this.animations,
+            dt,
+            (newOffsets) => { this.currentShipInfo.engineOffsets = newOffsets; },
+            () => this.updateWakePositions(),
+            () => this.updateVortexPositions()
+        );
     }
 
     updateWakePositions() {
-        if (!this.wakeMeshes || !this.currentShipInfo.engineOffsets) return;
-
-        // Update each wake mesh to match its corresponding engine offset
-        this.currentShipInfo.engineOffsets.forEach((offset, index) => {
-            if (this.wakeMeshes[index]) {
-                this.wakeMeshes[index].position.copy(offset);
-            }
-        });
+        EngineEffects.updateWakePositions(this.wakeMeshes, this.currentShipInfo?.engineOffsets);
     }
 
     updateVortexPositions() {
-        if (!this.vortexLines || !this.currentShipInfo.engineOffsets) return;
-
         const vortexRadius = 2.0;
-
-        // Update each vortex ring to match its corresponding engine offset
-        this.currentShipInfo.engineOffsets.forEach((offset, index) => {
-            if (this.vortexLines[index]) {
-                // Position vortex 'radius' units behind the engine, with y=0
-                this.vortexLines[index].position.set(offset.x, 0, offset.z + vortexRadius);
-            }
-        });
+        EngineEffects.updateVortexPositions(this.vortexLines, this.currentShipInfo?.engineOffsets, vortexRadius);
     }
 }
