@@ -18,9 +18,11 @@ export class Player extends Spaceship {
             w: false,
             a: false,
             d: false,
-            shift: false,
-            space: false
+            shift: false
         };
+
+        // Autofire state (toggle with F key)
+        this.autofire = false;
 
         this.initInput();
         this.isPlayer = true;
@@ -31,13 +33,16 @@ export class Player extends Spaceship {
             const k = e.key.toLowerCase();
             if (this.keys.hasOwnProperty(k)) this.keys[k] = true;
             if (e.key === 'Shift') this.keys.shift = true;
-            if (e.key === ' ') this.keys.space = true;
+
+            // Toggle autofire with F key
+            if (k === 'f') {
+                this.autofire = !this.autofire;
+            }
         });
         window.addEventListener('keyup', (e) => {
             const k = e.key.toLowerCase();
             if (this.keys.hasOwnProperty(k)) this.keys[k] = false;
             if (e.key === 'Shift') this.keys.shift = false;
-            if (e.key === ' ') this.keys.space = false;
         });
     }
 
@@ -57,12 +62,16 @@ export class Player extends Spaceship {
         if (this.keys.a) this.controls.turn += -1;
         if (this.keys.d) this.controls.turn += 1;
 
-        this.controls.fire = this.keys.space;
+        // Autofire - fires continuously when enabled
+        this.controls.fire = this.autofire;
     }
 
     explode() {
         // Clear selection when player dies
         this.clearSelection();
+
+        // Turn off autofire when player dies
+        this.autofire = false;
 
         // Call parent explode
         super.explode();
