@@ -96,11 +96,10 @@ export class Game {
             }
         });
 
-        // Initialize NPCs
+        // Initialize NPCs - create one of each type
         this.npcs = [];
         const npcTypes = ['hopper', 'speedster', 'kamikaze', 'shooter'];
-        for (let i = 0; i < 3; i++) {
-            const type = npcTypes[Math.floor(Math.random() * npcTypes.length)];
+        npcTypes.forEach(type => {
             // Random position away from center but within reasonable bounds
             // Solar systems can be large, Player starts at 0,0,15.
             const angle = Math.random() * Math.PI * 2;
@@ -109,7 +108,7 @@ export class Game {
 
             const npc = new NPC(this.scene, type, pos, this.celestialBodies, this.player);
             this.npcs.push(npc);
-        }
+        });
 
         this.setupCamera();
         this.setupControls();
