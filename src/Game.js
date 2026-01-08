@@ -598,8 +598,8 @@ export class Game {
 
                 if (distance < collisionDistance) {
                     // Collision detected - apply damage to both ships
-                    shipA.takeDamage(50);
-                    shipB.takeDamage(50);
+                    shipA.takeDamage(25);
+                    shipB.takeDamage(25);
 
                     // Set cooldown to prevent continuous damage (0.5 seconds)
                     shipA.collisionCooldown = 0.5;
